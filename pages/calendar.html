@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>지산리조트 보안팀 - 휴무 캘린더</title>
+  <!-- Supabase JS SDK CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    :root {
+      --bg-main: #0f172a;
+      --card-bg: rgba(30, 41, 59, 0.7);
+      --primary: #38bdf8;
+      --text-main: #f8fafc;
+      --text-sub: #94a3b8;
+      --border-color: rgba(255, 255, 255, 0.1);
+      --input-bg: rgba(15, 23, 42, 0.6);
+      --danger: #ef4444;
+      --badge-annual: #a855f7; /* 연차 보라색 */
+      --badge-off: #38bdf8;    /* 휴무 파란색 */
+      --badge-time: #f59e0b;   /* 시간차 주황색 */
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Pretendard", sans-serif;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      background-color: var(--bg-main);
+      color: var(--text-main);
+      min-height: 100vh;
+      padding-bottom: 40px;
+    }
+
+    .container {
+      padding: 16px;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    .header-area {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+
+    .header-area h2 {
+      font-size: 18px;
+      font-weight: 750;
+    }
+
+    .btn-add-vacation {
+      height: 40px;
+      padding: 0 14px;
+      background: linear-gradient(135deg, #38bdf8 0%, #0284c7 100%);
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(2, 132, 199, 0.3);
+    }
+
+    /* 월 이동 네비게이션 */
+    .calendar-nav {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: var(--card-bg);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--border-color);
+      border-radius: 14px;
+      padding: 12px 16px;
+      margin-bottom: 16px;
+    }
+
+    .calendar-nav button {
+      background: none;
+      border: none;
+      color: var(--primary);
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+      padding: 4px 10px;
+    }
+
+    .calendar-nav span {
+      font-size: 16px;
+      font-weight: 700;
+    }
+
+    /* 휴무 카드 리스트 */
+    .vacation-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .vacation-card {
+      background: var(--card-bg);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--border-color);
+      border-radius: 14px;
+      padding: 14px 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .vacation-info {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .vacation-user {
+      font-size: 15px;
+      font-weight: 700;
+      color: #fff;
+    }
+
+    .vacation-date {
+      font-size: 12px;
+      color: var(--text-sub);
+    }
+
+    .vacation-badges {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+    }
+
+    .type-badge {
+      font-size: 11px;
+      padding: 3px 8px;
+      border-radius: 6px;
+      font-weight: 700;
+    }
+    .type-badge.연차 { background: rgba(168, 85, 247, 0.2); color: #c084fc; border: 1px solid rgba(168, 85, 247, 0.4); }
+    .type-badge.휴무 { background: rgba(56, 189, 248, 0.2); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.4); }
+    .type-badge.시간차 { background: rgba(245, 158, 11, 0.2); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.4); }
+
+    .time-badge {
+      font-size: 11px;
+      padding: 3px 8px;
+      border-radius: 6px;
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--text-sub);
+      font-weight: 600;
+    }
+
+    .btn-delete-vacation {
+      background: none;
+      border: none;
+      color: var(--danger);
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      padding: 4px 8px;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 40px 0;
+      color: var(--text-sub);
+      font-size: 14px;
+    }
+
+    /* 모달 팝업 스타일 */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(0, 0, 0, 0.75);
+      backdrop-filter: blur(6px);
+      z-index: 300;
+      display: flex;
+      justify-content: center;
+      align-items: flex-end;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s ease;
+    }
+
+    @media (min-width: 600px) {
+      .modal-overlay { align-items: center; }
+    }
+
+    .modal-overlay.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .modal-card {
+      background: #1e293b;
+      border: 1px solid var(--border-color);
+      border-radius: 24px 24px 0 0;
+      width: 100%;
+      max-width: 480px;
+      padding: 24px 20px;
+      max-height: 85vh;
+      overflow-y: auto;
+      box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.5);
+    }
+
+    @media (min-width: 600px) {
+      .modal-card { border-radius: 20px; }
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 18px;
+    }
+
+    .modal-header h3 { font-size: 18px; font-weight: 700; color: #fff; }
+    .btn-close-modal { background: none; border: none; color: var(--text-sub); font-size: 24px; cursor: pointer; }
+
+    .form-group { margin-bottom: 14px; }
+    .form-group label { display: block; font-size: 12px; font-weight: 600; color: var(--text-sub); margin-bottom: 6px; }
+    .form-group input, .form-group select {
+      width: 100%; height: 44px; padding: 0 14px;
+      background: var(--input-bg); border: 1px solid var(--border-color);
+      border-radius: 10px; color: #fff; font-size: 14px; outline: none;
+    }
+
+    .btn-submit {
+      width: 100%; height: 46px;
+      background: linear-gradient(135deg, #38bdf8 0%, #0284c7 100%);
+      color: #fff; border: none; border-radius: 12px;
+      font-size: 15px; font-weight: 700; cursor: pointer; margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 공통 상단바 & 햄버거 메뉴 -->
+  <div id="navbar"></div>
+
+  <!-- 메인 컨텐츠 영역 -->
+  <main class="container">
+    <div class="header-area">
+      <h2>📅 보안팀 휴무 캘린더</h2>
+      <button class="btn-add-vacation" id="openModalBtn">+ 휴무 등록</button>
+    </div>
+
+    <!-- 월 이동 네비게이션 -->
+    <div class="calendar-nav">
+      <button id="prevMonthBtn">&lt; 이전달</button>
+      <span id="currentMonthDisplay">2026년 6월</span>
+      <button id="nextMonthBtn">다음달 &gt;</button>
+    </div>
+
+    <!-- 휴무 목록 리스트 -->
+    <div class="vacation-list" id="vacationList">
+      <div class="empty-state">휴무 일정을 불러오는 중...</div>
+    </div>
+  </main>
+
+  <!-- 휴무 등록 모달 팝업 -->
+  <div class="modal-overlay" id="vacationModal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>휴무 일정 등록</h3>
+        <button class="btn-close-modal" id="closeModalBtn">&times;</button>
+      </div>
+
+      <form id="vacationForm">
+        <div class="form-group">
+          <label>휴무 날짜 *</label>
+          <input type="date" id="vDate" required>
+        </div>
+
+        <div class="form-group">
+          <label>휴무 구분 *</label>
+          <select id="vLeaveType">
+            <option value="연차">연차</option>
+            <option value="휴무">휴무 (정기오프)</option>
+            <option value="시간차">시간차 (반차/조퇴 등)</option>
+          </select>
+        </div>
+
+        <div class="form-group" id="timeDetailGroup">
+          <label>세부 시간 *</label>
+          <select id="vTimeDetail">
+            <option value="종일">종일</option>
+            <option value="오전반차">오전반차</option>
+            <option value="오후반차">오후반차</option>
+            <option value="기타 시간">기타 시간 직접입력</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>비고 / 메모</label>
+          <input type="text" id="vMemo" placeholder="특이사항 입력 (선택)">
+        </div>
+
+        <button type="submit" class="btn-submit" id="submitBtn">등록 완료</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- JS 스크립트 연결 순서 -->
+  <script src="/js/supabase.js"></script>
+  <script src="/js/navbar.js"></script>
+  <script src="/js/calendar.js"></script>
+</body>
+</html>
