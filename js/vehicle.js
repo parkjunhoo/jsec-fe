@@ -10,81 +10,128 @@ document.addEventListener('DOMContentLoaded', async () => {
   const searchBtn = document.getElementById('searchBtn');
   const vehicleList = document.getElementById('vehicleList');
 
-  // 백엔드 Workers API URL (만약 백엔드 API를 쓰신다면 유지, 아니면 Supabase 직접 조회가 메인으로 동작)
-  const WORKER_API_URL = 'https://jsec-serverless.adobephotoshop.workers.dev/api/vehicles';
+  let allVehicles = [];
 
-  // 2. 차량 검색 실행 함수
-  async function searchVehicles() {
-    const query = searchInput.value.trim();
-
-    if (!query) {
-      vehicleList.innerHTML = `<div class="empty-state">차량번호 또는 소유자 이름을 입력해 주세요.</div>`;
-      return;
-    }
-
-    vehicleList.innerHTML = `<div class="empty-state">차량 정보 조회 중...</div>`;
+  // 2. 초기 데이터 전체 불러오기 (접속 시 전체 리스트 출력)
+  async function fetchAllVehicles() {
+    vehicleList.innerHTML = `<div class="empty-state">차량 목록 불러오는 중...</div>`;
 
     try {
-      let data = [];
-      
-      // 1차: 백엔드 Worker API 호출 시도
-      try {
-        const response = await fetch(`${WORKER_API_URL}?query=${encodeURIComponent(query)}`);
-        if (response.ok) {
-          data = await response.json();
-        }
-      } catch (e) {
-        console.warn('Worker API 호출 실패, Supabase 직접 조회로 전환합니다.');
-      }
+      const { data, error } = await supabaseClient
+        .from('skicar_data')
+        .select('*')
+        .order('number', { ascending: true }); // 번호 순 기본 정렬
 
-      // 2차: 데이터가 없거나 API 실패 시 Supabase skicar_data 직접 조회 (.or 조건으로 실제 컬럼 검색)
-      if (!data || data.length === 0) {
-        const { data: dbData, error } = await supabaseClient
-          .from('skicar_data')
-          .select('*')
-          .or(`full_number.ilike.%${query}%,number.ilike.%${query}%,car_name.ilike.%${query}%,name.ilike.%${query}%`);
-        
-        if (error) throw error;
-        data = dbData || [];
-      }
+      if (error) throw error;
 
-      renderVehicles(data);
+      allVehicles = data || [];
+      renderGroupedVehicles(allVehicles);
 
     } catch (err) {
-      console.error('차량 조회 중 오류 발생:', err);
+      console.error('차량 목록 조회 오류:', err);
       vehicleList.innerHTML = `<div class="empty-state">차량 정보를 불러오는 중 오류가 발생했습니다.</div>`;
     }
   }
 
-  // 3. 검색 결과 렌더링 함수 (실제 DB 컬럼 매핑)
-  function renderVehicles(list) {
+  // 3. 첫째 자리(0~9) 기준으로 그룹화하여 렌더링하는 함수
+  function renderGroupedVehicles(list) {
     if (!list || list.length === 0) {
       vehicleList.innerHTML = `<div class="empty-state">검색 결과가 없습니다.</div>`;
       return;
     }
 
-    vehicleList.innerHTML = list.map(item => `
-      <div class="vehicle-card">
-        <div class="vehicle-card-header">
-          <span class="car-number">${item.full_number || item.number || '번호 미등록'}</span>
-          <span class="car-type-badge">${item.car_name || '차종 미기재'}</span>
-        </div>
+    // 0부터 9까지의 숫자로 시작하는 그룹 객체 생성
+    const groups = {};
+    for (let i = 0; i <= 9; i++) {
+      groups[i] = [];
+    }
+    const etcGroup = []; // 숫자로 시작하지 않는 예외 차량
 
-        <div class="vehicle-details">
-          <div>소유자/소속: <span>${item.name || '-'}</span></div>
-          <div>부서/근무지: <span>${item.department || '-'}</span></div>
-          <div>연락처: <span>${item.phone || '-'}</span></div>
-          <div>등록구분: <span>등록차량</span></div>
+    list.forEach(item => {
+      const numStr = (item.number || item.full_number || '').toString().trim();
+      const firstChar = numStr.charAt(0);
+
+      if (groups[firstChar]) {
+        groups[firstChar].push(item);
+      } else {
+        etcGroup.push(item);
+      }
+    });
+
+    let htmlOutput = '';
+
+    // 0부터 9까지 순회하며 그룹별 HTML 생성
+    for (let i = 0; i <= 9; i++) {
+      const groupItems = groups[i];
+      if (groupItems.length > 0) {
+        htmlOutput += `
+          <div class="vehicle-group-section" style="margin-bottom: 24px;">
+            <div style="font-size: 15px; font-weight: 800; color: #38bdf8; margin-bottom: 10px; padding-left: 6px; border-left: 3px solid #38bdf8; line-height: 1;">
+              [ ${i}번 대 ] (${groupItems.length}대)
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 10px;">
+              ${groupItems.map(item => renderCard(item)).join('')}
+            </div>
+          </div>
+        `;
+      }
+    }
+
+    // 기타 그룹 처리
+    if (etcGroup.length > 0) {
+      htmlOutput += `
+        <div class="vehicle-group-section" style="margin-bottom: 24px;">
+          <div style="font-size: 15px; font-weight: 800; color: #94a3b8; margin-bottom: 10px; padding-left: 6px; border-left: 3px solid #94a3b8; line-height: 1;">
+            [ 기타 ] (${etcGroup.length}대)
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 10px;">
+            ${etcGroup.map(item => renderCard(item)).join('')}
+          </div>
         </div>
-      </div>
-    `).join('');
+      `;
+    }
+
+    vehicleList.innerHTML = htmlOutput;
   }
 
-  // 이벤트 연결 (버튼 클릭 및 엔터키)
-  searchBtn.addEventListener('click', searchVehicles);
-  searchInput.addEventListener('keypress', (e) => {
-    if (e.key === 'Enter') {
-      searchVehicles();
-    }
-  });
+  // 4. 개별 카드 HTML 생성 헬퍼 함수
+  function renderCard(item) {
+    return `
+      <div class="vehicle-card" style="background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 16px; padding: 16px; display: flex; flex-direction: column; gap: 10px;">
+        <div class="vehicle-card-header" style="display: flex; justify-content: space-between; align-items: center;">
+          <span class="car-number" style="font-size: 17px; font-weight: 800; color: #38bdf8;">${item.full_number || item.number || '번호 없음'}</span>
+          <span class="car-type-badge" style="font-size: 11px; padding: 4px 8px; border-radius: 6px; background: rgba(255, 255, 255, 0.08); color: #94a3b8; font-weight: 600;">${item.car_name || '차종 미기재'}</span>
+        </div>
+
+        <div class="vehicle-details" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; font-size: 13px; color: #94a3b8; background: rgba(15, 23, 42, 0.4); padding: 10px 12px; border-radius: 10px;">
+          <div>소유자: <span style="color: #f8fafc; font-weight: 600;">${item.name || '-'}</span></div>
+          <div>부서: <span style="color: #f8fafc; font-weight: 600;">${item.department || '-'}</span></div>
+          <div style="grid-column: span 2;">연락처: <span style="color: #f8fafc; font-weight: 600;">${item.phone || '-'}</span></div>
+        </div>
+      </div>
+    `;
+  }
+
+  // 5. 실시간 검색 필터링 이벤트 (엔터 불필요, 타이핑 즉시 반응)
+  if (searchInput) {
+    searchInput.addEventListener('input', (e) => {
+      const keyword = e.target.value.trim();
+
+      if (!keyword) {
+        renderGroupedVehicles(allVehicles);
+        return;
+      }
+
+      const filtered = allVehicles.filter(item => {
+        const num = (item.number || '').toString();
+        const fullNum = (item.full_number || '').toString();
+        return num.includes(keyword) || fullNum.includes(keyword);
+      });
+
+      renderGroupedVehicles(filtered);
+    });
+  }
+
+  // 초기 실행: 접속 시 전체 리스트 로드
+  fetchAllVehicles();
 });
