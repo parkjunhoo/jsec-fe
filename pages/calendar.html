@@ -370,20 +370,19 @@
       <form id="vacationForm">
         <input type="hidden" id="editVacationId">
 
+        <!-- 관리자일 경우에만 나타나는 팀원 선택 영역 -->
+        <div class="form-group" id="targetUserFormGroup" style="display: none;">
+          <label>대상 팀원 선택 (관리자 전용) *</label>
+          <select id="vTargetUserId" required>
+            <!-- JS로 동적 채워짐 -->
+          </select>
+        </div>
+
         <div class="form-group">
           <label>휴무 날짜 *</label>
           <input type="date" id="vDate" required>
         </div>
-
-        <div class="form-group">
-          <label>휴무 구분 *</label>
-          <select id="vLeaveType">
-            <option value="휴무">휴무 (정기오프)</option>
-            <option value="연차">연차</option>
-            <option value="시간차">시간차 (반차/조퇴 등)</option>
-          </select>
-        </div>
-
+        
         <div class="form-group">
           <label>세부 시간 *</label>
           <select id="vTimeDetail">

@@ -64,6 +64,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   const vLeaveType = document.getElementById('vLeaveType');
   const vTimeDetail = document.getElementById('vTimeDetail');
   const vMemo = document.getElementById('vMemo');
+  const targetUserFormGroup = document.getElementById('targetUserFormGroup');
+  const vTargetUserId = document.getElementById('vTargetUserId');
 
   // 필터 요소
   const locationCheckboxes = document.querySelectorAll('input[name="locFilter"]');
@@ -76,11 +78,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   let userMap = {}; 
   let allTeamMembers = []; 
 
-  // 휴무 구분 아이콘 생성 함수
   function getLeaveIcon(leaveType = '') {
     if (leaveType === '연차') return '🌴';
     if (leaveType === '시간차') return '⏳';
-    return '🟢'; // 일반 휴무(정기오프)
+    return '🟢';
   }
 
   async function fetchUsersInfo() {
@@ -104,6 +105,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           if (u.id) userMap[u.id] = userInfo;
         });
 
+        // 1. 캘린더 팀원 필터 칩 생성
         if (userFilterChipsContainer) {
           userFilterChipsContainer.innerHTML = data.map(u => {
             const memberName = u.name || u.username;
@@ -122,6 +124,14 @@ document.addEventListener('DOMContentLoaded', async () => {
             });
           });
         }
+
+        // 2. 관리자용 모달 팀원 선택 드롭다운 생성
+        if (vTargetUserId) {
+          vTargetUserId.innerHTML = data.map(u => {
+            const memberName = u.name || u.username;
+            return `<option value="${u.id}" data-name="${memberName}">${memberName}</option>`;
+          }).join('');
+        }
       }
     } catch (err) {
       console.error('유저 정보 로드 오류:', err);
@@ -135,6 +145,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     vacationForm.reset();
     editVacationId.value = '';
     vDate.value = selectedDateStr || getKSTDateString();
+
+    // 관리자일 경우 대상 팀원 선택창 표시 및 본인으로 기본 설정
+    if (userRole === 'admin') {
+      if (targetUserFormGroup) targetUserFormGroup.style.display = 'block';
+      if (vTargetUserId) vTargetUserId.value = userId;
+    } else {
+      if (targetUserFormGroup) targetUserFormGroup.style.display = 'none';
+    }
+
     vacationModal.classList.add('active');
   }
 
@@ -153,6 +172,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     vLeaveType.value = vacation.leave_type;
     vTimeDetail.value = vacation.time_detail || '종일';
     vMemo.value = vacation.memo || '';
+
+    if (userRole === 'admin') {
+      if (targetUserFormGroup) targetUserFormGroup.style.display = 'block';
+      if (vTargetUserId) vTargetUserId.value = vacation.user_id;
+    } else {
+      if (targetUserFormGroup) targetUserFormGroup.style.display = 'none';
+    }
 
     vacationModal.classList.add('active');
   }
@@ -261,7 +287,6 @@ document.addEventListener('DOMContentLoaded', async () => {
       dayList.sort((a, b) => a - b);
       const datesString = dayList.length > 0 ? dayList.join(', ') : '사용일 없음';
 
-      // ★ 게이지 최대치 기준 5일 설정 (5일 기준 백분율 계산, 5일 초과 시 100% 유지)
       const usageCount = memberVacations.length;
       const gaugePercent = Math.min(Math.round((usageCount / 5) * 100), 100);
 
@@ -272,7 +297,6 @@ document.addEventListener('DOMContentLoaded', async () => {
               <span style="width: 8px; height: 8px; border-radius: 50%; background: ${mColor}; display: inline-block;"></span>
               ${mName}
             </div>
-            <!-- 총 사용일수를 더 크고 눈에 띄게 강조 -->
             <div style="display: flex; align-items: center; gap: 6px;">
               <div style="background: rgba(56,189,248,0.15); border: 1px solid rgba(56,189,248,0.3); padding: 2px 8px; border-radius: 8px; font-size: 13px; font-weight: 800; color: var(--primary);">
                 총 <span style="font-size: 15px;">${usageCount}</span>일
@@ -280,12 +304,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             </div>
           </div>
 
-          <!-- 상세 내역 뱃지 -->
           <div class="stat-badges" style="font-size: 11px; color: var(--text-sub);">
             <span>휴무 ${offCount}</span> • <span>연차 ${annualCount}</span> ${timeCount > 0 ? `• <span>시간차 ${timeCount}</span>` : ''}
           </div>
           
-          <!-- 기준치 5일 기준 프로그레스 게이지바 (초과 시 100% 채워짐) -->
           <div style="width: 100%; background: rgba(255,255,255,0.08); height: 7px; border-radius: 4px; overflow: hidden;">
             <div style="width: ${gaugePercent}%; background: ${usageCount > 5 ? '#f87171' : mColor}; height: 100%; border-radius: 4px; transition: width 0.4s ease;"></div>
           </div>
@@ -345,14 +367,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       let dayEvents = allVacations.filter(v => v.date === dateString);
 
-      // 1. 근무지/주야간 필터 적용
       dayEvents = dayEvents.filter(ev => {
         const userInfo = userMap[ev.user_id] || userMap[ev.username] || { work_location: '' };
         const userLoc = userInfo.work_location;
         return checkedLocations.some(filterWord => userLoc.includes(filterWord));
       });
 
-      // 2. 팀원별 필터 적용
       dayEvents = dayEvents.filter(ev => {
         return checkedUsers.includes(ev.username);
       });
@@ -404,7 +424,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
-  // 근무지 필터 이벤트 바인딩
   locationCheckboxes.forEach(cb => {
     cb.addEventListener('change', () => {
       renderCalendarGrid();
@@ -412,7 +431,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   });
 
-  // 근무지 전체 선택/해제 버튼
   if (selectAllLocBtn) {
     selectAllLocBtn.addEventListener('click', () => {
       const allChecked = Array.from(locationCheckboxes).every(cb => cb.checked);
@@ -423,7 +441,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
-  // 팀원 전체 선택/해제 버튼
   if (selectAllUserBtn) {
     selectAllUserBtn.addEventListener('click', () => {
       const userCheckboxes = document.querySelectorAll('input[name="userFilter"]');
@@ -444,6 +461,18 @@ document.addEventListener('DOMContentLoaded', async () => {
       const time_detail = vTimeDetail.value;
       const memo = vMemo.value.trim();
 
+      // 대상 사용자 ID 및 이름 결정 (관리자면 선택한 유저, 일반 회원이면 본인)
+      let targetUserId = userId;
+      let targetUserName = userName;
+
+      if (userRole === 'admin' && vTargetUserId && vTargetUserId.value) {
+        targetUserId = vTargetUserId.value;
+        const selectedOption = vTargetUserId.options[vTargetUserId.selectedIndex];
+        if (selectedOption) {
+          targetUserName = selectedOption.getAttribute('data-name');
+        }
+      }
+
       if (!date) {
         alert('날짜를 선택해 주세요.');
         return;
@@ -454,9 +483,16 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       try {
         if (vacId) {
+          const updatePayload = { date, leave_type, time_detail, memo };
+          // 관리자인 경우 수정 시 대상 유저도 변경 반영 가능하도록 처리
+          if (userRole === 'admin') {
+            updatePayload.user_id = targetUserId;
+            updatePayload.username = targetUserName;
+          }
+
           const { error } = await supabaseClient
             .from('vacations')
-            .update({ date, leave_type, time_detail, memo })
+            .update(updatePayload)
             .eq('id', vacId);
 
           if (error) throw error;
@@ -464,7 +500,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         } else {
           const { error } = await supabaseClient
             .from('vacations')
-            .insert([{ user_id: userId, username: userName, date, leave_type, time_detail, memo }]);
+            .insert([{ 
+              user_id: targetUserId, 
+              username: targetUserName, 
+              date, 
+              leave_type, 
+              time_detail, 
+              memo 
+            }]);
 
           if (error) throw error;
           alert('휴무 일정이 등록되었습니다.');
