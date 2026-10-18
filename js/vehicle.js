@@ -10,7 +10,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const searchBtn = document.getElementById('searchBtn');
   const vehicleList = document.getElementById('vehicleList');
 
-  // 백엔드 Workers API URL 또는 Supabase 다이렉트 조회
+  // 백엔드 Workers API URL (만약 백엔드 API를 쓰신다면 유지, 아니면 Supabase 직접 조회가 메인으로 동작)
   const WORKER_API_URL = 'https://jsec-serverless.adobephotoshop.workers.dev/api/vehicles';
 
   // 2. 차량 검색 실행 함수
@@ -18,27 +18,31 @@ document.addEventListener('DOMContentLoaded', async () => {
     const query = searchInput.value.trim();
 
     if (!query) {
-      vehicleList.innerHTML = `<div class="empty-state">차량번호를 입력해 주세요.</div>`;
+      vehicleList.innerHTML = `<div class="empty-state">차량번호 또는 소유자 이름을 입력해 주세요.</div>`;
       return;
     }
 
     vehicleList.innerHTML = `<div class="empty-state">차량 정보 조회 중...</div>`;
 
     try {
-      // Worker API 호출 (또는 Supabase skicar_data 직접 조회 fallback)
       let data = [];
       
-      // 1차: 백엔드 Worker API 호출
-      const response = await fetch(`${WORKER_API_URL}?query=${encodeURIComponent(query)}`);
-      
-      if (response.ok) {
-        data = await response.json();
-      } else {
-        // Fallback: 백엔드 API 실패 시 Supabase skicar_data 직접 조회
+      // 1차: 백엔드 Worker API 호출 시도
+      try {
+        const response = await fetch(`${WORKER_API_URL}?query=${encodeURIComponent(query)}`);
+        if (response.ok) {
+          data = await response.json();
+        }
+      } catch (e) {
+        console.warn('Worker API 호출 실패, Supabase 직접 조회로 전환합니다.');
+      }
+
+      // 2차: 데이터가 없거나 API 실패 시 Supabase skicar_data 직접 조회 (.or 조건으로 실제 컬럼 검색)
+      if (!data || data.length === 0) {
         const { data: dbData, error } = await supabaseClient
           .from('skicar_data')
           .select('*')
-          .ilike('car_number', `%${query}%`);
+          .or(`full_number.ilike.%${query}%,number.ilike.%${query}%,car_name.ilike.%${query}%,name.ilike.%${query}%`);
         
         if (error) throw error;
         data = dbData || [];
@@ -52,7 +56,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
-  // 3. 검색 결과 렌더링 함수
+  // 3. 검색 결과 렌더링 함수 (실제 DB 컬럼 매핑)
   function renderVehicles(list) {
     if (!list || list.length === 0) {
       vehicleList.innerHTML = `<div class="empty-state">검색 결과가 없습니다.</div>`;
@@ -62,15 +66,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     vehicleList.innerHTML = list.map(item => `
       <div class="vehicle-card">
         <div class="vehicle-card-header">
-          <span class="car-number">${item.car_number || item.carno || '번호 미등록'}</span>
-          <span class="car-type-badge">${item.car_model || item.model || '차종 미기재'}</span>
+          <span class="car-number">${item.full_number || item.number || '번호 미등록'}</span>
+          <span class="car-type-badge">${item.car_name || '차종 미기재'}</span>
         </div>
 
         <div class="vehicle-details">
-          <div>소유자/소속: <span>${item.owner || item.name || '-'}</span></div>
-          <div>부서/근무지: <span>${item.department || item.dept || '-'}</span></div>
+          <div>소유자/소속: <span>${item.name || '-'}</span></div>
+          <div>부서/근무지: <span>${item.department || '-'}</span></div>
           <div>연락처: <span>${item.phone || '-'}</span></div>
-          <div>등록구분: <span>${item.type || '등록차량'}</span></div>
+          <div>등록구분: <span>등록차량</span></div>
         </div>
       </div>
     `).join('');
