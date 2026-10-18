@@ -78,10 +78,12 @@ document.addEventListener('DOMContentLoaded', async () => {
   let userMap = {}; 
   let allTeamMembers = []; 
 
-  function getLeaveIcon(leaveType = '') {
+  // ★ 수정: leaveType에 따라 아이콘 또는 색상 점 HTML을 반환하는 함수
+  function getLeaveIndicator(leaveType = '', userColor = '#38bdf8') {
     if (leaveType === '연차') return '🌴';
     if (leaveType === '시간차') return '⏳';
-    return '🟢';
+    // 일반 휴무인 경우 userColor로 채워진 작은 동그라미(Dot) 반환
+    return `<span style="display: inline-block; width: 8px; height: 8px; background-color: ${userColor}; border-radius: 50%; margin-right: 2px; vertical-align: middle;"></span>`;
   }
 
   async function fetchUsersInfo() {
@@ -125,7 +127,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           });
         }
 
-        // 2. 관리자용 모달 팀원 선택 드롭다운 생성 (요소가 있을 때만)
+        // 2. 관리자용 모달 팀원 선택 드롭다운 생성
         if (vTargetUserId) {
           vTargetUserId.innerHTML = data.map(u => {
             const memberName = u.name || u.username;
@@ -395,11 +397,13 @@ document.addEventListener('DOMContentLoaded', async () => {
             ${dayEvents.map(ev => {
               const userInfo = userMap[ev.user_id] || userMap[ev.username] || { color: '#38bdf8' };
               const userColor = userInfo.color;
-              const leaveIcon = getLeaveIcon(ev.leave_type);
+              
+              // ★ 수정: getLeaveIndicator 호출 시 userColor 전달
+              const leaveIndicator = getLeaveIndicator(ev.leave_type, userColor);
               
               return `
                 <div class="event-pill ${ev.leave_type}" data-id="${ev.id}" title="${ev.username} (${ev.leave_type} -${ev.time_detail})" style="border-left: 3px solid ${userColor}; background:${userColor}20; color: #fff;">
-                  ${leaveIcon}${ev.username}
+                  ${leaveIndicator}${ev.username}
                 </div>
               `;
             }).join('')}
