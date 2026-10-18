@@ -1,5 +1,4 @@
 document.addEventListener('DOMContentLoaded', async () => {
-  // 1. 세션 확인
   const { data: { session } } = await supabaseClient.auth.getSession();
   if (!session) {
     window.location.href = '/index.html';
@@ -10,7 +9,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   let userRole = 'user';
   let userName = '팀원';
 
-  // 내 프로필 정보(이름, 권한) 조회
   try {
     const { data: profile } = await supabaseClient
       .from('users')
@@ -26,36 +24,65 @@ document.addEventListener('DOMContentLoaded', async () => {
     console.error('프로필 조회 오류:', err);
   }
 
-  const vacationList = document.getElementById('vacationList');
+  const calendarGrid = document.getElementById('calendarGrid');
   const openModalBtn = document.getElementById('openModalBtn');
   const closeModalBtn = document.getElementById('closeModalBtn');
   const vacationModal = document.getElementById('vacationModal');
   const vacationForm = document.getElementById('vacationForm');
-  
+  const modalTitle = document.getElementById('modalTitle');
+  const submitBtn = document.getElementById('submitBtn');
+  const deleteBtn = document.getElementById('deleteBtn');
+
   const prevMonthBtn = document.getElementById('prevMonthBtn');
   const nextMonthBtn = document.getElementById('nextMonthBtn');
   const currentMonthDisplay = document.getElementById('currentMonthDisplay');
 
+  const editVacationId = document.getElementById('editVacationId');
   const vDate = document.getElementById('vDate');
   const vLeaveType = document.getElementById('vLeaveType');
   const vTimeDetail = document.getElementById('vTimeDetail');
   const vMemo = document.getElementById('vMemo');
 
-  // 현재 기준 연/월 관리
   let currentDate = new Date();
   let allVacations = [];
 
-  // 모달 제어
-  function openModal() {
-    vDate.value = new Date().toISOString().split('T')[0];
+  // 모달 제어 함수
+  function openAddModal(selectedDateStr = '') {
+    modalTitle.textContent = '휴무 일정 등록';
+    submitBtn.textContent = '등록 완료';
+    deleteBtn.style.display = 'none';
+    vacationForm.reset();
+    editVacationId.value = '';
+    vDate.value = selectedDateStr || new Date().toISOString().split('T')[0];
     vacationModal.classList.add('active');
   }
+
+  function openEditModal(vacation) {
+    // 본인이 작성했거나 관리자일 때만 수정 가능
+    if (vacation.user_id !== userId && userRole !== 'admin') {
+      alert('본인이 등록한 일정만 수정할 수 있습니다.');
+      return;
+    }
+
+    modalTitle.textContent = '휴무 일정 수정 / 삭제';
+    submitBtn.textContent = '수정 완료';
+    deleteBtn.style.display = 'block';
+
+    editVacationId.value = vacation.id;
+    vDate.value = vacation.date;
+    vLeaveType.value = vacation.leave_type;
+    vTimeDetail.value = vacation.time_detail || '종일';
+    vMemo.value = vacation.memo || '';
+
+    vacationModal.classList.add('active');
+  }
+
   function closeModal() {
     vacationModal.classList.remove('active');
     vacationForm.reset();
   }
 
-  if (openModalBtn) openModalBtn.addEventListener('click', openModal);
+  if (openModalBtn) openModalBtn.addEventListener('click', () => openAddModal());
   if (closeModalBtn) closeModalBtn.addEventListener('click', closeModal);
   if (vacationModal) {
     vacationModal.addEventListener('click', (e) => {
@@ -63,7 +90,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
-  // 휴무 구분 변경 시 세부시간 옵션 제어
   vLeaveType.addEventListener('change', (e) => {
     if (e.target.value === '연차' || e.target.value === '휴무') {
       vTimeDetail.innerHTML = '<option value="종일">종일</option>';
@@ -76,28 +102,24 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
-  // 월 이동 버튼 이벤트
   prevMonthBtn.addEventListener('click', () => {
     currentDate.setMonth(currentDate.getMonth() - 1);
-    fetchVacations();
+    fetchMonthData();
   });
   nextMonthBtn.addEventListener('click', () => {
     currentDate.setMonth(currentDate.getMonth() + 1);
-    fetchVacations();
+    fetchMonthData();
   });
 
-  // 2. 휴무 데이터 불러오기
-  async function fetchVacations() {
+  // 데이터 불러오기
+  async function fetchMonthData() {
     const year = currentDate.getFullYear();
-    const month = currentDate.getMonth(); // 0~11
+    const month = currentDate.getMonth();
 
     currentMonthDisplay.textContent = `${year}년 ${month + 1}월`;
 
-    // 해당 월의 시작일과 종료일 계산
     const startDate = new Date(year, month, 1).toISOString().split('T')[0];
     const endDate = new Date(year, month + 1, 0).toISOString().split('T')[0];
-
-    vacationList.innerHTML = `<div class="empty-state">일정을 불러오는 중...</div>`;
 
     try {
       const { data, error } = await supabaseClient
@@ -108,69 +130,98 @@ document.addEventListener('DOMContentLoaded', async () => {
         .order('date', { ascending: true });
 
       if (error) throw error;
-
       allVacations = data || [];
-      renderVacations(allVacations);
-
+      renderCalendarGrid();
     } catch (err) {
-      console.error('휴무 목록 조회 오류:', err);
-      vacationList.innerHTML = `<div class="empty-state">데이터를 불러오는 중 오류가 발생했습니다.</div>`;
+      console.error('휴무 데이터 조회 오류:', err);
     }
   }
 
-  // 3. 휴무 카드 렌더링
-  function renderVacations(list) {
-    if (!list || list.length === 0) {
-      vacationList.innerHTML = `<div class="empty-state">이번 달 등록된 휴무 일정이 없습니다.</div>`;
-      return;
+  // 달력 그리드 렌더링 함수
+  function renderCalendarGrid() {
+    const year = currentDate.getFullYear();
+    const month = currentDate.getMonth();
+
+    const firstDayIndex = new Date(year, month, 1).getDay(); // 0(일)~6(토)
+    const lastDay = new Date(year, month + 1, 0).getDate();
+    const prevLastDay = new Date(year, month, 0).getDate();
+
+    const todayStr = new Date().toISOString().split('T')[0];
+
+    let gridHTML = `
+      <div class="day-name">일</div>
+      <div class="day-name">월</div>
+      <div class="day-name">화</div>
+      <div class="day-name">수</div>
+      <div class="day-name">목</div>
+      <div class="day-name">금</div>
+      <div class="day-name">토</div>
+    `;
+
+    // 1. 이전 달 남은 날짜 공백 채우기
+    for (let i = firstDayIndex; i > 0; i--) {
+      const dayNum = prevLastDay - i + 1;
+      gridHTML += `<div class="calendar-cell other-month"><div class="cell-date">${dayNum}</div></div>`;
     }
 
-    vacationList.innerHTML = list.map(item => {
-      // 삭제 권한: 본인 글이거나 관리자(admin)인 경우 허용
-      const canDelete = (item.user_id === userId || userRole === 'admin');
+    // 2. 이번 달 날짜 채우기
+    for (let i = 1; i <= lastDay; i++) {
+      const monthStr = String(month + 1).padStart(2, '0');
+      const dayStr = String(i).padStart(2, '0');
+      const dateString = `${year}-${monthStr}-${dayStr}`;
+      const isToday = (dateString === todayStr);
 
-      return `
-        <div class="vacation-card">
-          <div class="vacation-info">
-            <span class="vacation-user">${item.username}</span>
-            <span class="vacation-date">📅 ${item.date} ${item.memo ? `(${item.memo})` : ''}</span>
-          </div>
-          <div class="vacation-badges">
-            <span class="type-badge ${item.leave_type}">${item.leave_type}</span>
-            <span class="time-badge">${item.time_detail || '종일'}</span>
-            ${canDelete ? `<button type="button" class="btn-delete-vacation" data-id="${item.id}">삭제</button>` : ''}
+      // 해당 날짜의 휴무일 필터링
+      const dayEvents = allVacations.filter(v => v.date === dateString);
+
+      gridHTML += `
+        <div class="calendar-cell ${isToday ? 'today' : ''}" data-date="${dateString}">
+          <div class="cell-date">${i}</div>
+          <div class="cell-events">
+            ${dayEvents.map(ev => `
+              <div class="event-pill ${ev.leave_type}" data-id="${ev.id}" title="${ev.username}:${ev.leave_type}">
+                <b>${ev.username}</b> (${ev.leave_type})
+              </div>
+            `).join('')}
           </div>
         </div>
       `;
-    }).join('');
+    }
 
-    // 삭제 버튼 이벤트 바인딩
-    vacationList.querySelectorAll('.btn-delete-vacation').forEach(btn => {
-      btn.addEventListener('click', async (e) => {
-        const vacationId = e.target.getAttribute('data-id');
-        if (!confirm('정말 해당 휴무 일정을 삭제하시겠습니까?')) return;
+    // 3. 다음 달 여분 칸 채우기 (총 35칸 또는 42칸 맞추기)
+    const totalCells = firstDayIndex + lastDay;
+    const nextDaysCount = totalCells <= 35 ? (35 - totalCells) : (42 - totalCells);
+    for (let i = 1; i <= nextDaysCount; i++) {
+      gridHTML += `<div class="calendar-cell other-month"><div class="cell-date">${i}</div></div>`;
+    }
 
-        try {
-          const { error } = await supabaseClient
-            .from('vacations')
-            .delete()
-            .eq('id', vacationId);
+    calendarGrid.innerHTML = gridHTML;
 
-          if (error) throw error;
-          alert('휴무 일정이 삭제되었습니다.');
-          fetchVacations();
-        } catch (err) {
-          alert(`삭제 실패: ${err.message}`);
+    // 날짜 칸 클릭 시 해당 날짜로 등록 모달 열기
+    calendarGrid.querySelectorAll('.calendar-cell').forEach(cell => {
+      const dateStr = cell.getAttribute('data-date');
+      if (!dateStr) return;
+
+      cell.addEventListener('click', (e) => {
+        // 만약 이벤트 칩을 눌렀다면 수정 모달 열기
+        const pill = e.target.closest('.event-pill');
+        if (pill) {
+          const evId = pill.getAttribute('data-id');
+          const targetEv = allVacations.find(v => v.id == evId);
+          if (targetEv) openEditModal(targetEv);
+          return;
         }
+        // 빈 칸을 눌렀다면 해당 날짜로 신규 등록 모달 열기
+        openAddModal(dateStr);
       });
     });
   }
 
-  // 4. 휴무 등록 폼 제출 (INSERT)
+  // 등록 및 수정 제출 (INSERT / UPDATE)
   if (vacationForm) {
     vacationForm.addEventListener('submit', async (e) => {
       e.preventDefault();
-
+      const vacId = editVacationId.value;
       const date = vDate.value;
       const leave_type = vLeaveType.value;
       const time_detail = vTimeDetail.value;
@@ -181,37 +232,63 @@ document.addEventListener('DOMContentLoaded', async () => {
         return;
       }
 
-      const submitBtn = document.getElementById('submitBtn');
       submitBtn.disabled = true;
-      submitBtn.textContent = '등록 중...';
+      submitBtn.textContent = '처리 중...';
 
       try {
-        const { error } = await supabaseClient
-          .from('vacations')
-          .insert([{
-            user_id: userId,
-            username: userName,
-            date: date,
-            leave_type: leave_type,
-            time_detail: time_detail,
-            memo: memo
-          }]);
+        if (vacId) {
+          // 수정 (UPDATE)
+          const { error } = await supabaseClient
+            .from('vacations')
+            .update({ date, leave_type, time_detail, memo })
+            .eq('id', vacId);
 
-        if (error) throw error;
+          if (error) throw error;
+          alert('휴무 일정이 수정되었습니다.');
+        } else {
+          // 등록 (INSERT)
+          const { error } = await supabaseClient
+            .from('vacations')
+            .insert([{ user_id: userId, username: userName, date, leave_type, time_detail, memo }]);
 
-        alert('휴무 일정이 성공적으로 등록되었습니다.');
+          if (error) throw error;
+          alert('휴무 일정이 등록되었습니다.');
+        }
+
         closeModal();
-        fetchVacations();
-
+        fetchMonthData();
       } catch (err) {
-        alert(`등록 오류: ${err.message}`);
+        alert(`오류: ${err.message}`);
       } finally {
         submitBtn.disabled = false;
-        submitBtn.textContent = '등록 완료';
       }
     });
   }
 
-  // 초기 실행
-  fetchVacations();
+  // 삭제 (DELETE)
+  if (deleteBtn) {
+    deleteBtn.addEventListener('click', async () => {
+      const vacId = editVacationId.value;
+      if (!confirm('정말 이 휴무 일정을 삭제하시겠습니까?')) return;
+
+      deleteBtn.disabled = true;
+      try {
+        const { error } = await supabaseClient
+          .from('vacations')
+          .delete()
+          .eq('id', vacId);
+
+        if (error) throw error;
+        alert('삭제되었습니다.');
+        closeModal();
+        fetchMonthData();
+      } catch (err) {
+        alert(`삭제 실패: ${err.message}`);
+      } finally {
+        deleteBtn.disabled = false;
+      }
+    });
+  }
+
+  fetchMonthData();
 });
