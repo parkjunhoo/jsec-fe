@@ -300,7 +300,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       const gaugePercent = Math.min(Math.round((usageCount / 5) * 100), 100);
 
       return `
-        <div class="stat-card" style="border-left: 3px solid ${mColor};">
+        <div class="stat-card">
           <div class="stat-card-top">
             <div class="stat-name">
               <span style="width: 8px; height: 8px; border-radius: 50%; background: ${mColor}; display: inline-block;"></span>
