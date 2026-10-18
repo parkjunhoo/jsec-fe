@@ -237,11 +237,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     let totalMonthCount = 0;
 
-    // 이번 달 전체 일수 (예: 6월이면 30일) 계산
-    const year = currentDate.getFullYear();
-    const month = currentDate.getMonth();
-    const totalDaysInMonth = new Date(year, month + 1, 0).getDate();
-
     statsGridContainer.innerHTML = targetMembers.map(member => {
       const mName = member.name || member.username;
       const mColor = member.color || '#38bdf8';
@@ -266,9 +261,9 @@ document.addEventListener('DOMContentLoaded', async () => {
       dayList.sort((a, b) => a - b);
       const datesString = dayList.length > 0 ? dayList.join(', ') : '사용일 없음';
 
-      // 게이지바 퍼센티지 계산 (한 달 기준 최대 15일을 만점으로 설정하거나 비율 계산)
+      // ★ 게이지 최대치 기준 5일 설정 (5일 기준 백분율 계산, 5일 초과 시 100% 유지)
       const usageCount = memberVacations.length;
-      const gaugePercent = Math.min(Math.round((usageCount / 15) * 100), 100);
+      const gaugePercent = Math.min(Math.round((usageCount / 5) * 100), 100);
 
       return `
         <div class="stat-card" style="border-left: 3px solid ${mColor};">
@@ -277,17 +272,22 @@ document.addEventListener('DOMContentLoaded', async () => {
               <span style="width: 8px; height: 8px; border-radius: 50%; background: ${mColor}; display: inline-block;"></span>
               ${mName}
             </div>
-            <div class="stat-badges">
-              <div class="stat-badge-item">휴무 <span>${offCount}</span></div>
-              <div class="stat-badge-item">연차 <span>${annualCount}</span></div>
-              ${timeCount > 0 ? `<div class="stat-badge-item">시간차 <span>${timeCount}</span></div>` : ''}
-              <div class="stat-badge-item" style="background: rgba(56,189,248,0.1); border-color: rgba(56,189,248,0.3);">총 <span>${usageCount}일</span></div>
+            <!-- 총 사용일수를 더 크고 눈에 띄게 강조 -->
+            <div style="display: flex; align-items: center; gap: 6px;">
+              <div style="background: rgba(56,189,248,0.15); border: 1px solid rgba(56,189,248,0.3); padding: 2px 8px; border-radius: 8px; font-size: 13px; font-weight: 800; color: var(--primary);">
+                총 <span style="font-size: 15px;">${usageCount}</span>일
+              </div>
             </div>
           </div>
+
+          <!-- 상세 내역 뱃지 -->
+          <div class="stat-badges" style="font-size: 11px; color: var(--text-sub);">
+            <span>휴무 ${offCount}</span> • <span>연차 ${annualCount}</span> ${timeCount > 0 ? `• <span>시간차 ${timeCount}</span>` : ''}
+          </div>
           
-          <!-- 시각적 프로그레스 게이지바 영역 -->
-          <div style="width: 100%; background: rgba(255,255,255,0.08); height: 6px; border-radius: 3px; overflow: hidden; margin-top: 2px;">
-            <div style="width: ${gaugePercent}%; background: ${mColor}; height: 100%; border-radius: 3px; transition: width 0.4s ease;"></div>
+          <!-- 기준치 5일 기준 프로그레스 게이지바 (초과 시 100% 채워짐) -->
+          <div style="width: 100%; background: rgba(255,255,255,0.08); height: 7px; border-radius: 4px; overflow: hidden;">
+            <div style="width: ${gaugePercent}%; background: ${usageCount > 5 ? '#f87171' : mColor}; height: 100%; border-radius: 4px; transition: width 0.4s ease;"></div>
           </div>
 
           <div class="stat-dates">
