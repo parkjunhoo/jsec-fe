@@ -10,6 +10,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   const userListContainer = document.getElementById('userList');
   const addUserBtn = document.getElementById('addUserBtn');
   const totalUserCountEl = document.getElementById('totalUserCount');
+  const sortSelect = document.getElementById('sortSelect');
+  const locationCheckboxes = document.querySelectorAll('input[name="locFilter"]');
 
   // 모달 관련 요소
   const userModal = document.getElementById('userModal');
@@ -30,8 +32,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   const newHireDate = document.getElementById('newHireDate');
   const newAnnualBaseDate = document.getElementById('newAnnualBaseDate');
   const newPhone = document.getElementById('newPhone');
-  const newColor = document.getElementById('newColor');         // 💡 추가된 컬러 피커 요소
-  const colorHexText = document.getElementById('colorHexText'); // 💡 컬러 텍스트 표시 요소 (선택사항)
+  const newColor = document.getElementById('newColor');
+  const colorHexText = document.getElementById('colorHexText');
 
   // API 엔드포인트 설정
   const WORKER_LIST_USERS_API = 'https://jsec-serverless.adobephotoshop.workers.dev/api/users/list';
@@ -101,13 +103,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     newAnnualBaseDate.value = user.annual_base_date ? user.annual_base_date.split('T')[0] : '';
     newPhone.value = user.phone || '';
     
-    // 💡 컬러 값 세팅
     const userColor = user.color || '#38bdf8';
     if (newColor) newColor.value = userColor;
     if (colorHexText) colorHexText.textContent = userColor;
 
     newPassword.value = '';
-
     userModal.classList.add('active');
   }
 
@@ -136,17 +136,66 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       allUsers = data || [];
       if (totalUserCountEl) totalUserCountEl.textContent = allUsers.length;
-      renderUsers(allUsers);
+      
+      // 데이터 로드 후 필터/정렬 적용하여 렌더링
+      filterAndRenderUsers();
     } catch (err) {
       console.error('회원 목록 조회 에러:', err);
       userListContainer.innerHTML = `<div class="empty-state">${err.message}</div>`;
     }
   }
 
-  // 4. 회원 목록 카드 렌더링 (관리자일 때만 수정 버튼 노출 + 컬러 정보 표시)
+  // 4. 필터 및 정렬 통합 처리 함수
+  function filterAndRenderUsers() {
+    const keyword = searchInput ? searchInput.value.toLowerCase().trim() : '';
+    
+    // 체크된 필터 키워드들 수집
+    const checkedLocations = Array.from(locationCheckboxes)
+      .filter(cb => cb.checked)
+      .map(cb => cb.value);
+
+    // 필터링 적용
+    let result = allUsers.filter(u => {
+      const name = (u.name || u.username || '').toLowerCase();
+      const location = (u.work_location || '').toLowerCase();
+
+      // 검색어 매칭 (이름 또는 근무지)
+      const matchesKeyword = !keyword || name.includes(keyword) || location.includes(keyword);
+
+      // 체크박스 매칭 (체크된 항목 중 하나라도 근무지 문자열에 포함되면 통과)
+      // 만약 체크된 게 하나도 없다면 결과 없음 처리를 위해 false
+      if (checkedLocations.length === 0) return false;
+      const matchesCheckbox = checkedLocations.some(filterWord => location.includes(filterWord.toLowerCase()));
+
+      return matchesKeyword && matchesCheckbox;
+    });
+
+    // 정렬 적용
+    const sortVal = sortSelect ? sortSelect.value : 'name_asc';
+    result.sort((a, b) => {
+      if (sortVal === 'name_asc') {
+        const nameA = a.name || a.username || '';
+        const nameB = b.name || b.username || '';
+        return nameA.localeCompare(nameB);
+      } else if (sortVal === 'hire_desc') {
+        const dateA = a.hire_date ? new Date(a.hire_date) : new Date(0);
+        const dateB = b.hire_date ? new Date(b.hire_date) : new Date(0);
+        return dateB - dateA; // 최신순
+      } else if (sortVal === 'hire_asc') {
+        const dateA = a.hire_date ? new Date(a.hire_date) : new Date(0);
+        const dateB = b.hire_date ? new Date(b.hire_date) : new Date(0);
+        return dateA - dateB; // 오래된순
+      }
+      return 0;
+    });
+
+    renderUsers(result);
+  }
+
+  // 5. 회원 목록 카드 렌더링
   function renderUsers(users) {
     if (!users || users.length === 0) {
-      userListContainer.innerHTML = `<div class="empty-state">조회된 회원이 없습니다.</div>`;
+      userListContainer.innerHTML = `<div class="empty-state">조건에 일치하는 회원이 없습니다.</div>`;
       return;
     }
 
@@ -172,8 +221,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             <div>계약형태: <span>${user.contract_type || '-'}</span></div>
             <div>연락처: <span>${user.phone || '-'}</span></div>
             <div>입사일: <span>${user.hire_date ? user.hire_date.split('T')[0] : '-'}</span></div>
-            <!-- 💡 조회 화면에 컬러 코드 표시 -->
-            <div>컬러: <span style="color: ${userColor}; font-weight: bold;">${userColor}</span></div>
           </div>
         </div>
       `;
@@ -191,18 +238,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
-  // 5. 검색 기능
-  if (searchInput) {
-    searchInput.addEventListener('input', (e) => {
-      const keyword = e.target.value.toLowerCase().trim();
-      const filtered = allUsers.filter(u => 
-        (u.name && u.name.toLowerCase().includes(keyword)) ||
-        (u.username && u.username.toLowerCase().includes(keyword)) ||
-        (u.work_location && u.work_location.toLowerCase().includes(keyword))
-      );
-      renderUsers(filtered);
-    });
-  }
+  // 이벤트 리스너 연결 (검색창, 정렬 변경, 체크박스 변경 시 실시간 필터/정렬 실행)
+  if (searchInput) searchInput.addEventListener('input', filterAndRenderUsers);
+  if (sortSelect) sortSelect.addEventListener('change', filterAndRenderUsers);
+  locationCheckboxes.forEach(cb => {
+    cb.addEventListener('change', filterAndRenderUsers);
+  });
 
   // 6. 회원 등록 및 수정 폼 제출 이벤트 (C / U)
   if (userForm) {
@@ -223,14 +264,13 @@ document.addEventListener('DOMContentLoaded', async () => {
       const hireDate = newHireDate.value;
       const annualBaseDate = newAnnualBaseDate.value;
       const phone = newPhone.value.trim();
-      const color = newColor ? newColor.value : '#38bdf8'; // 💡 선택한 컬러 값 가져오기
+      const color = newColor ? newColor.value : '#38bdf8';
 
       submitUserBtn.textContent = userId ? '수정 중...' : '등록 중...';
       submitUserBtn.disabled = true;
 
       try {
         if (userId) {
-          // --- 수정 로직 (Supabase users 테이블 직접 업데이트) ---
           const updateData = {
             name: username,
             role: role,
@@ -239,7 +279,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             hire_date: hireDate || null,
             annual_base_date: annualBaseDate || null,
             phone: phone,
-            color: color // 💡 컬러 값 업데이트 반영
+            color: color
           };
 
           const { error } = await supabaseClient
@@ -251,7 +291,6 @@ document.addEventListener('DOMContentLoaded', async () => {
           alert('회원 정보가 성공적으로 수정되었습니다.');
 
         } else {
-          // --- 등록 로직 (Cloudflare Worker API 활용) ---
           const response = await fetch(WORKER_CREATE_USER_API, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -260,12 +299,12 @@ document.addEventListener('DOMContentLoaded', async () => {
               name: username,
               password: password,
               role: role,
-              contract_type: contractType,
+              contract_type: contract_type,
               work_location: workLocation,
               hire_date: hireDate || null,
               annual_base_date: annualBaseDate || null,
               phone: phone,
-              color: color // 💡 신규 등록 시 컬러 값 전달
+              color: color
             })
           });
 
@@ -275,7 +314,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
 
         closeModal();
-        fetchUsers(); // 목록 새로고침
+        fetchUsers();
 
       } catch (err) {
         alert(`오류: ${err.message}`);
