@@ -56,6 +56,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   const prevMonthBtn = document.getElementById('prevMonthBtn');
   const nextMonthBtn = document.getElementById('nextMonthBtn');
   const currentMonthDisplay = document.getElementById('currentMonthDisplay');
+  const totalMonthVacationCount = document.getElementById('totalMonthVacationCount');
+  const statsGridContainer = document.getElementById('statsGridContainer');
 
   const editVacationId = document.getElementById('editVacationId');
   const vDate = document.getElementById('vDate');
@@ -63,32 +65,78 @@ document.addEventListener('DOMContentLoaded', async () => {
   const vTimeDetail = document.getElementById('vTimeDetail');
   const vMemo = document.getElementById('vMemo');
 
-  // 필터 및 정렬 요소
-  const sortSelect = document.getElementById('sortSelect');
+  // 필터 요소
   const locationCheckboxes = document.querySelectorAll('input[name="locFilter"]');
-  const selectAllBtn = document.getElementById('selectAllBtn');
+  const selectAllLocBtn = document.getElementById('selectAllLocBtn');
+  const userFilterChipsContainer = document.getElementById('userFilterChipsContainer');
+  const selectAllUserBtn = document.getElementById('selectAllUserBtn');
 
   let currentDate = new Date();
   let allVacations = [];
-  let userMap = {}; // 유저별 정보(근무지, 컬러) 매핑 객체
+  let userMap = {}; 
+  let allTeamMembers = []; 
 
-  // 1. users 테이블에서 전체 팀원들의 근무지 및 고유 color 정보 가져오기
+  // 근무지에 따른 위치/주야간 아이콘 및 휴무 구분 아이콘 생성 헬퍼 함수
+  function getEventIcons(workLocation = '', leaveType = '') {
+    const loc = workLocation.toLowerCase();
+    let placeIcon = '';
+    let timeIcon = '';
+    let leaveIcon = '';
+
+    if (loc.includes('스키장')) placeIcon = '⛷️';
+    else if (loc.includes('골프장')) placeIcon = '⛳';
+    else if (loc.includes('현관') || loc.includes('백맨')) placeIcon = '🚪';
+    else placeIcon = '🛡️';
+
+    if (loc.includes('주간')) timeIcon = '☀️';
+    else if (loc.includes('야간')) timeIcon = '🌙';
+
+    if (leaveType === '연차') leaveIcon = '🌴';
+    else if (leaveType === '시간차') leaveIcon = '⏳';
+    else leaveIcon = '🟢';
+
+    return `${placeIcon}${timeIcon}${leaveIcon}`;
+  }
+
   async function fetchUsersInfo() {
     try {
       const { data, error } = await supabaseClient
         .from('users')
-        .select('id, name, username, work_location, color');
+        .select('id, name, username, work_location, color')
+        .order('name', { ascending: true });
 
       if (!error && data) {
+        allTeamMembers = data;
         data.forEach(u => {
           const keyName = u.name || u.username;
           const userInfo = {
+            id: u.id,
+            name: keyName,
             work_location: u.work_location || '',
             color: u.color || '#38bdf8'
           };
           if (keyName) userMap[keyName] = userInfo;
           if (u.id) userMap[u.id] = userInfo;
         });
+
+        if (userFilterChipsContainer) {
+          userFilterChipsContainer.innerHTML = data.map(u => {
+            const memberName = u.name || u.username;
+            return `
+              <label class="filter-chip">
+                <input type="checkbox" name="userFilter" value="${memberName}" checked>
+                <span class="chip-label" style="border-color: ${u.color || 'var(--border-color)'};">${memberName}</span>
+              </label>
+            `;
+          }).join('');
+
+          document.querySelectorAll('input[name="userFilter"]').forEach(cb => {
+            cb.addEventListener('change', () => {
+              renderCalendarGrid();
+              renderStatistics();
+            });
+          });
+        }
       }
     } catch (err) {
       console.error('유저 정보 로드 오류:', err);
@@ -169,7 +217,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     const endDate = `${year}-${String(month + 1).padStart(2, '0')}-${String(lastDayNum).padStart(2, '0')}`;
 
     try {
-      // 조인 에러를 방지하기 위해 vacations 테이블만 순수하게 조회 후 userMap과 매칭
       const { data, error } = await supabaseClient
         .from('vacations')
         .select('*')
@@ -181,8 +228,84 @@ document.addEventListener('DOMContentLoaded', async () => {
       
       allVacations = data || [];
       renderCalendarGrid();
+      renderStatistics();
     } catch (err) {
       console.error('휴무 데이터 조회 오류:', err);
+    }
+  }
+
+  // 통계 대시보드 렌더링 함수
+  function renderStatistics() {
+    if (!statsGridContainer) return;
+
+    // 현재 선택된 사용자 필터 추출
+    const userCheckboxes = document.querySelectorAll('input[name="userFilter"]');
+    const checkedUsers = Array.from(userCheckboxes)
+      .filter(cb => cb.checked)
+      .map(cb => cb.value);
+
+    // 필터링된 팀원들만 대상 선정 (체크된 팀원 또는 전체 팀원 중 휴무가 있는 팀원)
+    const targetMembers = allTeamMembers.filter(m => checkedUsers.includes(m.name || m.username));
+
+    if (targetMembers.length === 0) {
+      statsGridContainer.innerHTML = `<div style="color: var(--text-sub); font-size: 13px; text-align: center; padding: 15px; grid-column: span 2;">선택된 팀원이 없습니다.</div>`;
+      if (totalMonthVacationCount) totalMonthVacationCount.textContent = '총 0건 사용';
+      return;
+    }
+
+    let totalMonthCount = 0;
+
+    statsGridContainer.innerHTML = targetMembers.map(member => {
+      const mName = member.name || member.username;
+      const mColor = member.color || '#38bdf8';
+
+      // 해당 팀원의 이번 달 휴무 데이터 필터링
+      const memberVacations = allVacations.filter(v => v.username === mName);
+      totalMonthCount += memberVacations.length;
+
+      let휴무Cnt = 0;
+      let연차Cnt = 0;
+      let시간차Cnt = 0;
+      const dayList = [];
+
+      memberVacations.forEach(v => {
+        if (v.leave_type === '연차') 연차Cnt++;
+        else if (v.leave_type === '시간차') 시간차Cnt++;
+        else 휴무Cnt++; // 기본 정기오프
+
+        // 날짜에서 일(Day)만 추출 (예: '2026-06-15' -> 15)
+        const dayNum = parseInt(v.date.split('-')[2], 10);
+        if (!dayList.includes(dayNum)) dayList.push(dayNum);
+      });
+
+      // 날짜 오름차순 정렬
+      dayList.sort((a, b) => a - b);
+      const datesString = dayList.length > 0 ? dayList.join(', ') : '사용일 없음';
+
+      return `
+        <div class="stat-card" style="border-left: 3px solid ${mColor};">
+          <div class="stat-card-top">
+            <div class="stat-name">
+              <span style="width: 8px; height: 8px; border-radius: 50%; background: ${mColor}; display: inline-block;"></span>
+              ${mName}
+            </div>
+            <div class="stat-badges">
+              <div class="stat-badge-item">휴무 <span>${휴무Cnt}</span></div>
+              <div class="stat-badge-item">연차 <span>${연차Cnt}</span></div>
+              ${시간차Cnt > 0 ? `<div class="stat-badge-item">시간차 <span>${시간차Cnt}</span></div>` : ''}
+              <div class="stat-badge-item" style="background: rgba(56,189,248,0.1); border-color: rgba(56,189,248,0.3);">총 <span>${memberVacations.length}일</span></div>
+            </div>
+          </div>
+          <div class="stat-dates">
+            <span class="stat-dates-title">📅 사용일:</span>
+            <span class="stat-dates-list">${datesString}</span>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    if (totalMonthVacationCount) {
+      totalMonthVacationCount.textContent = `총 ${totalMonthCount}건 사용`;
     }
   }
 
@@ -200,7 +323,10 @@ document.addEventListener('DOMContentLoaded', async () => {
       .filter(cb => cb.checked)
       .map(cb => cb.value);
 
-    const sortVal = sortSelect ? sortSelect.value : 'name_asc';
+    const userCheckboxes = document.querySelectorAll('input[name="userFilter"]');
+    const checkedUsers = Array.from(userCheckboxes)
+      .filter(cb => cb.checked)
+      .map(cb => cb.value);
 
     let gridHTML = `
       <div class="day-name">일</div>
@@ -225,33 +351,32 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       let dayEvents = allVacations.filter(v => v.date === dateString);
 
-      // 필터링 적용 (유저 근무지 정보 결합)
+      // 1. 근무지/주야간 필터 적용
       dayEvents = dayEvents.filter(ev => {
         const userInfo = userMap[ev.user_id] || userMap[ev.username] || { work_location: '' };
         const userLoc = userInfo.work_location;
-        
         return checkedLocations.some(filterWord => userLoc.includes(filterWord));
       });
 
-      // 정렬 적용
-      dayEvents.sort((a, b) => {
-        if (sortVal === 'name_asc') {
-          return (a.username || '').localeCompare(b.username || '');
-        }
-        return 0;
+      // 2. 팀원별 필터 적용
+      dayEvents = dayEvents.filter(ev => {
+        return checkedUsers.includes(ev.username);
       });
+
+      dayEvents.sort((a, b) => (a.username || '').localeCompare(b.username || ''));
 
       gridHTML += `
         <div class="calendar-cell ${isToday ? 'today' : ''}" data-date="${dateString}">
           <div class="cell-date">${i}</div>
           <div class="cell-events">
             ${dayEvents.map(ev => {
-              const userInfo = userMap[ev.user_id] || userMap[ev.username] || { color: '#38bdf8' };
+              const userInfo = userMap[ev.user_id] || userMap[ev.username] || { color: '#38bdf8', work_location: '' };
               const userColor = userInfo.color;
+              const icons = getEventIcons(userInfo.work_location, ev.leave_type);
               
               return `
                 <div class="event-pill ${ev.leave_type}" data-id="${ev.id}" title="${ev.username} (${ev.leave_type} -${ev.time_detail})" style="border-left: 3px solid ${userColor}; background:${userColor}20; color: #fff;">
-                  ${ev.username}
+                  ${icons}${ev.username}
                 </div>
               `;
             }).join('')}
@@ -285,28 +410,34 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
-  // 필터 및 정렬 이벤트 바인딩
-  if (sortSelect) sortSelect.addEventListener('change', renderCalendarGrid);
+  // 근무지 필터 이벤트 바인딩
   locationCheckboxes.forEach(cb => {
-    cb.addEventListener('change', renderCalendarGrid);
+    cb.addEventListener('change', () => {
+      renderCalendarGrid();
+      renderStatistics();
+    });
   });
 
-  // 전체 선택 / 해제 버튼 제어
-  if (selectAllBtn) {
-    selectAllBtn.addEventListener('click', () => {
+  // 근무지 전체 선택/해제 버튼
+  if (selectAllLocBtn) {
+    selectAllLocBtn.addEventListener('click', () => {
       const allChecked = Array.from(locationCheckboxes).every(cb => cb.checked);
-      locationCheckboxes.forEach(cb => {
-        cb.checked = !allChecked;
-      });
-      selectAllBtn.textContent = allChecked ? '전체 선택' : '전체 해제';
+      locationCheckboxes.forEach(cb => { cb.checked = !allChecked; });
+      selectAllLocBtn.textContent = allChecked ? '전체 선택' : '전체 해제';
       renderCalendarGrid();
+      renderStatistics();
     });
+  }
 
-    locationCheckboxes.forEach(cb => {
-      cb.addEventListener('change', () => {
-        const allChecked = Array.from(locationCheckboxes).every(c => c.checked);
-        selectAllBtn.textContent = allChecked ? '전체 해제' : '전체 선택';
-      });
+  // 팀원 전체 선택/해제 버튼
+  if (selectAllUserBtn) {
+    selectAllUserBtn.addEventListener('click', () => {
+      const userCheckboxes = document.querySelectorAll('input[name="userFilter"]');
+      const allChecked = Array.from(userCheckboxes).every(cb => cb.checked);
+      userCheckboxes.forEach(cb => { cb.checked = !allChecked; });
+      selectAllUserBtn.textContent = allChecked ? '전체 선택' : '전체 해제';
+      renderCalendarGrid();
+      renderStatistics();
     });
   }
 
