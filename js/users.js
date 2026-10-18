@@ -6,14 +6,32 @@ document.addEventListener('DOMContentLoaded', async () => {
     return;
   }
 
-  // DOM 요소 참조
   const searchInput = document.getElementById('searchInput');
   const userListContainer = document.getElementById('userList');
   const addUserBtn = document.getElementById('addUserBtn');
 
+  // 모달 관련 요소
+  const addUserModal = document.getElementById('addUserModal');
+  const closeModalBtn = document.getElementById('closeModalBtn');
+  const createUserForm = document.getElementById('createUserForm');
+  const submitUserBtn = document.getElementById('submitUserBtn');
+
+  const WORKER_CREATE_USER_API = 'https://jsec-serverless.adobephotoshop.workers.dev/api/users/create';
+
   let allUsers = [];
 
-  // 2. 현재 로그인한 사용자 권한 확인 (관리자일 때만 회원 등록 버튼 표시)
+  // 모달 열기/닫기
+  function openModal() { addUserModal.classList.add('active'); }
+  function closeModal() { addUserModal.classList.remove('active'); createUserForm.reset(); }
+
+  if (closeModalBtn) closeModalBtn.addEventListener('click', closeModal);
+  if (addUserModal) {
+    addUserModal.addEventListener('click', (e) => {
+      if (e.target === addUserModal) closeModal();
+    });
+  }
+
+  // 2. 현재 로그인 사용자 권한 체크 (관리자 시 등록 버튼 노출)
   async function checkAdminRole() {
     const { data: myProfile } = await supabaseClient
       .from('users')
@@ -24,15 +42,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (myProfile && myProfile.role === 'admin') {
       if (addUserBtn) {
         addUserBtn.style.display = 'block';
-        addUserBtn.addEventListener('click', () => {
-          // 관리자용 회원 등록 로직 또는 모달 연동 위치
-          alert('관리자 전용 신규 회원 등록 기능입니다.');
-        });
+        addUserBtn.addEventListener('click', openModal);
       }
     }
   }
 
-  // 3. users 테이블에서 회원 전체 목록 불러오기
+  // 3. 전체 회원 목록 불러오기
   async function fetchUsers() {
     const { data, error } = await supabaseClient
       .from('users')
@@ -49,7 +64,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     renderUsers(allUsers);
   }
 
-  // 4. 회원 목록 화면 렌더링 함수
+  // 4. 회원 목록 카드 렌더링
   function renderUsers(users) {
     if (!users || users.length === 0) {
       userListContainer.innerHTML = `<div class="empty-state">조회된 회원이 없습니다.</div>`;
@@ -78,7 +93,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     `).join('');
   }
 
-  // 5. 실시간 검색 기능 (이름 및 근무지 검색)
+  // 5. 검색 기능
   if (searchInput) {
     searchInput.addEventListener('input', (e) => {
       const keyword = e.target.value.toLowerCase().trim();
@@ -91,7 +106,60 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
-  // 초기화 함수 실행
+  // 6. 신규 회원 등록 폼 제출 이벤트
+  if (createUserForm) {
+    createUserForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const username = document.getElementById('newUsername').value.trim();
+      const password = document.getElementById('newPassword').value.trim();
+      const role = document.getElementById('newRole').value;
+      const contractType = document.getElementById('newContractType').value;
+      const workLocation = document.getElementById('newWorkLocation').value.trim();
+      const hireDate = document.getElementById('newHireDate').value;
+      const annualBaseDate = document.getElementById('newAnnualBaseDate').value;
+      const phone = document.getElementById('newPhone').value.trim();
+
+      submitUserBtn.textContent = '등록 중...';
+      submitUserBtn.disabled = true;
+
+      try {
+        const response = await fetch(WORKER_CREATE_USER_API, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            username: username,
+            name: username,
+            password: password,
+            role: role,
+            contract_type: contractType,
+            work_location: workLocation,
+            hire_date: hireDate || null,
+            annual_base_date: annualBaseDate || null,
+            phone: phone
+          })
+        });
+
+        const result = await response.json();
+
+        if (!response.ok) {
+          throw new Error(result.error || '회원 등록에 실패했습니다.');
+        }
+
+        alert('신규 회원이 성공적으로 등록되었습니다.');
+        closeModal();
+        fetchUsers(); // 목록 새로고침
+
+      } catch (err) {
+        alert(`오류: ${err.message}`);
+      } finally {
+        submitUserBtn.textContent = '등록 완료';
+        submitUserBtn.disabled = false;
+      }
+    });
+  }
+
+  // 초기화
   checkAdminRole();
   fetchUsers();
 });

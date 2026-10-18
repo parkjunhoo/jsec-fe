@@ -32,14 +32,12 @@
       padding-bottom: 40px;
     }
 
-    /* 본문 컨텐츠 영역 */
     .container {
       padding: 20px 16px;
       max-width: 600px;
       margin: 0 auto;
     }
 
-    /* 검색창 & 등록버튼 세트 */
     .top-actions {
       display: flex;
       gap: 10px;
@@ -74,7 +72,6 @@
       white-space: nowrap;
     }
 
-    /* 회원 목록 카드 스타일 */
     .user-list {
       display: flex;
       flex-direction: column;
@@ -156,11 +153,115 @@
       color: var(--text-sub);
       font-size: 14px;
     }
+
+    /* --- 모달 팝업 스타일 --- */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(6px);
+      z-index: 300;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s ease;
+    }
+
+    .modal-overlay.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .modal-card {
+      background: #1e293b;
+      border: 1px solid var(--border-color);
+      border-radius: 20px;
+      width: 100%;
+      max-width: 440px;
+      padding: 24px;
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+
+    .modal-header h3 {
+      font-size: 18px;
+      font-weight: 700;
+      color: #fff;
+    }
+
+    .btn-close-modal {
+      background: none;
+      border: none;
+      color: var(--text-sub);
+      font-size: 20px;
+      cursor: pointer;
+    }
+
+    .form-group {
+      margin-bottom: 14px;
+    }
+
+    .form-group label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-sub);
+      margin-bottom: 6px;
+    }
+
+    .form-group input, .form-group select {
+      width: 100%;
+      height: 44px;
+      padding: 0 14px;
+      background: var(--input-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      color: #fff;
+      font-size: 14px;
+      outline: none;
+    }
+
+    .form-group input:focus, .form-group select:focus {
+      border-color: var(--primary);
+    }
+
+    .form-grid-2 {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+    }
+
+    .btn-submit-user {
+      width: 100%;
+      height: 48px;
+      background: linear-gradient(135deg, #38bdf8 0%, #0284c7 100%);
+      color: #fff;
+      border: none;
+      border-radius: 12px;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      margin-top: 10px;
+    }
   </style>
 </head>
 <body>
 
-  <!-- 공통 상단바 & 햄버거 메뉴 바인딩 위치 -->
+  <!-- 공통 상단바 & 햄버거 메뉴 -->
   <div id="navbar"></div>
 
   <!-- 메인 컨텐츠 영역 -->
@@ -174,6 +275,70 @@
       <div class="empty-state">회원 정보를 불러오는 중...</div>
     </div>
   </main>
+
+  <!-- 신규 회원 등록 모달 팝업 -->
+  <div class="modal-overlay" id="addUserModal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>신규 회원 등록</h3>
+        <button class="btn-close-modal" id="closeModalBtn">&times;</button>
+      </div>
+
+      <form id="createUserForm">
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label>이름 (로그인 ID용)</label>
+            <input type="text" id="newUsername" placeholder="예: 홍길동" required>
+          </div>
+          <div class="form-group">
+            <label>비밀번호</label>
+            <input type="password" id="newPassword" placeholder="비밀번호" required>
+          </div>
+        </div>
+
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label>권한</label>
+            <select id="newRole">
+              <option value="user">일반 회원</option>
+              <option value="admin">관리자 (Admin)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>계약 형태</label>
+            <select id="newContractType">
+              <option value="정규직">정규직</option>
+              <option value="계약직">계약직</option>
+              <option value="아르바이트">아르바이트</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>근무지</label>
+          <input type="text" id="newWorkLocation" placeholder="예: 보안통제실 / 골프장야간" required>
+        </div>
+
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label>입사일</label>
+            <input type="date" id="newHireDate">
+          </div>
+          <div class="form-group">
+            <label>연차 기준일</label>
+            <input type="date" id="newAnnualBaseDate">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>연락처</label>
+          <input type="tel" id="newPhone" placeholder="010-0000-0000">
+        </div>
+
+        <button type="submit" class="btn-submit-user" id="submitUserBtn">등록 완료</button>
+      </form>
+    </div>
+  </div>
 
   <!-- JS 스크립트 연결 순서 -->
   <script src="/js/supabase.js"></script>
