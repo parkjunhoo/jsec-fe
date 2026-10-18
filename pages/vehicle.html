@@ -15,6 +15,8 @@
       --text-sub: #94a3b8;
       --border-color: rgba(255, 255, 255, 0.1);
       --input-bg: rgba(15, 23, 42, 0.6);
+      --danger: #ef4444;
+      --warning: #f59e0b;
     }
 
     * {
@@ -32,27 +34,57 @@
       padding-bottom: 40px;
     }
 
-    /* 컨텐츠 영역 */
     .container {
-      padding: 20px 16px;
+      padding: 16px;
       max-width: 600px;
       margin: 0 auto;
     }
 
+    /* 상단 헤더 & 건수 표시 영역 */
+    .vehicle-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 14px;
+    }
+
+    .car-count-badge {
+      font-size: 13px;
+      color: var(--text-sub);
+      font-weight: 600;
+    }
+
+    .car-count-badge span {
+      color: var(--primary);
+      font-weight: 800;
+    }
+
+    .btn-add-vehicle {
+      height: 40px;
+      padding: 0 14px;
+      background: linear-gradient(135deg, #38bdf8 0%, #0284c7 100%);
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(2, 132, 199, 0.3);
+      white-space: nowrap;
+    }
+
     /* 차량 검색바 영역 */
     .search-box {
-      display: flex;
-      gap: 10px;
-      margin-bottom: 20px;
+      margin-bottom: 12px;
     }
 
     .search-input {
-      flex: 1;
-      height: 52px;
+      width: 100%;
+      height: 48px;
       padding: 0 16px;
       background: var(--input-bg);
       border: 1px solid var(--border-color);
-      border-radius: 14px;
+      border-radius: 12px;
       color: #fff;
       font-size: 15px;
       outline: none;
@@ -61,84 +93,13 @@
 
     .search-input:focus {
       border-color: var(--primary);
-      box-shadow: 0 0 0 4px rgba(56, 189, 248, 0.15);
     }
 
-    .btn-search {
-      height: 52px;
-      padding: 0 20px;
-      background: linear-gradient(135deg, #38bdf8 0%, #0284c7 100%);
-      color: #fff;
-      border: none;
-      border-radius: 14px;
-      font-size: 15px;
-      font-weight: 700;
-      cursor: pointer;
-      white-space: nowrap;
-      box-shadow: 0 4px 12px rgba(2, 132, 199, 0.3);
-      transition: transform 0.2s;
-    }
-
-    .btn-search:active {
-      transform: scale(0.96);
-    }
-
-    /* 차량 검색 결과 리스트 */
+    /* 차량 리스트 영역 */
     .vehicle-list {
       display: flex;
       flex-direction: column;
-      gap: 12px;
-    }
-
-    .vehicle-card {
-      background: var(--card-bg);
-      backdrop-filter: blur(12px);
-      border: 1px solid var(--border-color);
-      border-radius: 18px;
-      padding: 20px 18px;
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-    }
-
-    .vehicle-card-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-
-    .car-number {
-      font-size: 18px;
-      font-weight: 800;
-      color: var(--primary);
-      letter-spacing: -0.5px;
-    }
-
-    .car-type-badge {
-      font-size: 11px;
-      padding: 4px 10px;
-      border-radius: 8px;
-      background: rgba(255, 255, 255, 0.08);
-      color: var(--text-sub);
-      font-weight: 600;
-      border: 1px solid var(--border-color);
-    }
-
-    .vehicle-details {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
       gap: 10px;
-      font-size: 13px;
-      color: var(--text-sub);
-      background: rgba(15, 23, 42, 0.4);
-      padding: 12px 14px;
-      border-radius: 12px;
-    }
-
-    .vehicle-details div span {
-      color: var(--text-main);
-      font-weight: 600;
-      margin-left: 4px;
     }
 
     .empty-state {
@@ -147,24 +108,221 @@
       color: var(--text-sub);
       font-size: 14px;
     }
+
+    /* --- 모달 팝업 스타일 (모바일 최적화) --- */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(0, 0, 0, 0.75);
+      backdrop-filter: blur(6px);
+      z-index: 300;
+      display: flex;
+      justify-content: center;
+      align-items: flex-end; /* 모바일 하단 슬라이드 느낌 */
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s ease;
+    }
+
+    @media (min-width: 600px) {
+      .modal-overlay {
+        align-items: center;
+        padding: 20px;
+      }
+    }
+
+    .modal-overlay.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .modal-card {
+      background: #1e293b;
+      border: 1px solid var(--border-color);
+      border-radius: 24px 24px 0 0;
+      width: 100%;
+      max-width: 500px;
+      padding: 24px 20px;
+      max-height: 85vh;
+      overflow-y: auto;
+      box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.5);
+    }
+
+    @media (min-width: 600px) {
+      .modal-card {
+        border-radius: 20px;
+      }
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 18px;
+    }
+
+    .modal-header h3 {
+      font-size: 18px;
+      font-weight: 700;
+      color: #fff;
+    }
+
+    .btn-close-modal {
+      background: none;
+      border: none;
+      color: var(--text-sub);
+      font-size: 24px;
+      cursor: pointer;
+      line-height: 1;
+    }
+
+    .form-group {
+      margin-bottom: 12px;
+    }
+
+    .form-group label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-sub);
+      margin-bottom: 4px;
+    }
+
+    .form-group input {
+      width: 100%;
+      height: 44px;
+      padding: 0 14px;
+      background: var(--input-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      color: #fff;
+      font-size: 14px;
+      outline: none;
+    }
+
+    .form-group input:focus {
+      border-color: var(--primary);
+    }
+
+    .form-grid-2 {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+    }
+
+    .modal-btn-group {
+      display: flex;
+      gap: 10px;
+      margin-top: 16px;
+    }
+
+    .btn-submit {
+      flex: 1;
+      height: 46px;
+      background: linear-gradient(135deg, #38bdf8 0%, #0284c7 100%);
+      color: #fff;
+      border: none;
+      border-radius: 12px;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .btn-delete {
+      height: 46px;
+      padding: 0 18px;
+      background: rgba(239, 68, 68, 0.2);
+      color: #f87171;
+      border: 1px solid rgba(239, 68, 68, 0.4);
+      border-radius: 12px;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+    }
   </style>
 </head>
 <body>
 
-  <!-- 공통 상단바 & 햄버거 메뉴 바인딩 위치 -->
+  <!-- 공통 상단바 & 햄버거 메뉴 -->
   <div id="navbar"></div>
 
   <!-- 메인 컨텐츠 영역 -->
   <main class="container">
+    <div class="vehicle-header">
+      <div class="car-count-badge" id="carCountBadge">
+        총 <span id="totalCount">0</span>대 중 <span id="displayCount">0</span>대 표시
+      </div>
+      <button class="btn-add-vehicle" id="addVehicleBtn">+ 차량 등록</button>
+    </div>
+
     <div class="search-box">
-      <input type="text" id="carSearchInput" class="search-input" placeholder="차량번호 뒤 4자리 또는 전체 번호 입력..." autocomplete="off">
-      <button class="btn-search" id="searchBtn">검색</button>
+      <input type="number" id="carSearchInput" class="search-input" placeholder="차량 뒷자리 4자리 숫자 입력..." inputmode="numeric" autocomplete="off">
     </div>
 
     <div class="vehicle-list" id="vehicleList">
-      <div class="empty-state">차량번호를 입력 후 검색해 주세요.</div>
+      <div class="empty-state">차량 목록 불러오는 중...</div>
     </div>
   </main>
+
+  <!-- 차량 등록 / 수정 모달 팝업 -->
+  <div class="modal-overlay" id="vehicleModal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 id="modalTitle">신규 차량 등록</h3>
+        <button class="btn-close-modal" id="closeModalBtn">&times;</button>
+      </div>
+
+      <form id="vehicleForm">
+        <input type="hidden" id="editCarId">
+
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label>검색용 뒷자리 4자리 *</label>
+            <input type="text" id="formNumber" placeholder="예: 4728" maxlength="4" required>
+          </div>
+          <div class="form-group">
+            <label>전체 차량번호 *</label>
+            <input type="text" id="formFullNumber" placeholder="예: 367도 4728" required>
+          </div>
+        </div>
+
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label>소유자 성함</label>
+            <input type="text" id="formName" placeholder="성함 입력">
+          </div>
+          <div class="form-group">
+            <label>부서/소속</label>
+            <input type="text" id="formDepartment" placeholder="부서 입력">
+          </div>
+        </div>
+
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label>차종</label>
+            <input type="text" id="formCarName" placeholder="예: 쏘렌토">
+          </div>
+          <div class="form-group">
+            <label>연락처</label>
+            <input type="tel" id="formPhone" placeholder="010-0000-0000">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>비고</label>
+          <input type="text" id="formNotes" placeholder="특이사항 입력">
+        </div>
+
+        <div class="modal-btn-group">
+          <button type="button" class="btn-delete" id="deleteBtn" style="display: none;">삭제</button>
+          <button type="submit" class="btn-submit" id="submitBtn">등록 완료</button>
+        </div>
+      </form>
+    </div>
+  </div>
 
   <!-- JS 스크립트 연결 순서 -->
   <script src="/js/supabase.js"></script>
