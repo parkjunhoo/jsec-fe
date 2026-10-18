@@ -86,4 +86,98 @@
       backdrop-filter: blur(12px);
       border: 1px solid var(--border-color);
       border-radius: 16px;
-      padding:
+      padding: 18px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .user-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .user-name-box {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .user-name {
+      font-size: 17px;
+      font-weight: 700;
+    }
+
+    .role-badge {
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-weight: 600;
+    }
+
+    .role-badge.admin {
+      background: rgba(239, 68, 68, 0.2);
+      color: #f87171;
+      border: 1px solid rgba(239, 68, 68, 0.3);
+    }
+
+    .role-badge.user {
+      background: rgba(56, 189, 248, 0.15);
+      color: var(--primary);
+      border: 1px solid rgba(56, 189, 248, 0.3);
+    }
+
+    .status-badge {
+      font-size: 12px;
+      color: #4ade80;
+      font-weight: 600;
+    }
+
+    .user-details {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+      font-size: 13px;
+      color: var(--text-sub);
+      background: rgba(15, 23, 42, 0.4);
+      padding: 10px 12px;
+      border-radius: 10px;
+    }
+
+    .user-details div span {
+      color: var(--text-main);
+      font-weight: 500;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 40px 0;
+      color: var(--text-sub);
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 공통 상단바 & 햄버거 메뉴 바인딩 위치 -->
+  <div id="navbar"></div>
+
+  <!-- 메인 컨텐츠 영역 -->
+  <main class="container">
+    <div class="top-actions">
+      <input type="text" id="searchInput" class="search-input" placeholder="회원 이름 또는 근무지 검색...">
+      <button class="btn-add-user" id="addUserBtn" style="display: none;">+ 회원 등록</button>
+    </div>
+
+    <div class="user-list" id="userList">
+      <div class="empty-state">회원 정보를 불러오는 중...</div>
+    </div>
+  </main>
+
+  <!-- JS 스크립트 연결 순서 -->
+  <script src="/js/supabase.js"></script>
+  <script src="/js/navbar.js"></script>
+  <script src="/js/users.js"></script>
+</body>
+</html>
