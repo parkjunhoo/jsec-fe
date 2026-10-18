@@ -125,7 +125,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           });
         }
 
-        // 2. 관리자용 모달 팀원 선택 드롭다운 생성
+        // 2. 관리자용 모달 팀원 선택 드롭다운 생성 (요소가 있을 때만)
         if (vTargetUserId) {
           vTargetUserId.innerHTML = data.map(u => {
             const memberName = u.name || u.username;
@@ -139,14 +139,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   function openAddModal(selectedDateStr = '') {
-    modalTitle.textContent = '휴무 일정 등록';
-    submitBtn.textContent = '등록 완료';
-    deleteBtn.style.display = 'none';
-    vacationForm.reset();
-    editVacationId.value = '';
-    vDate.value = selectedDateStr || getKSTDateString();
+    if (modalTitle) modalTitle.textContent = '휴무 일정 등록';
+    if (submitBtn) submitBtn.textContent = '등록 완료';
+    if (deleteBtn) deleteBtn.style.display = 'none';
+    if (vacationForm) vacationForm.reset();
+    if (editVacationId) editVacationId.value = '';
+    if (vDate) vDate.value = selectedDateStr || getKSTDateString();
 
-    // 관리자일 경우 대상 팀원 선택창 표시 및 본인으로 기본 설정
     if (userRole === 'admin') {
       if (targetUserFormGroup) targetUserFormGroup.style.display = 'block';
       if (vTargetUserId) vTargetUserId.value = userId;
@@ -154,7 +153,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (targetUserFormGroup) targetUserFormGroup.style.display = 'none';
     }
 
-    vacationModal.classList.add('active');
+    if (vacationModal) vacationModal.classList.add('active');
   }
 
   function openEditModal(vacation) {
@@ -163,15 +162,15 @@ document.addEventListener('DOMContentLoaded', async () => {
       return;
     }
 
-    modalTitle.textContent = '휴무 일정 수정 / 삭제';
-    submitBtn.textContent = '수정 완료';
-    deleteBtn.style.display = 'block';
+    if (modalTitle) modalTitle.textContent = '휴무 일정 수정 / 삭제';
+    if (submitBtn) submitBtn.textContent = '수정 완료';
+    if (deleteBtn) deleteBtn.style.display = 'block';
 
-    editVacationId.value = vacation.id;
-    vDate.value = vacation.date;
-    vLeaveType.value = vacation.leave_type;
-    vTimeDetail.value = vacation.time_detail || '종일';
-    vMemo.value = vacation.memo || '';
+    if (editVacationId) editVacationId.value = vacation.id;
+    if (vDate) vDate.value = vacation.date;
+    if (vLeaveType) vLeaveType.value = vacation.leave_type;
+    if (vTimeDetail) vTimeDetail.value = vacation.time_detail || '종일';
+    if (vMemo) vMemo.value = vacation.memo || '';
 
     if (userRole === 'admin') {
       if (targetUserFormGroup) targetUserFormGroup.style.display = 'block';
@@ -180,12 +179,12 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (targetUserFormGroup) targetUserFormGroup.style.display = 'none';
     }
 
-    vacationModal.classList.add('active');
+    if (vacationModal) vacationModal.classList.add('active');
   }
 
   function closeModal() {
-    vacationModal.classList.remove('active');
-    vacationForm.reset();
+    if (vacationModal) vacationModal.classList.remove('active');
+    if (vacationForm) vacationForm.reset();
   }
 
   if (openModalBtn) openModalBtn.addEventListener('click', () => openAddModal());
@@ -196,32 +195,40 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
-  vLeaveType.addEventListener('change', (e) => {
-    if (e.target.value === '연차' || e.target.value === '휴무') {
-      vTimeDetail.innerHTML = '<option value="종일">종일</option>';
-    } else {
-      vTimeDetail.innerHTML = `
-        <option value="오전반차">오전반차</option>
-        <option value="오후반차">오후반차</option>
-        <option value="시간지정">시간지정</option>
-      `;
-    }
-  });
+  if (vLeaveType) {
+    vLeaveType.addEventListener('change', (e) => {
+      if (e.target.value === '연차' || e.target.value === '휴무') {
+        vTimeDetail.innerHTML = '<option value="종일">종일</option>';
+      } else {
+        vTimeDetail.innerHTML = `
+          <option value="오전반차">오전반차</option>
+          <option value="오후반차">오후반차</option>
+          <option value="시간지정">시간지정</option>
+        `;
+      }
+    });
+  }
 
-  prevMonthBtn.addEventListener('click', () => {
-    currentDate.setMonth(currentDate.getMonth() - 1);
-    fetchMonthData();
-  });
-  nextMonthBtn.addEventListener('click', () => {
-    currentDate.setMonth(currentDate.getMonth() + 1);
-    fetchMonthData();
-  });
+  if (prevMonthBtn) {
+    prevMonthBtn.addEventListener('click', () => {
+      currentDate.setMonth(currentDate.getMonth() - 1);
+      fetchMonthData();
+    });
+  }
+  if (nextMonthBtn) {
+    nextMonthBtn.addEventListener('click', () => {
+      currentDate.setMonth(currentDate.getMonth() + 1);
+      fetchMonthData();
+    });
+  }
 
   async function fetchMonthData() {
     const year = currentDate.getFullYear();
     const month = currentDate.getMonth();
 
-    currentMonthDisplay.textContent = `${year}년 ${month + 1}월`;
+    if (currentMonthDisplay) {
+      currentMonthDisplay.textContent = `${year}년 ${month + 1}월`;
+    }
 
     const startDate = `${year}-${String(month + 1).padStart(2, '0')}-01`;
     const lastDayNum = new Date(year, month + 1, 0).getDate();
@@ -326,6 +333,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   function renderCalendarGrid() {
+    if (!calendarGrid) return;
+
     const year = currentDate.getFullYear();
     const month = currentDate.getMonth();
 
@@ -455,13 +464,12 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (vacationForm) {
     vacationForm.addEventListener('submit', async (e) => {
       e.preventDefault();
-      const vacId = editVacationId.value;
-      const date = vDate.value;
-      const leave_type = vLeaveType.value;
-      const time_detail = vTimeDetail.value;
-      const memo = vMemo.value.trim();
+      const vacId = editVacationId ? editVacationId.value : '';
+      const date = vDate ? vDate.value : '';
+      const leave_type = vLeaveType ? vLeaveType.value : '휴무';
+      const time_detail = vTimeDetail ? vTimeDetail.value : '종일';
+      const memo = vMemo ? vMemo.value.trim() : '';
 
-      // 대상 사용자 ID 및 이름 결정 (관리자면 선택한 유저, 일반 회원이면 본인)
       let targetUserId = userId;
       let targetUserName = userName;
 
@@ -478,13 +486,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         return;
       }
 
-      submitBtn.disabled = true;
-      submitBtn.textContent = '처리 중...';
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.textContent = '처리 중...';
+      }
 
       try {
         if (vacId) {
           const updatePayload = { date, leave_type, time_detail, memo };
-          // 관리자인 경우 수정 시 대상 유저도 변경 반영 가능하도록 처리
           if (userRole === 'admin') {
             updatePayload.user_id = targetUserId;
             updatePayload.username = targetUserName;
@@ -518,14 +527,16 @@ document.addEventListener('DOMContentLoaded', async () => {
       } catch (err) {
         alert(`오류: ${err.message}`);
       } finally {
-        submitBtn.disabled = false;
+        if (submitBtn) {
+          submitBtn.disabled = false;
+        }
       }
     });
   }
 
   if (deleteBtn) {
     deleteBtn.addEventListener('click', async () => {
-      const vacId = editVacationId.value;
+      const vacId = editVacationId ? editVacationId.value : '';
       if (!confirm('정말 이 휴무 일정을 삭제하시겠습니까?')) return;
 
       deleteBtn.disabled = true;
