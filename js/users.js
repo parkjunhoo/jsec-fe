@@ -17,7 +17,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   const submitUserBtn = document.getElementById('submitUserBtn');
 
   const WORKER_CREATE_USER_API = 'https://jsec-serverless.adobephotoshop.workers.dev/api/users/create';
-
+  const WORKER_LIST_USERS_API = 'https://jsec-serverless.adobephotoshop.workers.dev/api/users/list';
+  
   let allUsers = [];
 
   // 모달 열기/닫기
@@ -47,23 +48,23 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
-  // 3. 전체 회원 목록 불러오기
+// 3. 전체 회원 목록 불러오기 (Worker API 통해 조회)
   async function fetchUsers() {
-    const { data, error } = await supabaseClient
-      .from('users')
-      .select('*')
-      .order('name', { ascending: true });
+    try {
+      const response = await fetch(WORKER_LIST_USERS_API);
+      const data = await response.json();
 
-    if (error) {
-      console.error('회원 목록 조회 에러:', error);
-      userListContainer.innerHTML = `<div class="empty-state">회원 목록을 불러오는 데 실패했습니다.</div>`;
-      return;
+      if (!response.ok) {
+        throw new Error(data.error || '회원 목록을 불러오는 데 실패했습니다.');
+      }
+
+      allUsers = data || [];
+      renderUsers(allUsers);
+    } catch (err) {
+      console.error('회원 목록 조회 에러:', err);
+      userListContainer.innerHTML = `<div class="empty-state">${err.message}</div>`;
     }
-
-    allUsers = data || [];
-    renderUsers(allUsers);
   }
-
   // 4. 회원 목록 카드 렌더링
   function renderUsers(users) {
     if (!users || users.length === 0) {
