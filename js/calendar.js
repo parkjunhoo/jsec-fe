@@ -24,7 +24,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     console.error('프로필 조회 오류:', err);
   }
 
-  // ★ 기기 시계 타임존에 구애받지 않고 항상 정확한 대한민국 서울 시간(KST) YYYY-MM-DD를 반환하는 함수
+  // ★ 대한민국 서울 표준시(KST) YYYY-MM-DD 추출 함수 (타임존 밀림 원천 차단)
   function getKSTDateString(dateObj = new Date()) {
     const options = {
       timeZone: 'Asia/Seoul',
@@ -66,20 +66,17 @@ document.addEventListener('DOMContentLoaded', async () => {
   let currentDate = new Date();
   let allVacations = [];
 
-  // 모달 제어 함수
   function openAddModal(selectedDateStr = '') {
     modalTitle.textContent = '휴무 일정 등록';
     submitBtn.textContent = '등록 완료';
     deleteBtn.style.display = 'none';
     vacationForm.reset();
     editVacationId.value = '';
-    // 한국 시간 기준 오늘 날짜 기본 세팅
     vDate.value = selectedDateStr || getKSTDateString();
     vacationModal.classList.add('active');
   }
 
   function openEditModal(vacation) {
-    // 본인이 작성했거나 관리자일 때만 수정 가능
     if (vacation.user_id !== userId && userRole !== 'admin') {
       alert('본인이 등록한 일정만 수정할 수 있습니다.');
       return;
@@ -132,7 +129,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     fetchMonthData();
   });
 
-  // 데이터 불러오기
   async function fetchMonthData() {
     const year = currentDate.getFullYear();
     const month = currentDate.getMonth();
@@ -159,16 +155,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
-  // 달력 그리드 렌더링 함수
   function renderCalendarGrid() {
     const year = currentDate.getFullYear();
     const month = currentDate.getMonth();
 
-    const firstDayIndex = new Date(year, month, 1).getDay(); // 0(일)~6(토)
+    const firstDayIndex = new Date(year, month, 1).getDay();
     const lastDay = new Date(year, month + 1, 0).getDate();
     const prevLastDay = new Date(year, month, 0).getDate();
 
-    // ★ KST 기준 오늘 날짜 문자열 획득
     const todayStr = getKSTDateString();
 
     let gridHTML = `
@@ -181,20 +175,19 @@ document.addEventListener('DOMContentLoaded', async () => {
       <div class="day-name">토</div>
     `;
 
-    // 1. 이전 달 남은 날짜 공백 채우기
+    // 이전 달 공백 채우기
     for (let i = firstDayIndex; i > 0; i--) {
       const dayNum = prevLastDay - i + 1;
       gridHTML += `<div class="calendar-cell other-month"><div class="cell-date">${dayNum}</div></div>`;
     }
 
-    // 2. 이번 달 날짜 채우기
+    // 이번 달 날짜 채우기
     for (let i = 1; i <= lastDay; i++) {
       const monthStr = String(month + 1).padStart(2, '0');
       const dayStr = String(i).padStart(2, '0');
       const dateString = `${year}-${monthStr}-${dayStr}`;
       const isToday = (dateString === todayStr);
 
-      // 해당 날짜의 휴무일 필터링
       const dayEvents = allVacations.filter(v => v.date === dateString);
 
       gridHTML += `
@@ -202,8 +195,8 @@ document.addEventListener('DOMContentLoaded', async () => {
           <div class="cell-date">${i}</div>
           <div class="cell-events">
             ${dayEvents.map(ev => `
-              <div class="event-pill ${ev.leave_type}" data-id="${ev.id}" title="${ev.username}:${ev.leave_type}">
-                <b>${ev.username}</b> (${ev.leave_type})
+              <div class="event-pill ${ev.leave_type}" data-id="${ev.id}" title="${ev.username} (${ev.leave_type} -${ev.time_detail})">
+                ${ev.username}
               </div>
             `).join('')}
           </div>
@@ -211,7 +204,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       `;
     }
 
-    // 3. 다음 달 여분 칸 채우기 (총 35칸 또는 42칸 맞추기)
+    // 다음 달 여분 칸 채우기
     const totalCells = firstDayIndex + lastDay;
     const nextDaysCount = totalCells <= 35 ? (35 - totalCells) : (42 - totalCells);
     for (let i = 1; i <= nextDaysCount; i++) {
@@ -220,13 +213,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     calendarGrid.innerHTML = gridHTML;
 
-    // 날짜 칸 클릭 시 해당 날짜로 등록 모달 열기
+    // 날짜 및 칩 클릭 이벤트 핸들러
     calendarGrid.querySelectorAll('.calendar-cell').forEach(cell => {
       const dateStr = cell.getAttribute('data-date');
       if (!dateStr) return;
 
       cell.addEventListener('click', (e) => {
-        // 만약 이벤트 칩을 눌렀다면 수정 모달 열기
         const pill = e.target.closest('.event-pill');
         if (pill) {
           const evId = pill.getAttribute('data-id');
@@ -234,13 +226,11 @@ document.addEventListener('DOMContentLoaded', async () => {
           if (targetEv) openEditModal(targetEv);
           return;
         }
-        // 빈 칸을 눌렀다면 해당 날짜로 신규 등록 모달 열기
         openAddModal(dateStr);
       });
     });
   }
 
-  // 등록 및 수정 제출 (INSERT / UPDATE)
   if (vacationForm) {
     vacationForm.addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -260,7 +250,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       try {
         if (vacId) {
-          // 수정 (UPDATE)
           const { error } = await supabaseClient
             .from('vacations')
             .update({ date, leave_type, time_detail, memo })
@@ -269,7 +258,6 @@ document.addEventListener('DOMContentLoaded', async () => {
           if (error) throw error;
           alert('휴무 일정이 수정되었습니다.');
         } else {
-          // 등록 (INSERT)
           const { error } = await supabaseClient
             .from('vacations')
             .insert([{ user_id: userId, username: userName, date, leave_type, time_detail, memo }]);
@@ -288,7 +276,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
-  // 삭제 (DELETE)
   if (deleteBtn) {
     deleteBtn.addEventListener('click', async () => {
       const vacId = editVacationId.value;
