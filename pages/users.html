@@ -146,7 +146,6 @@
       border-color: var(--primary);
     }
 
-    /* 토글/칩 형태의 체크박스 스타일 */
     .filter-chips {
       display: flex;
       flex-wrap: wrap;
@@ -176,7 +175,6 @@
       transition: all 0.2s ease;
     }
 
-    /* 체크되었을 때의 스타일 */
     .filter-chip input:checked + .chip-label {
       background: rgba(56, 189, 248, 0.15);
       border-color: var(--primary);
@@ -414,9 +412,8 @@
       <button class="btn-add-user" id="addUserBtn">+ 회원 등록</button>
     </div>
 
-    <!-- 💡 세련되게 꾸민 필터 및 정렬 박스 -->
+    <!-- 필터 및 정렬 박스 ('백맨' 제거, '현관'만 유지) -->
     <div class="filter-box">
-      <!-- 정렬 기준 행 -->
       <div class="filter-row">
         <span class="filter-title">정렬 기준</span>
         <select id="sortSelect" class="sort-select">
@@ -426,7 +423,6 @@
         </select>
       </div>
 
-      <!-- 근무지 / 주·야간 칩 필터 행 -->
       <div>
         <span class="filter-title" style="display: block; margin-bottom: 8px;">근무지 및 주·야간 필터 (다중 선택)</span>
         <div class="filter-chips">
@@ -445,10 +441,6 @@
           <label class="filter-chip">
             <input type="checkbox" name="locFilter" value="골프장" checked>
             <span class="chip-label">⛳ 골프장</span>
-          </label>
-          <label class="filter-chip">
-            <input type="checkbox" name="locFilter" value="백맨" checked>
-            <span class="chip-label">🛡️ 백맨</span>
           </label>
           <label class="filter-chip">
             <input type="checkbox" name="locFilter" value="현관" checked>
@@ -505,7 +497,7 @@
 
         <div class="form-group">
           <label>근무지 *</label>
-          <input type="text" id="newWorkLocation" placeholder="예: 스키장 야간 / 백맨" required>
+          <input type="text" id="newWorkLocation" placeholder="예: 스키장 야간 / 현관" required>
         </div>
 
         <div class="form-grid-2">

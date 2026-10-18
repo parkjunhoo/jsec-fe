@@ -25,6 +25,80 @@
     .header-area h2 { font-size: 18px; font-weight: 750; }
     .btn-add-vacation { height: 38px; padding: 0 12px; background: linear-gradient(135deg, #38bdf8 0%, #0284c7 100%); color: #fff; border: none; border-radius: 10px; font-size: 13px; font-weight: 700; cursor: pointer; }
 
+    /* --- 세련된 필터 박스 디자인 --- */
+    .filter-box {
+      background: var(--card-bg);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      padding: 14px;
+      margin-bottom: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .filter-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .filter-title {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text-sub);
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+    }
+
+    .sort-select {
+      background: var(--input-bg);
+      border: 1px solid var(--border-color);
+      color: var(--text-main);
+      padding: 6px 10px;
+      border-radius: 8px;
+      font-size: 13px;
+      outline: none;
+      cursor: pointer;
+    }
+
+    .filter-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .filter-chip {
+      position: relative;
+      cursor: pointer;
+    }
+
+    .filter-chip input {
+      position: absolute;
+      opacity: 0;
+      cursor: pointer;
+    }
+
+    .chip-label {
+      display: inline-block;
+      padding: 5px 10px;
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-sub);
+      transition: all 0.2s ease;
+    }
+
+    .filter-chip input:checked + .chip-label {
+      background: rgba(56, 189, 248, 0.15);
+      border-color: var(--primary);
+      color: var(--primary);
+      font-weight: 600;
+    }
+
     /* 월 이동 네비게이션 */
     .calendar-nav { display: flex; justify-content: space-between; align-items: center; background: var(--card-bg); backdrop-filter: blur(12px); border: 1px solid var(--border-color); border-radius: 14px; padding: 10px 16px; margin-bottom: 14px; }
     .calendar-nav button { background: none; border: none; color: var(--primary); font-size: 15px; font-weight: bold; cursor: pointer; padding: 4px 8px; }
@@ -53,7 +127,6 @@
     .day-name:nth-child(1) { color: #f87171; }
     .day-name:nth-child(7) { color: #60a5fa; }
 
-    /* 셀 높이를 넉넉히 잡고 Flex Wrap 레이아웃 적용 */
     .calendar-cell {
       min-height: 115px;
       border-bottom: 1px solid var(--border-color);
@@ -86,7 +159,6 @@
     .calendar-cell:nth-child(7n) .cell-date { color: #60a5fa; }
     .calendar-cell.today .cell-date { background: var(--primary); color: #0f172a; }
 
-    /* 가로 공간을 채우고 넘치면 아래줄로 내려가는 Flex Wrap 컨테이너 */
     .cell-events {
       display: flex;
       flex-wrap: wrap;
@@ -97,22 +169,18 @@
     .cell-events::-webkit-scrollbar { width: 2px; }
     .cell-events::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.2); border-radius: 2px; }
 
-    /* 컴팩트한 이름 칩 스타일 */
+    /* 컴팩트한 이름 칩 스타일 (컬러 테두리/배경 반영) */
     .event-pill {
-      font-size: 9px;
-      padding: 1px 4px;
-      border-radius: 3px;
+      font-size: 10px;
+      padding: 2px 5px;
+      border-radius: 4px;
       font-weight: 600;
       white-space: nowrap;
       line-height: 1.2;
     }
-    .event-pill.연차 { background: rgba(168, 85, 247, 0.25); color: #d8b4fe; border: 1px solid rgba(168, 85, 247, 0.4); }
-    .event-pill.휴무 { background: rgba(56, 189, 248, 0.25); color: #bae6fd; border: 1px solid rgba(56, 189, 248, 0.4); }
-    .event-pill.시간차 { background: rgba(245, 158, 11, 0.25); color: #fde68a; border: 1px solid rgba(245, 158, 11, 0.4); }
 
     /* 모달 및 폼 스타일 */
     .modal-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.75); backdrop-filter: blur(6px); z-index: 300; display: flex; justify-content: center; align-items: center; opacity: 0; pointer-events: none; transition: opacity 0.25s ease; }
-    @media (min-width: 600px) { .modal-overlay { align-items: center; } }
     .modal-overlay.active { opacity: 1; pointer-events: auto; }
     .modal-card { background: #1e293b; border: 1px solid var(--border-color); border-radius: 24px 24px 0 0; width: 100%; max-width: 460px; padding: 24px 20px; max-height: 85vh; overflow-y: auto; box-shadow: 0 -10px 30px rgba(0,0,0,0.5); }
     @media (min-width: 600px) { .modal-card { border-radius: 20px; } }
@@ -137,6 +205,42 @@
     <div class="header-area">
       <h2>📅 보안팀 휴무 캘린더</h2>
       <button class="btn-add-vacation" id="openModalBtn">+ 휴무 등록</button>
+    </div>
+
+    <!-- 💡 필터 및 정렬 박스 추가 (백맨/현관 통합, 통제실 제외) -->
+    <div class="filter-box">
+      <div class="filter-row">
+        <span class="filter-title">정렬 기준</span>
+        <select id="sortSelect" class="sort-select">
+          <option value="name_asc">이름순 (가나다)</option>
+        </select>
+      </div>
+
+      <div>
+        <span class="filter-title" style="display: block; margin-bottom: 6px;">근무지 및 주·야간 필터 (다중 선택)</span>
+        <div class="filter-chips">
+          <label class="filter-chip">
+            <input type="checkbox" name="locFilter" value="주간" checked>
+            <span class="chip-label">☀️ 주간 전체</span>
+          </label>
+          <label class="filter-chip">
+            <input type="checkbox" name="locFilter" value="야간" checked>
+            <span class="chip-label">🌙 야간 전체</span>
+          </label>
+          <label class="filter-chip">
+            <input type="checkbox" name="locFilter" value="스키장" checked>
+            <span class="chip-label">⛷️ 스키장</span>
+          </label>
+          <label class="filter-chip">
+            <input type="checkbox" name="locFilter" value="골프장" checked>
+            <span class="chip-label">⛳ 골프장</span>
+          </label>
+          <label class="filter-chip">
+            <input type="checkbox" name="locFilter" value="백맨/현관" checked>
+            <span class="chip-label">🚪 백맨/현관</span>
+          </label>
+        </div>
+      </div>
     </div>
 
     <div class="calendar-nav">
