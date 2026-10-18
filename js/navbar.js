@@ -5,7 +5,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   // 현재 페이지 파일명 확인 (메뉴 활성화용)
   const currentPath = window.location.pathname;
 
-  // 공통 CSS 스타일 자동 주입
+  // 공통 CSS 스타일 자동 주입 (톱니바퀴 버튼 스타일 포함)
   const navStyle = document.createElement('style');
   navStyle.textContent = `
     .nav-header {
@@ -76,8 +76,34 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     .drawer-menu.active { right: 0; }
     .drawer-header { margin-bottom: 30px; }
-    .drawer-user-name { font-size: 18px; font-weight: 700; color: #f8fafc; margin-bottom: 4px; }
+    
+    /* 톱니바퀴 및 유저 정보 행 스타일 */
+    .drawer-user-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 4px;
+    }
+    .drawer-user-name { font-size: 18px; font-weight: 700; color: #f8fafc; }
+    .btn-settings-gear {
+      background: rgba(255, 255, 255, 0.1);
+      border: none;
+      border-radius: 8px;
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      text-decoration: none;
+      font-size: 16px;
+      transition: background 0.2s;
+    }
+    .btn-settings-gear:hover {
+      background: rgba(56, 189, 248, 0.2);
+    }
     .drawer-user-role { font-size: 12px; color: #38bdf8; font-weight: 600; }
+    
     .drawer-links { display: flex; flex-direction: column; gap: 8px; }
     .drawer-item {
       display: flex;
@@ -115,8 +141,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (currentPath.includes('main.html')) pageTitle = '메인 메뉴';
   else if (currentPath.includes('users.html')) pageTitle = '회원 조회 및 관리';
   else if (currentPath.includes('vehicle.html')) pageTitle = '차량 조회';
+  else if (currentPath.includes('calendar.html')) pageTitle = '휴무 캘린더';
 
-  // 공통 HTML 템플릿 주입
+  // 공통 HTML 템플릿 주입 (톱니바퀴 아이콘 포함)
   navContainer.innerHTML = `
     <header class="nav-header">
       <div class="nav-title">${pageTitle}</div>
@@ -129,8 +156,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     <div class="drawer-menu" id="navDrawerMenu">
       <div>
         <div class="drawer-header">
-          <div class="drawer-user-name" id="navUserName">회원 정보 로딩중...</div>
-          <div class="drawer-user-role" id="navUserRole">Jisan Security Team</div>
+          <div class="drawer-user-row">
+            <div>
+              <div class="drawer-user-name" id="navUserName">회원 정보 로딩중...</div>
+              <div class="drawer-user-role" id="navUserRole">Jisan Security Team</div>
+            </div>
+            <a href="/pages/settings.html" class="btn-settings-gear" title="내 정보 수정">⚙️</a>
+          </div>
         </div>
 
         <nav class="drawer-links">
@@ -164,15 +196,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     drawer.classList.toggle('active');
   }
 
-  openBtn.addEventListener('click', toggleDrawer);
-  overlay.addEventListener('click', toggleDrawer);
+  if (openBtn) openBtn.addEventListener('click', toggleDrawer);
+  if (overlay) overlay.addEventListener('click', toggleDrawer);
 
-  logoutBtn.addEventListener('click', async () => {
-    if (typeof supabaseClient !== 'undefined') {
-      await supabaseClient.auth.signOut();
-    }
-    window.location.href = '/index.html';
-  });
+  if (logoutBtn) {
+    logoutBtn.addEventListener('click', async () => {
+      if (typeof supabaseClient !== 'undefined') {
+        await supabaseClient.auth.signOut();
+      }
+      window.location.href = '/index.html';
+    });
+  }
 
   // 로그인 사용자 이름 불러오기
   if (typeof supabaseClient !== 'undefined') {
@@ -185,8 +219,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         .maybeSingle();
 
       if (profile) {
-        document.getElementById('navUserName').textContent = `${profile.name} 님`;
-        document.getElementById('navUserRole').textContent = profile.role === 'admin' ? '관리자 (Admin)' : '일반 회원';
+        const userNameEl = document.getElementById('navUserName');
+        const userRoleEl = document.getElementById('navUserRole');
+        if (userNameEl) userNameEl.textContent = `${profile.name} 님`;
+        if (userRoleEl) userRoleEl.textContent = profile.role === 'admin' ? '관리자 (Admin)' : '일반 회원';
       }
     }
   }
