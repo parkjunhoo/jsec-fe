@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>지산리조트 보안팀 - 회원 조회</title>
+  <title>지산리조트 보안팀 - 회원 조회 및 관리</title>
   <!-- Supabase JS SDK CDN -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
@@ -15,6 +15,7 @@
       --text-sub: #94a3b8;
       --border-color: rgba(255, 255, 255, 0.1);
       --input-bg: rgba(15, 23, 42, 0.6);
+      --danger: #ef4444;
     }
 
     * {
@@ -36,6 +37,24 @@
       padding: 20px 16px;
       max-width: 600px;
       margin: 0 auto;
+    }
+
+    .header-area {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 14px;
+    }
+
+    .user-count-badge {
+      font-size: 13px;
+      color: var(--text-sub);
+      font-weight: 600;
+    }
+
+    .user-count-badge span {
+      color: var(--primary);
+      font-weight: 800;
     }
 
     .top-actions {
@@ -70,6 +89,7 @@
       font-size: 14px;
       cursor: pointer;
       white-space: nowrap;
+      display: none; /* 기본 숨김, 관리자만 노출 */
     }
 
     .user-list {
@@ -125,10 +145,20 @@
       border: 1px solid rgba(56, 189, 248, 0.3);
     }
 
-    .status-badge {
+    .card-actions {
+      display: flex;
+      gap: 6px;
+    }
+
+    .btn-card-edit {
+      background: rgba(56, 189, 248, 0.15);
+      border: 1px solid rgba(56, 189, 248, 0.3);
+      color: var(--primary);
+      padding: 4px 10px;
+      border-radius: 6px;
       font-size: 12px;
-      color: #4ade80;
-      font-weight: 600;
+      font-weight: 700;
+      cursor: pointer;
     }
 
     .user-details {
@@ -245,8 +275,14 @@
       gap: 10px;
     }
 
+    .modal-btn-group {
+      display: flex;
+      gap: 10px;
+      margin-top: 16px;
+    }
+
     .btn-submit-user {
-      width: 100%;
+      flex: 1;
       height: 48px;
       background: linear-gradient(135deg, #38bdf8 0%, #0284c7 100%);
       color: #fff;
@@ -255,7 +291,19 @@
       font-size: 15px;
       font-weight: 700;
       cursor: pointer;
-      margin-top: 10px;
+    }
+
+    .btn-delete-user {
+      height: 48px;
+      padding: 0 16px;
+      background: rgba(239, 68, 68, 0.2);
+      color: #f87171;
+      border: 1px solid rgba(239, 68, 68, 0.4);
+      border-radius: 12px;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      display: none;
     }
   </style>
 </head>
@@ -266,9 +314,15 @@
 
   <!-- 메인 컨텐츠 영역 -->
   <main class="container">
+    <div class="header-area">
+      <div class="user-count-badge">
+        총 회원 <span id="totalUserCount">0</span>명
+      </div>
+    </div>
+
     <div class="top-actions">
       <input type="text" id="searchInput" class="search-input" placeholder="회원 이름 또는 근무지 검색...">
-      <button class="btn-add-user" id="addUserBtn" style="display: none;">+ 회원 등록</button>
+      <button class="btn-add-user" id="addUserBtn">+ 회원 등록</button>
     </div>
 
     <div class="user-list" id="userList">
@@ -276,23 +330,25 @@
     </div>
   </main>
 
-  <!-- 신규 회원 등록 모달 팝업 -->
-  <div class="modal-overlay" id="addUserModal">
+  <!-- 회원 등록 / 수정 모달 팝업 -->
+  <div class="modal-overlay" id="userModal">
     <div class="modal-card">
       <div class="modal-header">
-        <h3>신규 회원 등록</h3>
+        <h3 id="modalTitle">신규 회원 등록</h3>
         <button class="btn-close-modal" id="closeModalBtn">&times;</button>
       </div>
 
-      <form id="createUserForm">
+      <form id="userForm">
+        <input type="hidden" id="editUserId">
+
         <div class="form-grid-2">
           <div class="form-group">
-            <label>이름 (로그인 ID용)</label>
+            <label>이름 (로그인 ID 겸용) *</label>
             <input type="text" id="newUsername" placeholder="예: 홍길동" required>
           </div>
           <div class="form-group">
-            <label>비밀번호</label>
-            <input type="password" id="newPassword" placeholder="비밀번호" required>
+            <label id="passwordLabel">비밀번호 *</label>
+            <input type="password" id="newPassword" placeholder="비밀번호 입력">
           </div>
         </div>
 
@@ -315,7 +371,7 @@
         </div>
 
         <div class="form-group">
-          <label>근무지</label>
+          <label>근무지 *</label>
           <input type="text" id="newWorkLocation" placeholder="예: 보안통제실 / 골프장야간" required>
         </div>
 
@@ -335,7 +391,10 @@
           <input type="tel" id="newPhone" placeholder="010-0000-0000">
         </div>
 
-        <button type="submit" class="btn-submit-user" id="submitUserBtn">등록 완료</button>
+        <div class="modal-btn-group">
+          <button type="button" class="btn-delete-user" id="deleteUserBtn">삭제</button>
+          <button type="submit" class="btn-submit-user" id="submitUserBtn">등록 완료</button>
+        </div>
       </form>
     </div>
   </div>
