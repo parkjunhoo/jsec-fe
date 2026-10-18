@@ -1,5 +1,5 @@
 document.addEventListener('DOMContentLoaded', async () => {
-  // 1. 세션 체크 (supabaseClient 사용)
+  // 1. 이미 로그인된 세션이 있다면 메인으로 이동
   const { data: { session } } = await supabaseClient.auth.getSession();
   if (session) {
     window.location.href = '/pages/main.html';
@@ -10,11 +10,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   const errorMessage = document.getElementById('errorMessage');
   const loginBtn = document.getElementById('loginBtn');
 
-  // 2. 로그인 이벤트
   loginForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     
-    const username = document.getElementById('username').value.trim();
+    // 사용자가 입력한 이름/아이디 (예: '박준후')
+    const inputName = document.getElementById('username').value.trim();
     const password = document.getElementById('password').value.trim();
 
     errorMessage.style.display = 'none';
@@ -22,7 +22,19 @@ document.addEventListener('DOMContentLoaded', async () => {
     loginBtn.disabled = true;
 
     try {
-      const email = `${username}@jsec.com`;
+      // 2. users 테이블에서 입력받은 이름으로 해당 회원 조회
+      const { data: userData, error: userError } = await supabaseClient
+        .from('users')
+        .select('id, username, name')
+        .or(`username.eq.${inputName},name.eq.${inputName}`)
+        .maybeSingle();
+
+      if (userError || !userData) {
+        throw new Error('존재하지 않는 회원 이름입니다.');
+      }
+
+      // 3. 현재 auth에 만들어둔 테스트용 계정 (1@jsec.com)으로 로그인 시도
+      const email = '1@jsec.com'; 
 
       const { data, error } = await supabaseClient.auth.signInWithPassword({
         email: email,
@@ -30,10 +42,10 @@ document.addEventListener('DOMContentLoaded', async () => {
       });
 
       if (error) {
-        throw new Error('아이디 또는 비밀번호가 올바르지 않습니다.');
+        throw new Error('비밀번호가 올바르지 않습니다.');
       }
 
-      // 로그인 성공 시 이동
+      // 4. 로그인 성공 시 메인 화면으로 이동
       window.location.href = '/pages/main.html';
 
     } catch (err) {
