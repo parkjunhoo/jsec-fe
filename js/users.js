@@ -34,6 +34,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   // API 엔드포인트 설정
   const WORKER_LIST_USERS_API = 'https://jsec-serverless.adobephotoshop.workers.dev/api/users/list';
   const WORKER_CREATE_USER_API = 'https://jsec-serverless.adobephotoshop.workers.dev/api/users/create';
+  const WORKER_DELETE_USER_API = 'https://jsec-serverless.adobephotoshop.workers.dev/api/users/delete';
   // 필요시 서버리스에 구현된 수정/삭제 엔드포인트 또는 Supabase 직접 제어 연동 가능
   
   let allUsers = [];
@@ -262,40 +263,41 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   // 7. 회원 삭제 이벤트 (D)
-  if (deleteUserBtn) {
-    deleteUserBtn.addEventListener('click', async () => {
-      if (!isAdmin) {
-        alert('관리자 권한이 없습니다.');
-        return;
-      }
+if (deleteUserBtn) {
+  deleteUserBtn.addEventListener('click', async () => {
+    if (!isAdmin) {
+      alert('관리자 권한이 없습니다.');
+      return;
+    }
 
-      const userId = editUserId.value;
-      const userName = newUsername.value;
+    const userId = editUserId.value;
+    const userName = newUsername.value;
 
-      if (!confirm(`정말 [${userName}] 회원을 삭제하시겠습니까?`)) return;
+    if (!confirm(`정말 [${userName}] 회원을 완전히 삭제하시겠습니까?`)) return;
 
-      deleteUserBtn.disabled = true;
+    deleteUserBtn.disabled = true;
 
-      try {
-        // Supabase users 테이블에서 삭제 (Auth 계정 연동은 Worker에서 처리하거나 RLS 정책 확인 필요)
-        const { error } = await supabaseClient
-          .from('users')
-          .delete()
-          .eq('id', userId);
+    try {
+      // Worker API를 호출하여 Auth 계정과 DB 정보를 동시에 삭제
+      const response = await fetch(`${WORKER_DELETE_USER_API}/${userId}`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' }
+      });
 
-        if (error) throw error;
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || '회원 삭제에 실패했습니다.');
 
-        alert('회원이 삭제되었습니다.');
-        closeModal();
-        fetchUsers();
+      alert('회원이 성공적으로 삭제되었습니다.');
+      closeModal();
+      fetchUsers(); // 목록 새로고침
 
-      } catch (err) {
-        alert(`삭제 오류: ${err.message}`);
-      } finally {
-        deleteUserBtn.disabled = false;
-      }
-    });
-  }
+    } catch (err) {
+      alert(`삭제 오류: ${err.message}`);
+    } finally {
+      deleteUserBtn.disabled = false;
+    }
+  });
+}
 
   // 초기화 실행
   await checkAdminRole();
