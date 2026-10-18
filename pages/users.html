@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>지산리조트 보안팀 - 회원 조회</title>
+  <!-- Supabase JS SDK CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    :root {
+      --bg-main: #0f172a;
+      --card-bg: rgba(30, 41, 59, 0.7);
+      --primary: #38bdf8;
+      --text-main: #f8fafc;
+      --text-sub: #94a3b8;
+      --border-color: rgba(255, 255, 255, 0.1);
+      --input-bg: rgba(15, 23, 42, 0.6);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Pretendard", sans-serif;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      background-color: var(--bg-main);
+      color: var(--text-main);
+      min-height: 100vh;
+      padding-bottom: 40px;
+    }
+
+    /* 본문 컨텐츠 영역 */
+    .container {
+      padding: 20px 16px;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    /* 검색창 & 등록버튼 세트 */
+    .top-actions {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    .search-input {
+      flex: 1;
+      height: 48px;
+      padding: 0 16px;
+      background: var(--input-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      color: #fff;
+      font-size: 14px;
+      outline: none;
+    }
+
+    .search-input:focus {
+      border-color: var(--primary);
+    }
+
+    .btn-add-user {
+      background: linear-gradient(135deg, #38bdf8 0%, #0284c7 100%);
+      color: #fff;
+      border: none;
+      padding: 0 16px;
+      border-radius: 12px;
+      font-weight: 700;
+      font-size: 14px;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    /* 회원 목록 카드 스타일 */
+    .user-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .user-card {
+      background: var(--card-bg);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      padding:
