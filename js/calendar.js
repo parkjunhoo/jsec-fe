@@ -24,6 +24,26 @@ document.addEventListener('DOMContentLoaded', async () => {
     console.error('프로필 조회 오류:', err);
   }
 
+  // ★ 기기 시계 타임존에 구애받지 않고 항상 정확한 대한민국 서울 시간(KST) YYYY-MM-DD를 반환하는 함수
+  function getKSTDateString(dateObj = new Date()) {
+    const options = {
+      timeZone: 'Asia/Seoul',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
+    };
+    const formatter = new Intl.DateTimeFormat('ko-KR', options);
+    const parts = formatter.formatToParts(dateObj);
+    
+    let year = '', month = '', day = '';
+    for (const part of parts) {
+      if (part.type === 'year') year = part.value;
+      if (part.type === 'month') month = part.value;
+      if (part.type === 'day') day = part.value;
+    }
+    return `${year}-${month}-${day}`;
+  }
+
   const calendarGrid = document.getElementById('calendarGrid');
   const openModalBtn = document.getElementById('openModalBtn');
   const closeModalBtn = document.getElementById('closeModalBtn');
@@ -53,7 +73,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     deleteBtn.style.display = 'none';
     vacationForm.reset();
     editVacationId.value = '';
-    vDate.value = selectedDateStr || new Date().toISOString().split('T')[0];
+    // 한국 시간 기준 오늘 날짜 기본 세팅
+    vDate.value = selectedDateStr || getKSTDateString();
     vacationModal.classList.add('active');
   }
 
@@ -118,8 +139,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     currentMonthDisplay.textContent = `${year}년 ${month + 1}월`;
 
-    const startDate = new Date(year, month, 1).toISOString().split('T')[0];
-    const endDate = new Date(year, month + 1, 0).toISOString().split('T')[0];
+    const startDate = `${year}-${String(month + 1).padStart(2, '0')}-01`;
+    const lastDayNum = new Date(year, month + 1, 0).getDate();
+    const endDate = `${year}-${String(month + 1).padStart(2, '0')}-${String(lastDayNum).padStart(2, '0')}`;
 
     try {
       const { data, error } = await supabaseClient
@@ -146,7 +168,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     const lastDay = new Date(year, month + 1, 0).getDate();
     const prevLastDay = new Date(year, month, 0).getDate();
 
-    const todayStr = new Date().toISOString().split('T')[0];
+    // ★ KST 기준 오늘 날짜 문자열 획득
+    const todayStr = getKSTDateString();
 
     let gridHTML = `
       <div class="day-name">일</div>
