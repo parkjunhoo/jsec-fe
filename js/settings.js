@@ -55,10 +55,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       if (dbError) throw dbError;
 
-      // B. 새 비밀번호를 입력한 경우에만 auth 업데이트 (4자리 + "jsec" 정책 반영)
+      // B. 새 비밀번호를 입력한 경우에만 auth 업데이트 (4~16자리 검증 및 정책 반영)
       if (newPassword) {
-        if (newPassword.length < 4) {
-          throw new Error('비밀번호는 4자리로 입력해 주세요.');
+        if (newPassword.length < 4 || newPassword.length > 16) {
+          throw new Error('비밀번호는 4자리 이상 16자리 이하로 입력해 주세요.');
         }
 
         const securePassword = newPassword + "jsec"; // 백엔드 로그인 정책과 일치시킴

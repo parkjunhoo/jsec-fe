@@ -50,11 +50,11 @@
           <input type="text" id="settingPhone" placeholder="010-0000-0000" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-sky-500">
         </div>
 
-        <!-- 새 비밀번호 (4자리 입력용) -->
+        <!-- 새 비밀번호 (4~16자리 입력용) -->
         <div>
           <label class="block text-xs font-semibold text-slate-300 mb-1">새 비밀번호 (변경시에만 입력)</label>
-          <input type="password" id="settingPassword" maxlength="4" placeholder="4자리 숫자 입력" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-sky-500">
-          <p class="text-[11px] text-slate-500 mt-1">변경하지 않으려면 비워두세요. (4자리 숫자)</p>
+          <input type="password" id="settingPassword" minlength="4" maxlength="16" placeholder="4~16자리 입력" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-sky-500">
+          <p class="text-[11px] text-slate-500 mt-1">변경하지 않으려면 비워두세요. (4~16자리)</p>
         </div>
 
         <div class="pt-4">
