@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>지산리조트 보안팀 - 차량 조회</title>
+  <!-- Supabase JS SDK CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    :root {
+      --bg-main: #0f172a;
+      --card-bg: rgba(30, 41, 59, 0.7);
+      --primary: #38bdf8;
+      --text-main: #f8fafc;
+      --text-sub: #94a3b8;
+      --border-color: rgba(255, 255, 255, 0.1);
+      --input-bg: rgba(15, 23, 42, 0.6);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Pretendard", sans-serif;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      background-color: var(--bg-main);
+      color: var(--text-main);
+      min-height: 100vh;
+      padding-bottom: 40px;
+    }
+
+    /* 컨텐츠 영역 */
+    .container {
+      padding: 20px 16px;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    /* 차량 검색바 영역 */
+    .search-box {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    .search-input {
+      flex: 1;
+      height: 52px;
+      padding: 0 16px;
+      background: var(--input-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 14px;
+      color: #fff;
+      font-size: 15px;
+      outline: none;
+      transition: all 0.2s;
+    }
+
+    .search-input:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 4px rgba(56, 189, 248, 0.15);
+    }
+
+    .btn-search {
+      height: 52px;
+      padding: 0 20px;
+      background: linear-gradient(135deg, #38bdf8 0%, #0284c7 100%);
+      color: #fff;
+      border: none;
+      border-radius: 14px;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      white-space: nowrap;
+      box-shadow: 0 4px 12px rgba(2, 132, 199, 0.3);
+      transition: transform 0.2s;
+    }
+
+    .btn-search:active {
+      transform: scale(0.96);
+    }
+
+    /* 차량 검색 결과 리스트 */
+    .vehicle-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .vehicle-card {
+      background: var(--card-bg);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--border-color);
+      border-radius: 18px;
+      padding: 20px 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .vehicle-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .car-number {
+      font-size: 18px;
+      font-weight: 800;
+      color: var(--primary);
+      letter-spacing: -0.5px;
+    }
+
+    .car-type-badge {
+      font-size: 11px;
+      padding: 4px 10px;
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--text-sub);
+      font-weight: 600;
+      border: 1px solid var(--border-color);
+    }
+
+    .vehicle-details {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+      font-size: 13px;
+      color: var(--text-sub);
+      background: rgba(15, 23, 42, 0.4);
+      padding: 12px 14px;
+      border-radius: 12px;
+    }
+
+    .vehicle-details div span {
+      color: var(--text-main);
+      font-weight: 600;
+      margin-left: 4px;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 50px 0;
+      color: var(--text-sub);
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 공통 상단바 & 햄버거 메뉴 바인딩 위치 -->
+  <div id="navbar"></div>
+
+  <!-- 메인 컨텐츠 영역 -->
+  <main class="container">
+    <div class="search-box">
+      <input type="text" id="carSearchInput" class="search-input" placeholder="차량번호 뒤 4자리 또는 전체 번호 입력..." autocomplete="off">
+      <button class="btn-search" id="searchBtn">검색</button>
+    </div>
+
+    <div class="vehicle-list" id="vehicleList">
+      <div class="empty-state">차량번호를 입력 후 검색해 주세요.</div>
+    </div>
+  </main>
+
+  <!-- JS 스크립트 연결 순서 -->
+  <script src="/js/supabase.js"></script>
+  <script src="/js/navbar.js"></script>
+  <script src="/js/vehicle.js"></script>
+</body>
+</html>
