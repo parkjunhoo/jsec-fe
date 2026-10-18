@@ -78,6 +78,19 @@
     .search-input:focus {
       border-color: var(--primary);
     }
+    
+    /* 화면이 좁아질 때(모바일 등) 세로 배치로 전환 */
+    @media (max-width: 768px) {
+      .top-actions {
+        flex-direction: column;
+        align-items: stretch; /* 요소를 가로로 꽉 차게 늘림 */
+      }
+      
+      .btn-add-user {
+        width: 100%; /* 버튼을 화면 가로 폭에 맞춤 */
+      }
+    }
+
 
     .btn-add-user {
       background: linear-gradient(135deg, #38bdf8 0%, #0284c7 100%);
