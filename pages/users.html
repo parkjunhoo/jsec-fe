@@ -80,19 +80,17 @@
       border-color: var(--primary);
     }
     
-    /* 화면이 좁아질 때(모바일 등) 세로 배치로 전환 */
     @media (max-width: 768px) {
       .top-actions {
         flex-direction: column;
-        align-items: stretch; /* 요소를 가로로 꽉 차게 늘림 */
+        align-items: stretch;
       }
       
       .btn-add-user {
         min-height: 45px;
-        width: 100%; /* 버튼을 화면 가로 폭에 맞춤 */
+        width: 100%;
       }
     }
-
 
     .btn-add-user {
       background: linear-gradient(135deg, #38bdf8 0%, #0284c7 100%);
@@ -104,7 +102,7 @@
       font-size: 14px;
       cursor: pointer;
       white-space: nowrap;
-      display: none; /* 기본 숨김, 관리자만 노출 */
+      display: none;
     }
 
     .user-list {
@@ -158,11 +156,6 @@
       background: rgba(56, 189, 248, 0.15);
       color: var(--primary);
       border: 1px solid rgba(56, 189, 248, 0.3);
-    }
-
-    .card-actions {
-      display: flex;
-      gap: 6px;
     }
 
     .btn-card-edit {
@@ -404,6 +397,15 @@
         <div class="form-group">
           <label>연락처</label>
           <input type="tel" id="newPhone" placeholder="010-0000-0000">
+        </div>
+
+        <!-- 💡 추가된 컬러 피커 입력 영역 -->
+        <div class="form-group">
+          <label>회원 색상</label>
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <input type="color" id="newColor" value="#38bdf8" style="width: 50px; height: 44px; padding: 4px; background: var(--input-bg); border: 1px solid var(--border-color); border-radius: 10px; cursor: pointer;">
+            <span id="colorHexText" style="font-size: 14px; font-family: monospace; color: var(--text-sub);">#38bdf8</span>
+          </div>
         </div>
 
         <div class="modal-btn-group">

@@ -30,15 +30,23 @@ document.addEventListener('DOMContentLoaded', async () => {
   const newHireDate = document.getElementById('newHireDate');
   const newAnnualBaseDate = document.getElementById('newAnnualBaseDate');
   const newPhone = document.getElementById('newPhone');
+  const newColor = document.getElementById('newColor');         // 💡 추가된 컬러 피커 요소
+  const colorHexText = document.getElementById('colorHexText'); // 💡 컬러 텍스트 표시 요소 (선택사항)
 
   // API 엔드포인트 설정
   const WORKER_LIST_USERS_API = 'https://jsec-serverless.adobephotoshop.workers.dev/api/users/list';
   const WORKER_CREATE_USER_API = 'https://jsec-serverless.adobephotoshop.workers.dev/api/users/create';
   const WORKER_DELETE_USER_API = 'https://jsec-serverless.adobephotoshop.workers.dev/api/users/delete';
-  // 필요시 서버리스에 구현된 수정/삭제 엔드포인트 또는 Supabase 직접 제어 연동 가능
   
   let allUsers = [];
   let isAdmin = false;
+
+  // 컬러 피커 조작 시 HEX 텍스트 실시간 동기화
+  if (newColor && colorHexText) {
+    newColor.addEventListener('input', (e) => {
+      colorHexText.textContent = e.target.value;
+    });
+  }
 
   // 2. 현재 로그인 사용자 권한 체크 (관리자 여부 확인)
   async function checkAdminRole() {
@@ -67,6 +75,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     newPassword.required = true;
     userForm.reset();
     editUserId.value = '';
+    if (newColor) newColor.value = '#38bdf8';
+    if (colorHexText) colorHexText.textContent = '#38bdf8';
     userModal.classList.add('active');
   }
 
@@ -90,6 +100,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     newHireDate.value = user.hire_date ? user.hire_date.split('T')[0] : '';
     newAnnualBaseDate.value = user.annual_base_date ? user.annual_base_date.split('T')[0] : '';
     newPhone.value = user.phone || '';
+    
+    // 💡 컬러 값 세팅
+    const userColor = user.color || '#38bdf8';
+    if (newColor) newColor.value = userColor;
+    if (colorHexText) colorHexText.textContent = userColor;
+
     newPassword.value = '';
 
     userModal.classList.add('active');
@@ -127,36 +143,41 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
-  // 4. 회원 목록 카드 렌더링 (관리자일 때만 수정 버튼 노출)
+  // 4. 회원 목록 카드 렌더링 (관리자일 때만 수정 버튼 노출 + 컬러 정보 표시)
   function renderUsers(users) {
     if (!users || users.length === 0) {
       userListContainer.innerHTML = `<div class="empty-state">조회된 회원이 없습니다.</div>`;
       return;
     }
 
-    userListContainer.innerHTML = users.map(user => `
-      <div class="user-card">
-        <div class="user-card-header">
-          <div class="user-name-box">
-            <span class="user-name">${user.name || user.username || '이름 없음'}</span>
-            <span class="role-badge ${user.role === 'admin' ? 'admin' : 'user'}">
-              ${user.role === 'admin' ? '관리자' : '회원'}
-            </span>
+    userListContainer.innerHTML = users.map(user => {
+      const userColor = user.color || '#38bdf8';
+      return `
+        <div class="user-card" style="border-left: 4px solid ${userColor};">
+          <div class="user-card-header">
+            <div class="user-name-box">
+              <span class="user-name">${user.name || user.username || '이름 없음'}</span>
+              <span class="role-badge ${user.role === 'admin' ? 'admin' : 'user'}">
+                ${user.role === 'admin' ? '관리자' : '회원'}
+              </span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span class="status-badge">${user.status || '재직'}</span>
+              ${isAdmin ? `<button type="button" class="btn-card-edit" data-id="${user.id}">수정</button>` : ''}
+            </div>
           </div>
-          <div style="display: flex; align-items: center; gap: 8px;">
-            <span class="status-badge">${user.status || '재직'}</span>
-            ${isAdmin ? `<button type="button" class="btn-card-edit" data-id="${user.id}">수정</button>` : ''}
-          </div>
-        </div>
 
-        <div class="user-details">
-          <div>근무지: <span>${user.work_location || '-'}</span></div>
-          <div>계약형태: <span>${user.contract_type || '-'}</span></div>
-          <div>연락처: <span>${user.phone || '-'}</span></div>
-          <div>입사일: <span>${user.hire_date ? user.hire_date.split('T')[0] : '-'}</span></div>
+          <div class="user-details">
+            <div>근무지: <span>${user.work_location || '-'}</span></div>
+            <div>계약형태: <span>${user.contract_type || '-'}</span></div>
+            <div>연락처: <span>${user.phone || '-'}</span></div>
+            <div>입사일: <span>${user.hire_date ? user.hire_date.split('T')[0] : '-'}</span></div>
+            <!-- 💡 조회 화면에 컬러 코드 표시 -->
+            <div>컬러: <span style="color: ${userColor}; font-weight: bold;">${userColor}</span></div>
+          </div>
         </div>
-      </div>
-    `).join('');
+      `;
+    }).join('');
 
     // 카드별 수정 버튼 이벤트 바인딩
     if (isAdmin) {
@@ -202,6 +223,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       const hireDate = newHireDate.value;
       const annualBaseDate = newAnnualBaseDate.value;
       const phone = newPhone.value.trim();
+      const color = newColor ? newColor.value : '#38bdf8'; // 💡 선택한 컬러 값 가져오기
 
       submitUserBtn.textContent = userId ? '수정 중...' : '등록 중...';
       submitUserBtn.disabled = true;
@@ -216,7 +238,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             work_location: workLocation,
             hire_date: hireDate || null,
             annual_base_date: annualBaseDate || null,
-            phone: phone
+            phone: phone,
+            color: color // 💡 컬러 값 업데이트 반영
           };
 
           const { error } = await supabaseClient
@@ -241,7 +264,8 @@ document.addEventListener('DOMContentLoaded', async () => {
               work_location: workLocation,
               hire_date: hireDate || null,
               annual_base_date: annualBaseDate || null,
-              phone: phone
+              phone: phone,
+              color: color // 💡 신규 등록 시 컬러 값 전달
             })
           });
 
@@ -263,41 +287,40 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   // 7. 회원 삭제 이벤트 (D)
-if (deleteUserBtn) {
-  deleteUserBtn.addEventListener('click', async () => {
-    if (!isAdmin) {
-      alert('관리자 권한이 없습니다.');
-      return;
-    }
+  if (deleteUserBtn) {
+    deleteUserBtn.addEventListener('click', async () => {
+      if (!isAdmin) {
+        alert('관리자 권한이 없습니다.');
+        return;
+      }
 
-    const userId = editUserId.value;
-    const userName = newUsername.value;
+      const userId = editUserId.value;
+      const userName = newUsername.value;
 
-    if (!confirm(`정말 [${userName}] 회원을 완전히 삭제하시겠습니까?`)) return;
+      if (!confirm(`정말 [${userName}] 회원을 완전히 삭제하시겠습니까?`)) return;
 
-    deleteUserBtn.disabled = true;
+      deleteUserBtn.disabled = true;
 
-    try {
-      // Worker API를 호출하여 Auth 계정과 DB 정보를 동시에 삭제
-      const response = await fetch(`${WORKER_DELETE_USER_API}/${userId}`, {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' }
-      });
+      try {
+        const response = await fetch(`${WORKER_DELETE_USER_API}/${userId}`, {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' }
+        });
 
-      const result = await response.json();
-      if (!response.ok) throw new Error(result.error || '회원 삭제에 실패했습니다.');
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.error || '회원 삭제에 실패했습니다.');
 
-      alert('회원이 성공적으로 삭제되었습니다.');
-      closeModal();
-      fetchUsers(); // 목록 새로고침
+        alert('회원이 성공적으로 삭제되었습니다.');
+        closeModal();
+        fetchUsers();
 
-    } catch (err) {
-      alert(`삭제 오류: ${err.message}`);
-    } finally {
-      deleteUserBtn.disabled = false;
-    }
-  });
-}
+      } catch (err) {
+        alert(`삭제 오류: ${err.message}`);
+      } finally {
+        deleteUserBtn.disabled = false;
+      }
+    });
+  }
 
   // 초기화 실행
   await checkAdminRole();
