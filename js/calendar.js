@@ -76,26 +76,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   let userMap = {}; 
   let allTeamMembers = []; 
 
-  // 근무지에 따른 위치/주야간 아이콘 및 휴무 구분 아이콘 생성 헬퍼 함수
-  function getEventIcons(workLocation = '', leaveType = '') {
-    const loc = workLocation.toLowerCase();
-    let placeIcon = '';
-    let timeIcon = '';
-    let leaveIcon = '';
-
-    if (loc.includes('스키장')) placeIcon = '⛷️';
-    else if (loc.includes('골프장')) placeIcon = '⛳';
-    else if (loc.includes('현관') || loc.includes('백맨')) placeIcon = '🚪';
-    else placeIcon = '🛡️';
-
-    if (loc.includes('주간')) timeIcon = '☀️';
-    else if (loc.includes('야간')) timeIcon = '🌙';
-
-    if (leaveType === '연차') leaveIcon = '🌴';
-    else if (leaveType === '시간차') leaveIcon = '⏳';
-    else leaveIcon = '🟢';
-
-    return `${placeIcon}${timeIcon}${leaveIcon}`;
+  // 휴무 구분 아이콘 생성 함수
+  function getLeaveIcon(leaveType = '') {
+    if (leaveType === '연차') return '🌴';
+    if (leaveType === '시간차') return '⏳';
+    return '🟢'; // 일반 휴무(정기오프)
   }
 
   async function fetchUsersInfo() {
@@ -234,17 +219,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
-  // 통계 대시보드 렌더링 함수
   function renderStatistics() {
     if (!statsGridContainer) return;
 
-    // 현재 선택된 사용자 필터 추출
     const userCheckboxes = document.querySelectorAll('input[name="userFilter"]');
     const checkedUsers = Array.from(userCheckboxes)
       .filter(cb => cb.checked)
       .map(cb => cb.value);
 
-    // 필터링된 팀원들만 대상 선정 (체크된 팀원 또는 전체 팀원 중 휴무가 있는 팀원)
     const targetMembers = allTeamMembers.filter(m => checkedUsers.includes(m.name || m.username));
 
     if (targetMembers.length === 0) {
@@ -259,26 +241,23 @@ document.addEventListener('DOMContentLoaded', async () => {
       const mName = member.name || member.username;
       const mColor = member.color || '#38bdf8';
 
-      // 해당 팀원의 이번 달 휴무 데이터 필터링
       const memberVacations = allVacations.filter(v => v.username === mName);
       totalMonthCount += memberVacations.length;
 
-      let휴무Cnt = 0;
-      let연차Cnt = 0;
-      let시간차Cnt = 0;
+      let offCount = 0;
+      let annualCount = 0;
+      let timeCount = 0;
       const dayList = [];
 
       memberVacations.forEach(v => {
-        if (v.leave_type === '연차') 연차Cnt++;
-        else if (v.leave_type === '시간차') 시간차Cnt++;
-        else 휴무Cnt++; // 기본 정기오프
+        if (v.leave_type === '연차') annualCount++;
+        else if (v.leave_type === '시간차') timeCount++;
+        else offCount++;
 
-        // 날짜에서 일(Day)만 추출 (예: '2026-06-15' -> 15)
         const dayNum = parseInt(v.date.split('-')[2], 10);
         if (!dayList.includes(dayNum)) dayList.push(dayNum);
       });
 
-      // 날짜 오름차순 정렬
       dayList.sort((a, b) => a - b);
       const datesString = dayList.length > 0 ? dayList.join(', ') : '사용일 없음';
 
@@ -290,9 +269,9 @@ document.addEventListener('DOMContentLoaded', async () => {
               ${mName}
             </div>
             <div class="stat-badges">
-              <div class="stat-badge-item">휴무 <span>${휴무Cnt}</span></div>
-              <div class="stat-badge-item">연차 <span>${연차Cnt}</span></div>
-              ${시간차Cnt > 0 ? `<div class="stat-badge-item">시간차 <span>${시간차Cnt}</span></div>` : ''}
+              <div class="stat-badge-item">휴무 <span>${offCount}</span></div>
+              <div class="stat-badge-item">연차 <span>${annualCount}</span></div>
+              ${timeCount > 0 ? `<div class="stat-badge-item">시간차 <span>${timeCount}</span></div>` : ''}
               <div class="stat-badge-item" style="background: rgba(56,189,248,0.1); border-color: rgba(56,189,248,0.3);">총 <span>${memberVacations.length}일</span></div>
             </div>
           </div>
@@ -370,13 +349,13 @@ document.addEventListener('DOMContentLoaded', async () => {
           <div class="cell-date">${i}</div>
           <div class="cell-events">
             ${dayEvents.map(ev => {
-              const userInfo = userMap[ev.user_id] || userMap[ev.username] || { color: '#38bdf8', work_location: '' };
+              const userInfo = userMap[ev.user_id] || userMap[ev.username] || { color: '#38bdf8' };
               const userColor = userInfo.color;
-              const icons = getEventIcons(userInfo.work_location, ev.leave_type);
+              const leaveIcon = getLeaveIcon(ev.leave_type);
               
               return `
                 <div class="event-pill ${ev.leave_type}" data-id="${ev.id}" title="${ev.username} (${ev.leave_type} -${ev.time_detail})" style="border-left: 3px solid ${userColor}; background:${userColor}20; color: #fff;">
-                  ${icons}${ev.username}
+                  ${leaveIcon}${ev.username}
                 </div>
               `;
             }).join('')}
