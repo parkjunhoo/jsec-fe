@@ -237,6 +237,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     let totalMonthCount = 0;
 
+    // 이번 달 전체 일수 (예: 6월이면 30일) 계산
+    const year = currentDate.getFullYear();
+    const month = currentDate.getMonth();
+    const totalDaysInMonth = new Date(year, month + 1, 0).getDate();
+
     statsGridContainer.innerHTML = targetMembers.map(member => {
       const mName = member.name || member.username;
       const mColor = member.color || '#38bdf8';
@@ -261,6 +266,10 @@ document.addEventListener('DOMContentLoaded', async () => {
       dayList.sort((a, b) => a - b);
       const datesString = dayList.length > 0 ? dayList.join(', ') : '사용일 없음';
 
+      // 게이지바 퍼센티지 계산 (한 달 기준 최대 15일을 만점으로 설정하거나 비율 계산)
+      const usageCount = memberVacations.length;
+      const gaugePercent = Math.min(Math.round((usageCount / 15) * 100), 100);
+
       return `
         <div class="stat-card" style="border-left: 3px solid ${mColor};">
           <div class="stat-card-top">
@@ -272,9 +281,15 @@ document.addEventListener('DOMContentLoaded', async () => {
               <div class="stat-badge-item">휴무 <span>${offCount}</span></div>
               <div class="stat-badge-item">연차 <span>${annualCount}</span></div>
               ${timeCount > 0 ? `<div class="stat-badge-item">시간차 <span>${timeCount}</span></div>` : ''}
-              <div class="stat-badge-item" style="background: rgba(56,189,248,0.1); border-color: rgba(56,189,248,0.3);">총 <span>${memberVacations.length}일</span></div>
+              <div class="stat-badge-item" style="background: rgba(56,189,248,0.1); border-color: rgba(56,189,248,0.3);">총 <span>${usageCount}일</span></div>
             </div>
           </div>
+          
+          <!-- 시각적 프로그레스 게이지바 영역 -->
+          <div style="width: 100%; background: rgba(255,255,255,0.08); height: 6px; border-radius: 3px; overflow: hidden; margin-top: 2px;">
+            <div style="width: ${gaugePercent}%; background: ${mColor}; height: 100%; border-radius: 3px; transition: width 0.4s ease;"></div>
+          </div>
+
           <div class="stat-dates">
             <span class="stat-dates-title">📅 사용일:</span>
             <span class="stat-dates-list">${datesString}</span>
