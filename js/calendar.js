@@ -66,27 +66,32 @@ document.addEventListener('DOMContentLoaded', async () => {
   // 필터 및 정렬 요소
   const sortSelect = document.getElementById('sortSelect');
   const locationCheckboxes = document.querySelectorAll('input[name="locFilter"]');
+  const selectAllBtn = document.getElementById('selectAllBtn');
 
   let currentDate = new Date();
   let allVacations = [];
-  let userColorMap = {}; // 사용자별 컬러 매핑 객체 (user_id 또는 username 기준)
+  let userMap = {}; // 유저별 정보(근무지, 컬러) 매핑 객체
 
-  // 1. users 테이블에서 전체 팀원들의 고유 color 정보 미리 가져오기
-  async function fetchUserColors() {
+  // 1. users 테이블에서 전체 팀원들의 근무지 및 고유 color 정보 가져오기
+  async function fetchUsersInfo() {
     try {
       const { data, error } = await supabaseClient
         .from('users')
-        .select('id, name, username, color');
+        .select('id, name, username, work_location, color');
 
       if (!error && data) {
         data.forEach(u => {
           const keyName = u.name || u.username;
-          if (keyName) userColorMap[keyName] = u.color || '#38bdf8';
-          if (u.id) userColorMap[u.id] = u.color || '#38bdf8';
+          const userInfo = {
+            work_location: u.work_location || '',
+            color: u.color || '#38bdf8'
+          };
+          if (keyName) userMap[keyName] = userInfo;
+          if (u.id) userMap[u.id] = userInfo;
         });
       }
     } catch (err) {
-      console.error('유저 컬러 로드 오류:', err);
+      console.error('유저 정보 로드 오류:', err);
     }
   }
 
@@ -164,13 +169,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     const endDate = `${year}-${String(month + 1).padStart(2, '0')}-${String(lastDayNum).padStart(2, '0')}`;
 
     try {
-      // 캘린더 휴무 데이터 및 유저 정보 조인(또는 별도 유저 상세정보)을 위해 users 정보와 함께 혹은 개별 매칭
+      // 조인 에러를 방지하기 위해 vacations 테이블만 순수하게 조회 후 userMap과 매칭
       const { data, error } = await supabaseClient
         .from('vacations')
-        .select(`
-          *,
-          users:user_id (work_location, color)
-        `)
+        .select('*')
         .gte('date', startDate)
         .lte('date', endDate)
         .order('date', { ascending: true });
@@ -194,12 +196,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const todayStr = getKSTDateString();
 
-    // 1. 체크된 필터 조건 수집
     const checkedLocations = Array.from(locationCheckboxes)
       .filter(cb => cb.checked)
       .map(cb => cb.value);
 
-    // 2. 정렬 기준 가져오기
     const sortVal = sortSelect ? sortSelect.value : 'name_asc';
 
     let gridHTML = `
@@ -212,44 +212,33 @@ document.addEventListener('DOMContentLoaded', async () => {
       <div class="day-name">토</div>
     `;
 
-    // 이전 달 공백 채우기
     for (let i = firstDayIndex; i > 0; i--) {
       const dayNum = prevLastDay - i + 1;
       gridHTML += `<div class="calendar-cell other-month"><div class="cell-date">${dayNum}</div></div>`;
     }
 
-    // 이번 달 날짜 채우기
     for (let i = 1; i <= lastDay; i++) {
       const monthStr = String(month + 1).padStart(2, '0');
       const dayStr = String(i).padStart(2, '0');
       const dateString = `${year}-${monthStr}-${dayStr}`;
       const isToday = (dateString === todayStr);
 
-      // 해당 날짜 이벤트 필터링
       let dayEvents = allVacations.filter(v => v.date === dateString);
 
-      // 근무지/주야간 필터링 적용
+      // 필터링 적용 (유저 근무지 정보 결합)
       dayEvents = dayEvents.filter(ev => {
-        const userLoc = ev.users ? (ev.users.work_location || '') : '';
+        const userInfo = userMap[ev.user_id] || userMap[ev.username] || { work_location: '' };
+        const userLoc = userInfo.work_location;
         
-        // 백맨과 현관은 동일 처리 (백맨이거나 현관이면 '백맨/현관' 혹은 둘 중 하나로 매칭)
-        // 사용자가 체크한 필터 조건 중 하나라도 유저의 근무지 문자열에 포함되는지 확인
-        return checkedLocations.some(filterWord => {
-          if (filterWord === '백맨/현관') {
-            return userLoc.includes('백맨') || userLoc.includes('현관');
-          }
-          return userLoc.includes(filterWord);
-        });
+        return checkedLocations.some(filterWord => userLoc.includes(filterWord));
       });
 
-      // 정렬 적용 (이름순 또는 등록순/입사일순 등)
+      // 정렬 적용
       dayEvents.sort((a, b) => {
         if (sortVal === 'name_asc') {
-          const nameA = a.username || '';
-          const nameB = b.username || '';
-          return nameA.localeCompare(nameB);
+          return (a.username || '').localeCompare(b.username || '');
         }
-        return 0; // 기본
+        return 0;
       });
 
       gridHTML += `
@@ -257,8 +246,8 @@ document.addEventListener('DOMContentLoaded', async () => {
           <div class="cell-date">${i}</div>
           <div class="cell-events">
             ${dayEvents.map(ev => {
-              // 컬러 값 가져오기 (users 테이블 조인 결과 or 컬러 맵 활용)
-              const userColor = (ev.users && ev.users.color) ? ev.users.color : (userColorMap[ev.user_id] || userColorMap[ev.username] || '#38bdf8');
+              const userInfo = userMap[ev.user_id] || userMap[ev.username] || { color: '#38bdf8' };
+              const userColor = userInfo.color;
               
               return `
                 <div class="event-pill ${ev.leave_type}" data-id="${ev.id}" title="${ev.username} (${ev.leave_type} -${ev.time_detail})" style="border-left: 3px solid ${userColor}; background:${userColor}20; color: #fff;">
@@ -271,7 +260,6 @@ document.addEventListener('DOMContentLoaded', async () => {
       `;
     }
 
-    // 다음 달 여분 칸 채우기
     const totalCells = firstDayIndex + lastDay;
     const nextDaysCount = totalCells <= 35 ? (35 - totalCells) : (42 - totalCells);
     for (let i = 1; i <= nextDaysCount; i++) {
@@ -280,7 +268,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     calendarGrid.innerHTML = gridHTML;
 
-    // 날짜 및 칩 클릭 이벤트 핸들러
     calendarGrid.querySelectorAll('.calendar-cell').forEach(cell => {
       const dateStr = cell.getAttribute('data-date');
       if (!dateStr) return;
@@ -298,11 +285,30 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
-  // 필터나 정렬 변경 시 달력 즉시 갱신
+  // 필터 및 정렬 이벤트 바인딩
   if (sortSelect) sortSelect.addEventListener('change', renderCalendarGrid);
   locationCheckboxes.forEach(cb => {
     cb.addEventListener('change', renderCalendarGrid);
   });
+
+  // 전체 선택 / 해제 버튼 제어
+  if (selectAllBtn) {
+    selectAllBtn.addEventListener('click', () => {
+      const allChecked = Array.from(locationCheckboxes).every(cb => cb.checked);
+      locationCheckboxes.forEach(cb => {
+        cb.checked = !allChecked;
+      });
+      selectAllBtn.textContent = allChecked ? '전체 선택' : '전체 해제';
+      renderCalendarGrid();
+    });
+
+    locationCheckboxes.forEach(cb => {
+      cb.addEventListener('change', () => {
+        const allChecked = Array.from(locationCheckboxes).every(c => c.checked);
+        selectAllBtn.textContent = allChecked ? '전체 해제' : '전체 선택';
+      });
+    });
+  }
 
   if (vacationForm) {
     vacationForm.addEventListener('submit', async (e) => {
@@ -373,6 +379,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
-  await fetchUserColors();
+  await fetchUsersInfo();
   fetchMonthData();
 });

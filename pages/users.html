@@ -412,7 +412,7 @@
       <button class="btn-add-user" id="addUserBtn">+ 회원 등록</button>
     </div>
 
-    <!-- 필터 및 정렬 박스 ('백맨' 제거, '현관'만 유지) -->
+    <!-- 필터 및 정렬 박스 (전체 선택 버튼 추가) -->
     <div class="filter-box">
       <div class="filter-row">
         <span class="filter-title">정렬 기준</span>
@@ -424,7 +424,10 @@
       </div>
 
       <div>
-        <span class="filter-title" style="display: block; margin-bottom: 8px;">근무지 및 주·야간 필터 (다중 선택)</span>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+          <span class="filter-title">근무지 및 주·야간 필터 (다중 선택)</span>
+          <button type="button" id="selectAllBtn" style="background: none; border: none; color: var(--primary); font-size: 11px; font-weight: 700; cursor: pointer; padding: 2px 4px;">전체 해제</button>
+        </div>
         <div class="filter-chips">
           <label class="filter-chip">
             <input type="checkbox" name="locFilter" value="주간" checked>

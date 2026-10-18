@@ -25,7 +25,7 @@
     .header-area h2 { font-size: 18px; font-weight: 750; }
     .btn-add-vacation { height: 38px; padding: 0 12px; background: linear-gradient(135deg, #38bdf8 0%, #0284c7 100%); color: #fff; border: none; border-radius: 10px; font-size: 13px; font-weight: 700; cursor: pointer; }
 
-    /* --- 세련된 필터 박스 디자인 --- */
+    /* --- 필터 박스 디자인 --- */
     .filter-box {
       background: var(--card-bg);
       backdrop-filter: blur(12px);
@@ -169,7 +169,6 @@
     .cell-events::-webkit-scrollbar { width: 2px; }
     .cell-events::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.2); border-radius: 2px; }
 
-    /* 컴팩트한 이름 칩 스타일 (컬러 테두리/배경 반영) */
     .event-pill {
       font-size: 10px;
       padding: 2px 5px;
@@ -207,7 +206,7 @@
       <button class="btn-add-vacation" id="openModalBtn">+ 휴무 등록</button>
     </div>
 
-    <!-- 💡 필터 및 정렬 박스 추가 (백맨/현관 통합, 통제실 제외) -->
+    <!-- 필터 및 정렬 박스 -->
     <div class="filter-box">
       <div class="filter-row">
         <span class="filter-title">정렬 기준</span>
@@ -217,7 +216,10 @@
       </div>
 
       <div>
-        <span class="filter-title" style="display: block; margin-bottom: 6px;">근무지 및 주·야간 필터 (다중 선택)</span>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+          <span class="filter-title">근무지 및 주·야간 필터 (다중 선택)</span>
+          <button type="button" id="selectAllBtn" style="background: none; border: none; color: var(--primary); font-size: 11px; font-weight: 700; cursor: pointer; padding: 2px 4px;">전체 해제</button>
+        </div>
         <div class="filter-chips">
           <label class="filter-chip">
             <input type="checkbox" name="locFilter" value="주간" checked>
@@ -236,8 +238,8 @@
             <span class="chip-label">⛳ 골프장</span>
           </label>
           <label class="filter-chip">
-            <input type="checkbox" name="locFilter" value="백맨/현관" checked>
-            <span class="chip-label">🚪 백맨/현관</span>
+            <input type="checkbox" name="locFilter" value="현관" checked>
+            <span class="chip-label">🚪 현관</span>
           </label>
         </div>
       </div>

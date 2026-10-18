@@ -12,6 +12,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const totalUserCountEl = document.getElementById('totalUserCount');
   const sortSelect = document.getElementById('sortSelect');
   const locationCheckboxes = document.querySelectorAll('input[name="locFilter"]');
+  const selectAllBtn = document.getElementById('selectAllBtn');
 
   // 모달 관련 요소
   const userModal = document.getElementById('userModal');
@@ -137,7 +138,6 @@ document.addEventListener('DOMContentLoaded', async () => {
       allUsers = data || [];
       if (totalUserCountEl) totalUserCountEl.textContent = allUsers.length;
       
-      // 데이터 로드 후 필터/정렬 적용하여 렌더링
       filterAndRenderUsers();
     } catch (err) {
       console.error('회원 목록 조회 에러:', err);
@@ -149,28 +149,22 @@ document.addEventListener('DOMContentLoaded', async () => {
   function filterAndRenderUsers() {
     const keyword = searchInput ? searchInput.value.toLowerCase().trim() : '';
     
-    // 체크된 필터 키워드들 수집
     const checkedLocations = Array.from(locationCheckboxes)
       .filter(cb => cb.checked)
       .map(cb => cb.value);
 
-    // 필터링 적용
     let result = allUsers.filter(u => {
       const name = (u.name || u.username || '').toLowerCase();
       const location = (u.work_location || '').toLowerCase();
 
-      // 검색어 매칭 (이름 또는 근무지)
       const matchesKeyword = !keyword || name.includes(keyword) || location.includes(keyword);
 
-      // 체크박스 매칭 (체크된 항목 중 하나라도 근무지 문자열에 포함되면 통과)
-      // 만약 체크된 게 하나도 없다면 결과 없음 처리를 위해 false
       if (checkedLocations.length === 0) return false;
       const matchesCheckbox = checkedLocations.some(filterWord => location.includes(filterWord.toLowerCase()));
 
       return matchesKeyword && matchesCheckbox;
     });
 
-    // 정렬 적용
     const sortVal = sortSelect ? sortSelect.value : 'name_asc';
     result.sort((a, b) => {
       if (sortVal === 'name_asc') {
@@ -180,11 +174,11 @@ document.addEventListener('DOMContentLoaded', async () => {
       } else if (sortVal === 'hire_desc') {
         const dateA = a.hire_date ? new Date(a.hire_date) : new Date(0);
         const dateB = b.hire_date ? new Date(b.hire_date) : new Date(0);
-        return dateB - dateA; // 최신순
+        return dateB - dateA;
       } else if (sortVal === 'hire_asc') {
         const dateA = a.hire_date ? new Date(a.hire_date) : new Date(0);
         const dateB = b.hire_date ? new Date(b.hire_date) : new Date(0);
-        return dateA - dateB; // 오래된순
+        return dateA - dateB;
       }
       return 0;
     });
@@ -226,7 +220,6 @@ document.addEventListener('DOMContentLoaded', async () => {
       `;
     }).join('');
 
-    // 카드별 수정 버튼 이벤트 바인딩
     if (isAdmin) {
       userListContainer.querySelectorAll('.btn-card-edit').forEach(btn => {
         btn.addEventListener('click', (e) => {
@@ -238,12 +231,31 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
-  // 이벤트 리스너 연결 (검색창, 정렬 변경, 체크박스 변경 시 실시간 필터/정렬 실행)
+  // 이벤트 리스너 연결
   if (searchInput) searchInput.addEventListener('input', filterAndRenderUsers);
   if (sortSelect) sortSelect.addEventListener('change', filterAndRenderUsers);
   locationCheckboxes.forEach(cb => {
     cb.addEventListener('change', filterAndRenderUsers);
   });
+
+  // 전체 선택 / 해제 버튼 제어
+  if (selectAllBtn) {
+    selectAllBtn.addEventListener('click', () => {
+      const allChecked = Array.from(locationCheckboxes).every(cb => cb.checked);
+      locationCheckboxes.forEach(cb => {
+        cb.checked = !allChecked;
+      });
+      selectAllBtn.textContent = allChecked ? '전체 선택' : '전체 해제';
+      filterAndRenderUsers();
+    });
+
+    locationCheckboxes.forEach(cb => {
+      cb.addEventListener('change', () => {
+        const allChecked = Array.from(locationCheckboxes).every(c => c.checked);
+        selectAllBtn.textContent = allChecked ? '전체 해제' : '전체 선택';
+      });
+    });
+  }
 
   // 6. 회원 등록 및 수정 폼 제출 이벤트 (C / U)
   if (userForm) {
@@ -299,7 +311,7 @@ document.addEventListener('DOMContentLoaded', async () => {
               name: username,
               password: password,
               role: role,
-              contract_type: contract_type,
+              contract_type: contractType,
               work_location: workLocation,
               hire_date: hireDate || null,
               annual_base_date: annualBaseDate || null,
