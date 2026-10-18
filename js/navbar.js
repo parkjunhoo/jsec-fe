@@ -143,7 +143,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           <a href="/pages/vehicle.html" class="drawer-item ${currentPath.includes('vehicle.html') ? 'active' : ''}">
             <span>🚗</span> 차량 조회
           </a>
-          <a href="/pages/vehicle.html" class="drawer-item ${currentPath.includes('calendar.html') ? 'active' : ''}">
+          <a href="/pages/calendar.html" class="drawer-item ${currentPath.includes('calendar.html') ? 'active' : ''}">
             <span>📅</span> 휴무 캘린더
           </a>
         </nav>
