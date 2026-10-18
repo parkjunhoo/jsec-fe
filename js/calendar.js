@@ -300,7 +300,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       const gaugePercent = Math.min(Math.round((usageCount / 5) * 100), 100);
 
       return `
-        <div class="stat-card">
+        <div class="stat-card" style="border-left: 3px solid ${mColor};">
           <div class="stat-card-top">
             <div class="stat-name">
               <span style="width: 8px; height: 8px; border-radius: 50%; background: ${mColor}; display: inline-block;"></span>
@@ -402,7 +402,7 @@ document.addEventListener('DOMContentLoaded', async () => {
               const leaveIndicator = getLeaveIndicator(ev.leave_type, userColor);
               
               return `
-                <div class="event-pill ${ev.leave_type}" data-id="${ev.id}" title="${ev.username} (${ev.leave_type} -${ev.time_detail})" style="border-left: 3px solid ${userColor}; background:${userColor}20; color: #fff;">
+                <div class="event-pill ${ev.leave_type}" data-id="${ev.id}" title="${ev.username} (${ev.leave_type} -${ev.time_detail})" style="background:${userColor}20; color: #fff;">
                   ${leaveIndicator}${ev.username}
                 </div>
               `;
