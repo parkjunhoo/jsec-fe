@@ -166,8 +166,9 @@
     .cell-events::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.2); border-radius: 2px; }
 
     .event-pill {
-      font-size: 10px;
-      padding: 2px 6px;
+      font-size: 14px;
+      padding: 1px 1px;
+      margin: auto;
       border-radius: 4px;
       font-weight: 600;
       white-space: nowrap;
@@ -286,6 +287,7 @@
     .modal-tab.active { background: rgba(56, 189, 248, 0.15); color: var(--primary); border-color: var(--primary); }
     .emoji-picker { display: grid; grid-template-columns: repeat(8, 1fr); gap: 6px; }
     .emoji-choice { height: 38px; background: var(--input-bg); border: 1px solid var(--border-color); border-radius: 8px; font-size: 20px; cursor: pointer; }
+    .emoji-choice.emoji-none { font-size: 11px; font-weight: 650; }
     .emoji-choice.selected { border-color: var(--primary); background: rgba(56, 189, 248, 0.15); }
     .emoji-choice:disabled { cursor: default; opacity: 1; }
     .form-group textarea { width: 100%; min-height: 110px; resize: vertical; padding: 12px 14px; background: var(--input-bg); border: 1px solid var(--border-color); border-radius: 10px; color: #fff; font-size: 14px; outline: none; }

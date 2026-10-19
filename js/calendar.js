@@ -144,7 +144,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   let userMap = {}; 
   let allTeamMembers = []; 
   let activeModalTab = 'schedule';
-  let selectedNoteEmoji = CALENDAR_NOTE_EMOJIS[0];
+  let selectedNoteEmoji = '';
 
   function escapeHtml(value) {
     return String(value).replace(/[&<>"']/g, character => ({
@@ -172,10 +172,14 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   function renderEmojiPicker() {
     if (!calendarNoteEmojiPicker) return;
-    calendarNoteEmojiPicker.innerHTML = CALENDAR_NOTE_EMOJIS.map(emoji => `
+    calendarNoteEmojiPicker.innerHTML = `
+      <button type="button" class="emoji-choice emoji-none ${selectedNoteEmoji ? '' : 'selected'}"
+        data-emoji="" aria-label="이모지 없음">없음</button>
+      ${CALENDAR_NOTE_EMOJIS.map(emoji => `
       <button type="button" class="emoji-choice ${emoji === selectedNoteEmoji ? 'selected' : ''}"
         data-emoji="${escapeHtml(emoji)}" aria-label="${escapeHtml(emoji)}">${escapeHtml(emoji)}</button>
-    `).join('');
+      `).join('')}
+    `;
     calendarNoteEmojiPicker.querySelectorAll('[data-emoji]').forEach(button => {
       button.disabled = userRole !== 'admin';
       button.addEventListener('click', () => {
@@ -294,7 +298,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       calendarNoteContent.value = '';
       calendarNoteContent.readOnly = userRole !== 'admin';
     }
-    selectedNoteEmoji = CALENDAR_NOTE_EMOJIS[0];
+    selectedNoteEmoji = '';
 
     if (userRole === 'admin') {
       if (targetUserFormGroup) targetUserFormGroup.style.display = 'block';
@@ -320,7 +324,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       calendarNoteContent.value = note?.content || '';
       calendarNoteContent.readOnly = userRole !== 'admin';
     }
-    selectedNoteEmoji = note?.emoji || CALENDAR_NOTE_EMOJIS[0];
+    selectedNoteEmoji = note?.emoji || '';
     if (modalTitle) modalTitle.textContent = note ? '달력 메모' : '달력 메모 등록';
     if (vTargetUserId) vTargetUserId.required = false;
     switchModalTab('note');
@@ -423,7 +427,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         <article class="date-detail-item">
           <div class="date-detail-heading">
             <div>
-              <div class="date-detail-name">${escapeHtml(dayNote.emoji || '📝')} 달력 메모</div>
+              <div class="date-detail-name">${dayNote.emoji ? `${escapeHtml(dayNote.emoji)} ` : ''}달력 메모</div>
               <p class="date-detail-note">${escapeHtml(dayNote.content || '내용 없음')}</p>
             </div>
             ${noteActions}
@@ -995,7 +999,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       dayEvents.sort((a, b) => (a.username || '').localeCompare(b.username || ''));
       const calendarNote = allCalendarNotes.find(item => item.date === dateString);
       const noteSummary = calendarNote
-        ? `<span class="calendar-note-indicator" title="${escapeHtml(`${calendarNote.emoji} ${calendarNote.content}`)}" aria-label="달력 메모: ${escapeHtml(calendarNote.content)}">${escapeHtml(calendarNote.emoji)}</span><span class="calendar-note-text" title="${escapeHtml(calendarNote.content)}">${escapeHtml(calendarNote.content)}</span>`
+        ? `${calendarNote.emoji ? `<span class="calendar-note-indicator" title="${escapeHtml(`${calendarNote.emoji} ${calendarNote.content}`)}" aria-label="달력 메모: ${escapeHtml(calendarNote.content)}">${escapeHtml(calendarNote.emoji)}</span>` : ''}<span class="calendar-note-text" title="${escapeHtml(calendarNote.content)}">${escapeHtml(calendarNote.content)}</span>`
         : '';
 
       gridHTML += `
