@@ -374,8 +374,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       const shuttleNames = getNames('caddie_shuttle');
       const ballNames = getNames('ball_pickup');
       const status = [
-        shuttleNames.length ? `셔틀: ${shuttleNames.join(', ')}` : '',
-        ballNames.length ? `볼수거: ${ballNames.join(', ')}` : ''
+        shuttleNames.length ? `🚗 ${shuttleNames.join(', ')}` : '',
+        ballNames.length ? `⛳ ${ballNames.join(', ')}` : ''
       ].filter(Boolean).map(text => `<span>${text}</span>`).join('');
       const classes = [
         'allowance-day-cell',
