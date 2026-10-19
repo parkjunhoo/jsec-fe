@@ -60,7 +60,14 @@ document.addEventListener('DOMContentLoaded', async () => {
   const statsGridContainer = document.getElementById('statsGridContainer');
 
   const editVacationId = document.getElementById('editVacationId');
+  const editCalendarNote = document.getElementById('editCalendarNote');
   const vDate = document.getElementById('vDate');
+  const modalDateLabel = document.getElementById('modalDateLabel');
+  const modalTabButtons = document.querySelectorAll('[data-modal-tab]');
+  const scheduleTabPanel = document.getElementById('scheduleTabPanel');
+  const noteTabPanel = document.getElementById('noteTabPanel');
+  const calendarNoteEmojiPicker = document.getElementById('calendarNoteEmojiPicker');
+  const calendarNoteContent = document.getElementById('calendarNoteContent');
   const vLeaveType = document.getElementById('vLeaveType');
   const vTimeDetail = document.getElementById('vTimeDetail');
   const vHoursUsedGroup = document.getElementById('vHoursUsedGroup');
@@ -70,6 +77,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   const targetUserFormGroup = document.getElementById('targetUserFormGroup');
   const vTargetUserId = document.getElementById('vTargetUserId');
   const VACATIONS_API = 'https://jsec-serverless.adobephotoshop.workers.dev/api/vacations';
+  const CALENDAR_NOTES_API = 'https://jsec-serverless.adobephotoshop.workers.dev/api/calendar-notes';
+  const CALENDAR_NOTE_EMOJIS = ['📌', '📣', '🎉', '⚠️', '📅', '🎂', '🏖️', '🏥', '🚨', '✅', '⭐', '🎁', '🍀', '☕', '📝', '💡'];
 
   async function mutateVacation(path, method, payload) {
     const { data: { session }, error: sessionError } = await supabaseClient.auth.getSession();
@@ -77,6 +86,24 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (!session) throw new Error('로그인이 필요합니다.');
 
     const response = await fetch(`${VACATIONS_API}/${path}`, {
+      method,
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${session.access_token}`
+      },
+      body: payload ? JSON.stringify(payload) : undefined
+    });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(result.error || `HTTP ${response.status}`);
+    return result;
+  }
+
+  async function requestCalendarNotes(path, method = 'GET', payload) {
+    const { data: { session }, error: sessionError } = await supabaseClient.auth.getSession();
+    if (sessionError) throw sessionError;
+    if (!session) throw new Error('로그인이 필요합니다.');
+
+    const response = await fetch(`${CALENDAR_NOTES_API}${path}`, {
       method,
       headers: {
         'Content-Type': 'application/json',
@@ -97,8 +124,71 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   let currentDate = new Date();
   let allVacations = [];
+  let allCalendarNotes = [];
   let userMap = {}; 
   let allTeamMembers = []; 
+  let activeModalTab = 'schedule';
+  let selectedNoteEmoji = CALENDAR_NOTE_EMOJIS[0];
+
+  function escapeHtml(value) {
+    return String(value).replace(/[&<>"']/g, character => ({
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#39;'
+    })[character]);
+  }
+
+  function renderEmojiPicker() {
+    if (!calendarNoteEmojiPicker) return;
+    calendarNoteEmojiPicker.innerHTML = CALENDAR_NOTE_EMOJIS.map(emoji => `
+      <button type="button" class="emoji-choice ${emoji === selectedNoteEmoji ? 'selected' : ''}"
+        data-emoji="${escapeHtml(emoji)}" aria-label="${escapeHtml(emoji)}">${escapeHtml(emoji)}</button>
+    `).join('');
+    calendarNoteEmojiPicker.querySelectorAll('[data-emoji]').forEach(button => {
+      button.disabled = userRole !== 'admin';
+      button.addEventListener('click', () => {
+        selectedNoteEmoji = button.dataset.emoji;
+        renderEmojiPicker();
+      });
+    });
+  }
+
+  function switchModalTab(tab) {
+    activeModalTab = tab;
+    modalTabButtons.forEach(button => button.classList.toggle('active', button.dataset.modalTab === tab));
+    if (scheduleTabPanel) scheduleTabPanel.style.display = tab === 'schedule' ? 'block' : 'none';
+    if (noteTabPanel) noteTabPanel.style.display = tab === 'note' ? 'block' : 'none';
+    if (modalDateLabel) modalDateLabel.textContent = tab === 'note' ? '메모 날짜' : '휴무 날짜 *';
+    if (vDate) vDate.disabled = tab === 'note' && Boolean(editCalendarNote?.value);
+    if (vTargetUserId) vTargetUserId.required = tab === 'schedule' && userRole === 'admin';
+    if (vLeaveType) vLeaveType.required = tab === 'schedule';
+    if (vHoursUsed) {
+      vHoursUsed.required = tab === 'schedule'
+        && vLeaveType?.value === '시간차'
+        && vTimeDetail?.value === '시간지정';
+    }
+    if (modalTitle) {
+      modalTitle.textContent = tab === 'note'
+        ? (editCalendarNote?.value ? '달력 메모 수정' : '달력 메모 등록')
+        : (editVacationId?.value ? '휴무 일정 수정 / 삭제' : '휴무 일정 등록');
+    }
+    if (deleteBtn) deleteBtn.style.display = tab === 'note'
+      ? (userRole === 'admin' && editCalendarNote?.value ? 'block' : 'none')
+      : (editVacationId?.value ? 'block' : 'none');
+    if (submitBtn) {
+      submitBtn.style.display = tab === 'note' && userRole !== 'admin' ? 'none' : '';
+      submitBtn.textContent = tab === 'note'
+        ? (editCalendarNote?.value ? '메모 수정' : '메모 등록')
+        : (editVacationId?.value ? '수정 완료' : '등록 완료');
+    }
+    renderEmojiPicker();
+  }
+
+  modalTabButtons.forEach(button => {
+    button.addEventListener('click', () => switchModalTab(button.dataset.modalTab));
+  });
 
   // ★ 수정: leaveType에 따라 아이콘 또는 색상 점 HTML을 반환하는 함수
   function getLeaveIndicator(leaveType = '', userColor = '#38bdf8') {
@@ -124,7 +214,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const showHours = leaveType === '시간차' && timeDetail === '시간지정';
     if (vHoursUsedGroup) vHoursUsedGroup.style.display = showHours ? 'block' : 'none';
     if (vHoursUsed) {
-      vHoursUsed.required = showHours;
+      vHoursUsed.required = showHours && activeModalTab === 'schedule';
       vHoursUsed.value = showHours ? selectedHours ?? '' : '';
     }
   }
@@ -186,11 +276,16 @@ document.addEventListener('DOMContentLoaded', async () => {
   function openAddModal(selectedDateStr = '') {
     if (modalTitle) modalTitle.textContent = '휴무 일정 등록';
     if (submitBtn) submitBtn.textContent = '등록 완료';
-    if (deleteBtn) deleteBtn.style.display = 'none';
     if (vacationForm) vacationForm.reset();
     if (editVacationId) editVacationId.value = '';
+    if (editCalendarNote) editCalendarNote.value = '';
     if (vDate) vDate.value = selectedDateStr || getKSTDateString();
     if (vLeaveType) updateTimeDetailOptions(vLeaveType.value, '종일');
+    if (calendarNoteContent) {
+      calendarNoteContent.value = '';
+      calendarNoteContent.readOnly = userRole !== 'admin';
+    }
+    selectedNoteEmoji = CALENDAR_NOTE_EMOJIS[0];
 
     if (userRole === 'admin') {
       if (targetUserFormGroup) targetUserFormGroup.style.display = 'block';
@@ -199,6 +294,27 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (targetUserFormGroup) targetUserFormGroup.style.display = 'none';
     }
 
+    if (vTargetUserId) vTargetUserId.required = userRole === 'admin';
+    if (vLeaveType) vLeaveType.required = true;
+    switchModalTab('schedule');
+    if (vacationModal) vacationModal.classList.add('active');
+  }
+
+  function openCalendarNoteModal(date) {
+    const note = allCalendarNotes.find(item => item.date === date);
+    if (vacationForm) vacationForm.reset();
+    if (editVacationId) editVacationId.value = '';
+    if (editCalendarNote) editCalendarNote.value = note ? note.date : '';
+    if (vDate) vDate.value = date;
+    if (targetUserFormGroup) targetUserFormGroup.style.display = 'none';
+    if (calendarNoteContent) {
+      calendarNoteContent.value = note?.content || '';
+      calendarNoteContent.readOnly = userRole !== 'admin';
+    }
+    selectedNoteEmoji = note?.emoji || CALENDAR_NOTE_EMOJIS[0];
+    if (modalTitle) modalTitle.textContent = note ? '달력 메모' : '달력 메모 등록';
+    if (vTargetUserId) vTargetUserId.required = false;
+    switchModalTab('note');
     if (vacationModal) vacationModal.classList.add('active');
   }
 
@@ -212,8 +328,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     if (modalTitle) modalTitle.textContent = '휴무 일정 수정 / 삭제';
-    if (submitBtn) submitBtn.textContent = '수정 완료';
-    if (deleteBtn) deleteBtn.style.display = 'block';
+    if (editCalendarNote) editCalendarNote.value = '';
 
     if (editVacationId) editVacationId.value = vacation.id;
     if (vDate) vDate.value = vacation.date;
@@ -231,6 +346,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (targetUserFormGroup) targetUserFormGroup.style.display = 'none';
     }
 
+    if (vTargetUserId) vTargetUserId.required = userRole === 'admin';
+    switchModalTab('schedule');
     if (vacationModal) vacationModal.classList.add('active');
   }
 
@@ -265,6 +382,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       updateTimeDetailOptions(vLeaveType.value);
     });
   }
+
+  if (vTargetUserId) vTargetUserId.required = false;
   if (vTimeDetail) {
     vTimeDetail.addEventListener('change', () => {
       updateHoursUsedInput(vLeaveType.value, vTimeDetail.value);
@@ -297,20 +416,27 @@ document.addEventListener('DOMContentLoaded', async () => {
     const endDate = `${year}-${String(month + 1).padStart(2, '0')}-${String(lastDayNum).padStart(2, '0')}`;
 
     try {
-      const { data, error } = await supabaseClient
-        .from('vacations')
-        .select('*')
-        .gte('date', startDate)
-        .lte('date', endDate)
-        .order('date', { ascending: true });
+      const [{ data, error }, noteResult] = await Promise.all([
+        supabaseClient
+          .from('vacations')
+          .select('*')
+          .gte('date', startDate)
+          .lte('date', endDate)
+          .order('date', { ascending: true }),
+        requestCalendarNotes(`?start=${startDate}&end=${endDate}`)
+      ]);
 
       if (error) throw error;
-      
       allVacations = data || [];
+      allCalendarNotes = noteResult || [];
       renderCalendarGrid();
       renderStatistics();
     } catch (err) {
       console.error('휴무 데이터 조회 오류:', err);
+      await Swal.fire({
+        icon: 'error',
+        text: `달력 데이터를 불러오지 못했습니다: ${err.message}`
+      });
     }
   }
 
@@ -711,10 +837,17 @@ document.addEventListener('DOMContentLoaded', async () => {
       });
 
       dayEvents.sort((a, b) => (a.username || '').localeCompare(b.username || ''));
+      const calendarNote = allCalendarNotes.find(item => item.date === dateString);
+      const noteSummary = calendarNote
+        ? `<span class="calendar-note-indicator" title="${escapeHtml(`${calendarNote.emoji} ${calendarNote.content}`)}" aria-label="달력 메모: ${escapeHtml(calendarNote.content)}">${escapeHtml(calendarNote.emoji)}</span><span class="calendar-note-text" title="${escapeHtml(calendarNote.content)}">${escapeHtml(calendarNote.content)}</span>`
+        : '';
 
       gridHTML += `
         <div class="calendar-cell ${isToday ? 'today' : ''}" data-date="${dateString}">
-          <div class="cell-date">${i}</div>
+          <div class="cell-date">
+            <span>${i}</span>
+            ${noteSummary}
+          </div>
           <div class="cell-events">
             ${dayEvents.map(ev => {
               const userInfo = userMap[ev.user_id] || userMap[ev.username] || { color: '#38bdf8' };
@@ -747,6 +880,10 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (!dateStr) return;
 
       cell.addEventListener('click', (e) => {
+        if (e.target.closest('.calendar-note-indicator, .calendar-note-text')) {
+          openCalendarNoteModal(dateStr);
+          return;
+        }
         const pill = e.target.closest('.event-pill');
         if (pill) {
           const evId = pill.getAttribute('data-id');
@@ -823,6 +960,24 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
 
       try {
+        if (activeModalTab === 'note') {
+          if (userRole !== 'admin') throw new Error('관리자만 달력 메모를 등록할 수 있습니다.');
+          const content = calendarNoteContent ? calendarNoteContent.value.trim() : '';
+          if (!content) throw new Error('메모 내용을 입력해 주세요.');
+          await requestCalendarNotes('', 'PUT', {
+            date,
+            emoji: selectedNoteEmoji,
+            content
+          });
+          await Swal.fire({
+            icon: 'success',
+            text: editCalendarNote?.value ? '달력 메모가 수정되었습니다.' : '달력 메모가 등록되었습니다.'
+          });
+          closeModal();
+          await fetchMonthData();
+          return;
+        }
+
         if (vacId) {
           const updatePayload = { date, leave_type, time_detail, hours_used, memo };
           if (userRole === 'admin') {
@@ -871,6 +1026,32 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   if (deleteBtn) {
     deleteBtn.addEventListener('click', async () => {
+      if (activeModalTab === 'note') {
+        const noteDate = vDate ? vDate.value : '';
+        const result = await Swal.fire({
+          icon: 'warning',
+          text: '이 날짜의 달력 메모를 삭제하시겠습니까?',
+          showCancelButton: true,
+          confirmButtonText: '삭제',
+          cancelButtonText: '취소',
+          reverseButtons: true
+        });
+        if (!result.isConfirmed) return;
+
+        deleteBtn.disabled = true;
+        try {
+          await requestCalendarNotes(`/${encodeURIComponent(noteDate)}`, 'DELETE');
+          await Swal.fire({ icon: 'success', text: '달력 메모가 삭제되었습니다.' });
+          closeModal();
+          await fetchMonthData();
+        } catch (err) {
+          await Swal.fire({ icon: 'error', text: `메모 삭제 실패: ${err.message}` });
+        } finally {
+          deleteBtn.disabled = false;
+        }
+        return;
+      }
+
       const vacId = editVacationId ? editVacationId.value : '';
       const result = await Swal.fire({
         icon: 'warning',

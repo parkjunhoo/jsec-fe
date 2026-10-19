@@ -140,14 +140,17 @@
       font-size: 12px;
       font-weight: 700;
       color: var(--text-main);
-      width: 20px;
+      width: 100%;
       height: 20px;
       display: flex;
       align-items: center;
-      justify-content: center;
+      justify-content: flex-start;
+      gap: 4px;
       border-radius: 50%;
       flex-shrink: 0;
     }
+    .calendar-note-indicator { font-size: 13px; line-height: 1; }
+    .calendar-note-text { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #fde68a; font-size: 10px; font-weight: 600; }
     .calendar-cell:nth-child(7n+1) .cell-date { color: #f87171; }
     .calendar-cell:nth-child(7n) .cell-date { color: #60a5fa; }
     .calendar-cell.today .cell-date { background: var(--primary); color: #0f172a; }
@@ -278,6 +281,14 @@
     .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; }
     .modal-header h3 { font-size: 18px; font-weight: 700; color: #fff; }
     .btn-close-modal { background: none; border: none; color: var(--text-sub); font-size: 24px; cursor: pointer; }
+    .modal-tabs { display: flex; gap: 8px; margin-bottom: 16px; }
+    .modal-tab { flex: 1; height: 40px; background: var(--input-bg); color: var(--text-sub); border: 1px solid var(--border-color); border-radius: 10px; font-size: 13px; font-weight: 700; cursor: pointer; }
+    .modal-tab.active { background: rgba(56, 189, 248, 0.15); color: var(--primary); border-color: var(--primary); }
+    .emoji-picker { display: grid; grid-template-columns: repeat(8, 1fr); gap: 6px; }
+    .emoji-choice { height: 38px; background: var(--input-bg); border: 1px solid var(--border-color); border-radius: 8px; font-size: 20px; cursor: pointer; }
+    .emoji-choice.selected { border-color: var(--primary); background: rgba(56, 189, 248, 0.15); }
+    .emoji-choice:disabled { cursor: default; opacity: 1; }
+    .form-group textarea { width: 100%; min-height: 110px; resize: vertical; padding: 12px 14px; background: var(--input-bg); border: 1px solid var(--border-color); border-radius: 10px; color: #fff; font-size: 14px; outline: none; }
 
     .form-group { margin-bottom: 14px; }
     .form-group label { display: block; font-size: 12px; font-weight: 600; color: var(--text-sub); margin-bottom: 6px; }
@@ -375,45 +386,61 @@
 
       <form id="vacationForm">
         <input type="hidden" id="editVacationId">
-
-        <!-- 관리자일 경우에만 나타나는 팀원 선택 영역 -->
-        <div class="form-group" id="targetUserFormGroup" style="display: none;">
-          <label>대상 팀원 선택 (관리자 전용) *</label>
-          <select id="vTargetUserId" required>
-            <!-- JS로 동적 채워짐 -->
-          </select>
-        </div>
+        <input type="hidden" id="editCalendarNote">
 
         <div class="form-group">
-          <label>휴무 날짜 *</label>
+          <label id="modalDateLabel">휴무 날짜 *</label>
           <input type="date" id="vDate" required>
         </div>
 
-        <div class="form-group">
-          <label>휴무 종류 *</label>
-          <select id="vLeaveType" required>
-            <option value="휴무">휴무</option>
-            <option value="연차">연차</option>
-            <option value="시간차">시간차</option>
-          </select>
-        </div>
-        
-        <div class="form-group">
-          <label>세부 시간 *</label>
-          <select id="vTimeDetail">
-            <option value="종일">종일</option>
-            <option value="시간지정">N시간 사용</option>
-          </select>
+        <div class="modal-tabs">
+          <button type="button" class="modal-tab active" data-modal-tab="schedule">휴무 일정</button>
+          <button type="button" class="modal-tab" data-modal-tab="note">📝 달력 메모</button>
         </div>
 
-        <div class="form-group" id="vHoursUsedGroup" style="display: none;">
-          <label for="vHoursUsed">사용 시간 *</label>
-          <input type="number" id="vHoursUsed" min="0.25" max="24" step="0.25" placeholder="예: 4">
+        <div id="scheduleTabPanel">
+          <div class="form-group" id="targetUserFormGroup" style="display: none;">
+            <label>대상 팀원 선택 (관리자 전용) *</label>
+            <select id="vTargetUserId" required></select>
+          </div>
+
+          <div class="form-group">
+            <label>휴무 종류 *</label>
+            <select id="vLeaveType" required>
+              <option value="휴무">휴무</option>
+              <option value="연차">연차</option>
+              <option value="시간차">시간차</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>세부 시간 *</label>
+            <select id="vTimeDetail">
+              <option value="종일">종일</option>
+              <option value="시간지정">N시간 사용</option>
+            </select>
+          </div>
+
+          <div class="form-group" id="vHoursUsedGroup" style="display: none;">
+            <label for="vHoursUsed">사용 시간 *</label>
+            <input type="number" id="vHoursUsed" min="0.25" max="24" step="0.25" placeholder="예: 4">
+          </div>
+
+          <div class="form-group">
+            <label>비고 / 메모</label>
+            <input type="text" id="vMemo" placeholder="특이사항 입력 (선택)">
+          </div>
         </div>
 
-        <div class="form-group">
-          <label>비고 / 메모</label>
-          <input type="text" id="vMemo" placeholder="특이사항 입력 (선택)">
+        <div id="noteTabPanel" style="display: none;">
+          <div class="form-group">
+            <label>이모지 선택</label>
+            <div class="emoji-picker" id="calendarNoteEmojiPicker"></div>
+          </div>
+          <div class="form-group">
+            <label for="calendarNoteContent">메모 (최대 500자)</label>
+            <textarea id="calendarNoteContent" maxlength="500" placeholder="이 날짜에 표시할 메모를 입력해 주세요."></textarea>
+          </div>
         </div>
 
         <div class="modal-btn-group">
