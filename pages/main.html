@@ -135,8 +135,44 @@
       gap: 7px;
       margin-top: 6px;
     }
-    .today-off-location { min-width: 0; }
-    .today-off-location-title { margin: 0 0 4px 2px; color: #b8d0d2; font-size: 9px; font-weight: 750; }
+    .today-off-location {
+      min-width: 0;
+      padding: 8px;
+      border: 1px solid var(--location-border, rgba(190, 211, 239, 0.14));
+      border-radius: 10px;
+      background: var(--location-surface, rgba(255, 255, 255, 0.035));
+    }
+    .today-off-location.golf {
+      --location-border: rgba(118, 212, 179, 0.24);
+      --location-surface: linear-gradient(145deg, rgba(70, 154, 119, 0.12), rgba(255, 255, 255, 0.025));
+      --location-accent: #8ee0bb;
+      --location-label: #c5ead8;
+    }
+    .today-off-location.ski {
+      --location-border: rgba(131, 207, 255, 0.24);
+      --location-surface: linear-gradient(145deg, rgba(76, 151, 195, 0.14), rgba(255, 255, 255, 0.025));
+      --location-accent: #83cfff;
+      --location-label: #c8e8fa;
+    }
+    .today-off-location-title {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin: 0 0 7px 1px;
+      color: var(--location-label, #b8d0d2);
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: 0.015em;
+    }
+    .today-off-location-title::before {
+      width: 6px;
+      height: 6px;
+      flex: 0 0 auto;
+      border-radius: 50%;
+      background: var(--location-accent, #b8d0d2);
+      box-shadow: 0 0 9px color-mix(in srgb, var(--location-accent, #b8d0d2) 45%, transparent);
+      content: "";
+    }
     .today-off-shifts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 5px; }
     .today-off-group {
       min-width: 0;
@@ -269,7 +305,8 @@
       .today-off-heading { align-items: flex-start; }
       .today-off-heading .welcome-meta { flex-wrap: wrap; justify-content: flex-end; gap: 4px; }
       .today-off-heading .welcome-meta time { font-size: 9px; }
-      .today-off-location-title { font-size: 8px; }
+      .today-off-location { padding: 7px; border-radius: 9px; }
+      .today-off-location-title { margin-bottom: 6px; font-size: 9px; }
       .today-off-group { padding: 6px; }
       .today-off-group-label { font-size: 8px; }
       .today-off-group-members { font-size: 10px; }
@@ -325,14 +362,14 @@
             </div>
           </div>
           <div class="today-off-names" id="todayOffNames" aria-live="polite">
-            <div class="today-off-location">
+            <div class="today-off-location golf">
               <div class="today-off-location-title">골프장</div>
               <div class="today-off-shifts">
                 <div class="today-off-group" data-off-group="golf-day"><div class="today-off-group-label">주간</div><div class="today-off-group-members">확인 중</div></div>
                 <div class="today-off-group" data-off-group="golf-night"><div class="today-off-group-label">야간</div><div class="today-off-group-members">확인 중</div></div>
               </div>
             </div>
-            <div class="today-off-location">
+            <div class="today-off-location ski">
               <div class="today-off-location-title">스키장</div>
               <div class="today-off-shifts">
                 <div class="today-off-group" data-off-group="ski-day"><div class="today-off-group-label">주간</div><div class="today-off-group-members">확인 중</div></div>

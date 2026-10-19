@@ -349,6 +349,18 @@ html[data-theme="light"] .today-off-summary {
 }
 html[data-theme="light"] .today-off-label { color: #3f5949; }
 html[data-theme="light"] .today-off-location-title { color: #3f5949; }
+html[data-theme="light"] .today-off-location.golf {
+  --location-border: rgba(43, 129, 88, 0.22);
+  --location-surface: linear-gradient(145deg, #edf6ef, #f8fbf8);
+  --location-accent: #33855c;
+  --location-label: #285b3f;
+}
+html[data-theme="light"] .today-off-location.ski {
+  --location-border: rgba(46, 116, 160, 0.22);
+  --location-surface: linear-gradient(145deg, #edf5fa, #f8fbfd);
+  --location-accent: #347da8;
+  --location-label: #285975;
+}
 html[data-theme="light"] .today-off-count {
   border-color: rgba(25, 114, 84, 0.2);
   background: rgba(25, 114, 84, 0.09);
@@ -357,6 +369,10 @@ html[data-theme="light"] .today-off-count {
 html[data-theme="light"] .today-off-group {
   border-color: rgba(44, 73, 57, 0.13);
   background: #f7faf7;
+}
+html[data-theme="light"] .today-off-location .today-off-group {
+  border-color: color-mix(in srgb, var(--location-accent, #52675a) 14%, transparent);
+  background: rgba(255, 255, 255, 0.72);
 }
 html[data-theme="light"] .today-off-group-label { color: #52675a; }
 html[data-theme="light"] .today-off-group-members { color: #1b2922; }
