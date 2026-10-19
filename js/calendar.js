@@ -215,6 +215,19 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (e.target === vacationModal) closeModal();
     });
   }
+  if (vacationForm) {
+    vacationForm.addEventListener('keydown', (e) => {
+      if (
+        e.key !== 'Enter' ||
+        e.isComposing ||
+        e.target.matches('button, textarea, [type="submit"], [type="button"]') ||
+        submitBtn.disabled
+      ) return;
+
+      e.preventDefault();
+      vacationForm.requestSubmit(submitBtn);
+    });
+  }
 
   if (vLeaveType) {
     vLeaveType.addEventListener('change', () => {
