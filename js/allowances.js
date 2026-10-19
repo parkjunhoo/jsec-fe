@@ -1084,15 +1084,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     render();
   }));
   exportButton.addEventListener('click', exportWorkbook);
-  categoryCalendarHead.addEventListener('click', async event => {
-    const button = event.target.closest('[data-month-offset]');
-    if (!button) return;
-    try {
-      await moveMonth(Number(button.dataset.monthOffset));
-    } catch (error) {
-      setError(`수당 정보를 불러오지 못했습니다: ${error.message}`);
-    }
-  });
   calendar.addEventListener('click', event => {
     const dayButton = event.target.closest('[data-date]');
     if (!dayButton) return;
