@@ -729,7 +729,19 @@ document.addEventListener('DOMContentLoaded', async () => {
           <span>${year}년 ${month}월 · 엑셀 시트 미리보기</span>
         </header>
         <div class="schedule-preview-scroll">
-          <table class="schedule-preview-table"><tbody>${body}</tbody></table>
+          <table class="schedule-preview-table">
+            <colgroup>${Array.from({ length: columnCount }, (_, index) => {
+              const className = index === 0
+                ? 'schedule-shift-column'
+                : index === 1
+                  ? 'schedule-name-column'
+                  : index === columnCount - 1
+                    ? 'schedule-total-column'
+                    : 'schedule-day-column';
+              return `<col class="${className}">`;
+            }).join('')}</colgroup>
+            <tbody>${body}</tbody>
+          </table>
         </div>
       `;
     } catch (error) {
