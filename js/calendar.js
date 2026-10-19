@@ -121,10 +121,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // 필터 요소
   const locationCheckboxes = document.querySelectorAll('input[name="locFilter"]');
+  const shiftFilterValues = ['주간', '야간'];
   const otherLocationFilter = 'other';
   const locationFilterValues = Array.from(locationCheckboxes)
     .map(checkbox => checkbox.value)
-    .filter(value => value !== otherLocationFilter);
+    .filter(value => value !== otherLocationFilter && !shiftFilterValues.includes(value));
   const selectAllLocBtn = document.getElementById('selectAllLocBtn');
   const savedLocationFilters = preferences?.getSettings().calendar_location_filters;
   if (Array.isArray(savedLocationFilters)) {
@@ -153,9 +154,16 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   function matchesLocationFilter(location, checkedLocations) {
     const normalizedLocation = (location || '').toLowerCase();
-    return checkedLocations.some(filterValue => filterValue === otherLocationFilter
-      ? !locationFilterValues.some(value => normalizedLocation.includes(value.toLowerCase()))
-      : normalizedLocation.includes(filterValue.toLowerCase()));
+    const selectedShifts = checkedLocations.filter(value => shiftFilterValues.includes(value));
+    const selectedLocations = checkedLocations.filter(value =>
+      value !== otherLocationFilter && !shiftFilterValues.includes(value)
+    );
+    const matchesShift = selectedShifts.some(value => normalizedLocation.includes(value.toLowerCase()));
+    const matchesLocation = selectedLocations.some(value => normalizedLocation.includes(value.toLowerCase()))
+      || (checkedLocations.includes(otherLocationFilter)
+        && !locationFilterValues.some(value => normalizedLocation.includes(value.toLowerCase())));
+
+    return matchesShift && matchesLocation;
   }
 
   function renderEmojiPicker() {

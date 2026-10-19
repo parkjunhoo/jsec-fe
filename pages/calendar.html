@@ -110,7 +110,7 @@
 
     .day-name {
       text-align: center;
-      font-size: 12px;
+      font-size: 14px;
       font-weight: 700;
       color: var(--text-sub);
       padding: 10px 0;
@@ -137,7 +137,7 @@
     .calendar-cell.today { background: rgba(56, 189, 248, 0.1); border: 1px solid rgba(56, 189, 248, 0.3); }
 
     .cell-date {
-      font-size: 12px;
+      font-size: 14px;
       font-weight: 700;
       color: var(--text-main);
       width: 100%;
@@ -148,7 +148,7 @@
       gap: 4px;
       flex-shrink: 0;
     }
-    .cell-date > span:first-child { width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; border-radius: 50%; flex-shrink: 0; }
+    .cell-date > span:first-child { width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; border-radius: 50%; flex-shrink: 0; }
     .calendar-note-indicator { font-size: 13px; line-height: 1; }
     .calendar-note-text { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #fde68a; font-size: 10px; font-weight: 600; }
     .calendar-cell:nth-child(7n+1) .cell-date { color: #f87171; }
@@ -166,12 +166,32 @@
     .cell-events::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.2); border-radius: 2px; }
 
     .event-pill {
-      font-size: 10px;
-      padding: 2px 6px;
+      min-width: 0;
+      max-width: 100%;
+      font-size: 12px;
+      padding: 3px 5px;
       border-radius: 4px;
       font-weight: 600;
-      white-space: nowrap;
-      line-height: 1.3;
+      white-space: normal;
+      overflow-wrap: anywhere;
+      line-height: 1.35;
+    }
+
+    @media (max-width: 600px) {
+      .container { padding: 12px 8px; }
+      .day-name { padding: 11px 0; }
+      .calendar-cell { min-height: 118px; padding: 3px; }
+      .cell-date { height: 24px; gap: 2px; }
+      .cell-date > span:first-child { width: 22px; height: 22px; }
+      .calendar-note-text { font-size: 11px; }
+      .cell-events { flex-direction: column; flex-wrap: nowrap; align-items: stretch; gap: 3px; max-height: 88px; }
+      .event-pill { flex: 0 0 auto; width: 100%; padding: 3px 4px; font-size: 14px; }
+    }
+
+    @media (max-width: 360px) {
+      .calendar-cell { min-height: 108px; }
+      .cell-events { max-height: 78px; }
+      .event-pill { font-size: 13px; }
     }
 
     /* --- 월간 통계 대시보드 스타일 --- */
@@ -321,31 +341,41 @@
           <span class="filter-title">근무지 및 근무시간</span>
           <button type="button" id="selectAllLocBtn" style="background: none; border: none; color: var(--primary); font-size: 11px; font-weight: 700; cursor: pointer; padding: 2px 4px;">전체 해제</button>
         </div>
-        <div class="filter-chips">
-          <label class="filter-chip">
-            <input type="checkbox" name="locFilter" value="주간" checked>
-            <span class="chip-label">주간 전체</span>
-          </label>
-          <label class="filter-chip">
-            <input type="checkbox" name="locFilter" value="야간" checked>
-            <span class="chip-label">야간 전체</span>
-          </label>
-          <label class="filter-chip">
-            <input type="checkbox" name="locFilter" value="스키장" checked>
-            <span class="chip-label">스키장</span>
-          </label>
-          <label class="filter-chip">
-            <input type="checkbox" name="locFilter" value="골프장" checked>
-            <span class="chip-label">골프장</span>
-          </label>
-          <label class="filter-chip">
-            <input type="checkbox" name="locFilter" value="현관" checked>
-            <span class="chip-label">현관</span>
-          </label>
-          <label class="filter-chip">
-            <input type="checkbox" name="locFilter" value="other" checked>
-            <span class="chip-label">기타</span>
-          </label>
+        <div class="filter-groups">
+          <div class="filter-group">
+            <span class="filter-group-label">근무시간</span>
+            <div class="filter-chips">
+              <label class="filter-chip">
+                <input type="checkbox" name="locFilter" value="주간" checked>
+                <span class="chip-label">주간</span>
+              </label>
+              <label class="filter-chip">
+                <input type="checkbox" name="locFilter" value="야간" checked>
+                <span class="chip-label">야간</span>
+              </label>
+            </div>
+          </div>
+          <div class="filter-group">
+            <span class="filter-group-label">근무지</span>
+            <div class="filter-chips">
+              <label class="filter-chip">
+                <input type="checkbox" name="locFilter" value="스키장" checked>
+                <span class="chip-label">스키장</span>
+              </label>
+              <label class="filter-chip">
+                <input type="checkbox" name="locFilter" value="골프장" checked>
+                <span class="chip-label">골프장</span>
+              </label>
+              <label class="filter-chip">
+                <input type="checkbox" name="locFilter" value="현관" checked>
+                <span class="chip-label">현관</span>
+              </label>
+              <label class="filter-chip">
+                <input type="checkbox" name="locFilter" value="other" checked>
+                <span class="chip-label">기타</span>
+              </label>
+            </div>
+          </div>
         </div>
       </div>
 

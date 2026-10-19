@@ -87,7 +87,10 @@ textarea:focus {
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 12%, transparent);
 }
 
-.filter-chips { gap: 8px; }
+.filter-groups { display: grid; gap: 10px; }
+.filter-group { display: flex; align-items: flex-start; gap: 12px; }
+.filter-group-label { flex: 0 0 62px; padding-top: 12px; color: var(--text-sub); font-size: 12px; font-weight: 700; }
+.filter-chips { display: flex; flex: 1; flex-wrap: wrap; gap: 8px; }
 .filter-chip {
   display: inline-flex;
   align-items: center;
@@ -360,6 +363,8 @@ html[data-theme="light"] .person-avatar { border-color: var(--app-border); color
   #navbar .nav-title { font-size: 14px; }
   #navbar .nav-brand-logo { width: 31px; height: 31px; }
   html { scroll-padding-top: 66px; }
+  .filter-group { flex-direction: column; gap: 4px; }
+  .filter-group-label { flex-basis: auto; padding-top: 0; }
 }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }

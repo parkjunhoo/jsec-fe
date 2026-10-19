@@ -12,10 +12,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   const totalUserCountEl = document.getElementById('totalUserCount');
   const sortSelect = document.getElementById('sortSelect');
   const locationCheckboxes = document.querySelectorAll('input[name="locFilter"]');
+  const shiftFilterValues = ['주간', '야간'];
   const otherLocationFilter = 'other';
   const locationFilterValues = Array.from(locationCheckboxes)
     .map(checkbox => checkbox.value)
-    .filter(value => value !== otherLocationFilter);
+    .filter(value => value !== otherLocationFilter && !shiftFilterValues.includes(value));
   const selectAllBtn = document.getElementById('selectAllBtn');
 
   // 모달 관련 요소
@@ -52,9 +53,16 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   function matchesLocationFilter(location, checkedLocations) {
     const normalizedLocation = (location || '').toLowerCase();
-    return checkedLocations.some(filterValue => filterValue === otherLocationFilter
-      ? !locationFilterValues.some(value => normalizedLocation.includes(value.toLowerCase()))
-      : normalizedLocation.includes(filterValue.toLowerCase()));
+    const selectedShifts = checkedLocations.filter(value => shiftFilterValues.includes(value));
+    const selectedLocations = checkedLocations.filter(value =>
+      value !== otherLocationFilter && !shiftFilterValues.includes(value)
+    );
+    const matchesShift = selectedShifts.some(value => normalizedLocation.includes(value.toLowerCase()));
+    const matchesLocation = selectedLocations.some(value => normalizedLocation.includes(value.toLowerCase()))
+      || (checkedLocations.includes(otherLocationFilter)
+        && !locationFilterValues.some(value => normalizedLocation.includes(value.toLowerCase())));
+
+    return matchesShift && matchesLocation;
   }
 
   // 컬러 피커 조작 시 HEX 텍스트 실시간 동기화
