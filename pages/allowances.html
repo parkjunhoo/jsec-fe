@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#111815">
+  <title>지산리조트 보안팀 - 수당 관리</title>
+  <link rel="stylesheet" href="/lib/sw2/sweetalert2.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    * { box-sizing: border-box; }
+    .allowance-shell { width: min(1180px, 100%); margin: 0 auto; padding: 24px clamp(14px, 3vw, 28px) 48px; }
+    .allowance-heading { display: flex; align-items: flex-end; justify-content: space-between; gap: 18px; margin-bottom: 20px; }
+    .allowance-kicker { margin-bottom: 6px; color: var(--primary); font-size: 10px; font-weight: 750; letter-spacing: 0.12em; }
+    .allowance-heading h1 { margin: 0; color: var(--text-main); font-size: 25px; font-weight: 760; }
+    .allowance-heading p { margin: 6px 0 0; color: var(--text-sub); font-size: 13px; }
+    .allowance-controls { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 8px; }
+    .allowance-control, .allowance-primary-button, .allowance-export-button {
+      min-height: 40px; border: 1px solid var(--app-border); border-radius: 8px;
+      background: var(--app-surface); color: var(--text-main); font: inherit; font-size: 13px;
+    }
+    .allowance-control { padding: 0 11px; }
+    .allowance-primary-button, .allowance-export-button { padding: 0 13px; font-weight: 700; cursor: pointer; white-space: nowrap; }
+    .allowance-primary-button { border-color: transparent; background: linear-gradient(135deg, #65b58b, #367b59); color: #fff; }
+    .allowance-export-button { color: var(--text-main); }
+    .allowance-tabs { display: flex; gap: 5px; overflow-x: auto; margin-bottom: 16px; border-bottom: 1px solid var(--app-border); scrollbar-width: thin; }
+    .allowance-tab { flex: 0 0 auto; min-height: 42px; padding: 0 15px; border: 0; border-bottom: 2px solid transparent; background: transparent; color: var(--text-sub); font: inherit; font-size: 13px; font-weight: 650; cursor: pointer; white-space: nowrap; }
+    .allowance-tab[aria-selected="true"] { border-bottom-color: var(--primary); color: var(--primary); }
+    .allowance-summary-heading { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin: 16px 2px 9px; }
+    .allowance-summary-heading h2 { margin: 0; color: var(--text-main); font-size: 15px; font-weight: 730; }
+    .allowance-summary-heading p { margin: 0; color: var(--text-sub); font-size: 12px; }
+    .allowance-total { display: inline-flex; align-items: center; gap: 7px; color: var(--text-sub); font-size: 12px; }
+    .allowance-total strong { color: var(--primary); font-size: 15px; font-variant-numeric: tabular-nums; }
+    .allowance-table-wrap { width: 100%; overflow-x: auto; border: 1px solid var(--app-border); border-radius: 9px; background: var(--app-surface); }
+    .allowance-table { width: 100%; border-collapse: collapse; font-size: 13px; text-align: left; }
+    .allowance-table th, .allowance-table td { padding: 11px 12px; border-bottom: 1px solid var(--app-border); vertical-align: middle; }
+    .allowance-table th { background: var(--app-surface-raised); color: var(--text-sub); font-size: 11px; font-weight: 700; white-space: nowrap; }
+    .allowance-table td { color: var(--text-main); }
+    .allowance-table tbody tr:last-child td { border-bottom: 0; }
+    .allowance-table .amount { color: var(--text-main); font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .allowance-table .date, .allowance-table .shift { white-space: nowrap; }
+    .allowance-table .note { min-width: 120px; color: var(--text-sub); white-space: pre-wrap; overflow-wrap: anywhere; }
+    .allowance-actions { display: flex; justify-content: flex-end; gap: 6px; white-space: nowrap; }
+    .allowance-row-action { min-height: 30px; padding: 0 9px; border: 1px solid var(--app-border); border-radius: 6px; background: transparent; color: var(--text-main); font: inherit; font-size: 11px; cursor: pointer; }
+    .allowance-row-action.delete { color: var(--danger); }
+    .allowance-empty { padding: 30px 14px !important; color: var(--text-sub) !important; text-align: center; }
+    .allowance-error { margin: 0 0 14px; color: var(--danger); font-size: 13px; }
+    .allowance-secondary-heading { margin-top: 24px; }
+    .allowance-modal-overlay { position: fixed; inset: 0; z-index: 350; display: flex; justify-content: center; align-items: center; padding: 16px; background: rgba(0,0,0,0.68); opacity: 0; pointer-events: none; transition: opacity 160ms ease; }
+    .allowance-modal-overlay.active { opacity: 1; pointer-events: auto; }
+    .allowance-modal { width: min(100%, 480px); max-height: min(88vh, 720px); overflow-y: auto; padding: 20px; border: 1px solid var(--app-border); border-radius: 12px; background: var(--app-surface); box-shadow: var(--app-shadow); }
+    .allowance-modal-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 16px; }
+    .allowance-modal-header h2 { margin: 0; color: var(--text-main); font-size: 18px; }
+    .allowance-close { width: 34px; height: 34px; border: 0; border-radius: 7px; background: transparent; color: var(--text-sub); font-size: 22px; cursor: pointer; }
+    .allowance-form-group { margin-bottom: 13px; }
+    .allowance-form-group label { display: block; margin-bottom: 6px; color: var(--text-sub); font-size: 12px; font-weight: 650; }
+    .allowance-form-group input, .allowance-form-group select, .allowance-form-group textarea { width: 100%; min-height: 42px; padding: 9px 11px; border: 1px solid var(--app-border); border-radius: 7px; background: var(--input-bg); color: var(--text-main); font: inherit; font-size: 14px; }
+    .allowance-form-group textarea { min-height: 84px; resize: vertical; }
+    .allowance-rate { color: var(--primary); font-size: 13px; font-weight: 700; }
+    .allowance-modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 18px; }
+    .allowance-cancel { min-height: 40px; padding: 0 14px; border: 1px solid var(--app-border); border-radius: 7px; background: transparent; color: var(--text-main); font: inherit; cursor: pointer; }
+    @media (max-width: 720px) {
+      .allowance-heading { align-items: flex-start; flex-direction: column; }
+      .allowance-controls { width: 100%; justify-content: flex-start; }
+      .allowance-controls .allowance-control:first-child { flex: 1; min-width: 132px; }
+      .allowance-heading h1 { font-size: 22px; }
+      .allowance-table { min-width: 700px; }
+      .allowance-table.summary-table { min-width: 660px; }
+    }
+    @media (max-width: 380px) {
+      .allowance-controls { display: grid; grid-template-columns: 1fr 1fr; }
+      .allowance-controls .allowance-control:first-child { grid-column: 1 / -1; }
+      .allowance-controls button { width: 100%; }
+      .allowance-total { display: grid; gap: 2px; justify-items: end; }
+    }
+  </style>
+  <link rel="stylesheet" href="/css/app-theme.css">
+</head>
+<body>
+  <div id="navbar"></div>
+  <main class="allowance-shell">
+    <header class="allowance-heading">
+      <div>
+        <div class="allowance-kicker">JISAN SECURITY · PAYROLL</div>
+        <h1>수당 관리</h1>
+        <p id="allowancePageDescription">수당 기록과 월별 정산을 확인합니다.</p>
+      </div>
+      <div class="allowance-controls">
+        <input class="allowance-control" id="allowanceMonth" type="month" aria-label="정산 월">
+        <select class="allowance-control" id="allowanceUserFilter" aria-label="직원 선택" hidden>
+          <option value="">전체 직원</option>
+        </select>
+        <button class="allowance-export-button" id="allowanceExportBtn" type="button">↓ 엑셀</button>
+        <button class="allowance-primary-button" id="addAllowanceBtn" type="button">+ 수당 입력</button>
+      </div>
+    </header>
+
+    <nav class="allowance-tabs" role="tablist" aria-label="수당 보기">
+      <button class="allowance-tab" id="tab-journal" role="tab" type="button" data-tab="journal" aria-selected="true">수당 일지</button>
+      <button class="allowance-tab" id="tab-ball_pickup" role="tab" type="button" data-tab="ball_pickup" aria-selected="false">연습장 볼수거</button>
+      <button class="allowance-tab" id="tab-caddie_shuttle" role="tab" type="button" data-tab="caddie_shuttle" aria-selected="false">캐디 셔틀</button>
+      <button class="allowance-tab" id="tab-settlement" role="tab" type="button" data-tab="settlement" aria-selected="false">월말 정산</button>
+    </nav>
+
+    <div id="allowanceError" class="allowance-error" role="alert" hidden></div>
+    <section id="allowanceSummary"></section>
+    <section id="allowanceDetails"></section>
+  </main>
+
+  <div class="allowance-modal-overlay" id="allowanceModal" aria-hidden="true">
+    <section class="allowance-modal" role="dialog" aria-modal="true" aria-labelledby="allowanceModalTitle">
+      <header class="allowance-modal-header">
+        <h2 id="allowanceModalTitle">수당 입력</h2>
+        <button class="allowance-close" id="closeAllowanceModal" type="button" aria-label="닫기">&times;</button>
+      </header>
+      <form id="allowanceForm">
+        <input type="hidden" id="allowanceEntryId">
+        <div class="allowance-form-group">
+          <label for="allowanceType">수당 종류</label>
+          <select id="allowanceType" required></select>
+        </div>
+        <div class="allowance-form-group">
+          <label for="allowanceDate">수당 날짜</label>
+          <input id="allowanceDate" type="date" required>
+        </div>
+        <div class="allowance-form-group" id="allowanceShiftGroup" hidden>
+          <label for="allowanceShift">근무 시간</label>
+          <select id="allowanceShift" required></select>
+        </div>
+        <div class="allowance-form-group">
+          <label>지급 금액</label>
+          <div class="allowance-rate" id="allowanceRate"></div>
+        </div>
+        <div class="allowance-form-group">
+          <label for="allowanceNote">비고</label>
+          <textarea id="allowanceNote" maxlength="500" placeholder="추가 메모가 있으면 입력하세요."></textarea>
+        </div>
+        <div class="allowance-modal-actions">
+          <button class="allowance-cancel" id="cancelAllowanceModal" type="button">취소</button>
+          <button class="allowance-primary-button" id="saveAllowanceBtn" type="submit">저장</button>
+        </div>
+      </form>
+    </section>
+  </div>
+
+  <script src="/lib/sw2/sweetalert2.min.js"></script>
+  <script>window.Swal = window.Sweetalert2;</script>
+  <script src="/lib/sheetjs/xlsx.full.min.js"></script>
+  <script src="/js/app-loading.js"></script>
+  <script src="/js/supabase.js"></script>
+  <script src="/js/user-preferences.js"></script>
+  <script src="/js/navbar.js"></script>
+  <script src="/js/allowances.js"></script>
+</body>
+</html>
