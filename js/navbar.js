@@ -25,6 +25,36 @@ document.addEventListener('DOMContentLoaded', async () => {
       font-weight: 700;
       color: #f8fafc;
     }
+    .nav-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .notification-btn {
+      position: relative;
+      width: 40px;
+      height: 40px;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.06);
+      color: #f8fafc;
+      font-size: 20px;
+      cursor: pointer;
+    }
+    .notification-badge {
+      position: absolute;
+      top: -5px;
+      right: -6px;
+      min-width: 18px;
+      height: 18px;
+      padding: 0 5px;
+      border-radius: 10px;
+      background: #ef4444;
+      color: #fff;
+      font-size: 11px;
+      line-height: 18px;
+      font-weight: 700;
+    }
     .hamburger-btn {
       background: none;
       border: none;
@@ -133,6 +163,91 @@ document.addEventListener('DOMContentLoaded', async () => {
       width: 100%;
       text-align: center;
     }
+    .notification-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 300;
+      display: none;
+      justify-content: center;
+      align-items: center;
+      padding: 16px;
+      background: rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(4px);
+    }
+    .notification-overlay.active { display: flex; }
+    .notification-dialog {
+      display: flex;
+      flex-direction: column;
+      width: min(100%, 480px);
+      max-height: min(78vh, 680px);
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 18px;
+      background: #1e293b;
+      color: #f8fafc;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.45);
+    }
+    .notification-dialog-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 16px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    .notification-dialog-title { font-size: 17px; font-weight: 700; }
+    .notification-header-actions { display: flex; align-items: center; gap: 10px; }
+    .notification-text-btn, .notification-close-btn {
+      border: 0;
+      background: none;
+      color: #38bdf8;
+      font-size: 12px;
+      font-weight: 650;
+      cursor: pointer;
+    }
+    .notification-close-btn { color: #94a3b8; font-size: 23px; line-height: 1; }
+    .notification-list {
+      overflow-y: auto;
+      padding: 8px 12px;
+    }
+    .notification-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      padding: 12px 4px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .notification-item.unread { background: rgba(56, 189, 248, 0.07); }
+    .notification-content {
+      flex: 1;
+      min-width: 0;
+      border: 0;
+      background: none;
+      color: inherit;
+      text-align: left;
+      cursor: pointer;
+    }
+    .notification-item-title { display: block; font-size: 14px; font-weight: 700; }
+    .notification-item-body {
+      display: block;
+      margin-top: 4px;
+      color: #cbd5e1;
+      font-size: 13px;
+      line-height: 1.45;
+      overflow-wrap: anywhere;
+    }
+    .notification-item-date { display: block; margin-top: 6px; color: #94a3b8; font-size: 11px; }
+    .notification-read-state { margin-right: 5px; color: #38bdf8; font-size: 11px; }
+    .notification-delete-btn {
+      flex: 0 0 auto;
+      padding: 6px;
+      border: 0;
+      background: none;
+      color: #f87171;
+      font-size: 12px;
+      cursor: pointer;
+    }
+    .notification-empty { padding: 32px 12px; color: #94a3b8; font-size: 13px; text-align: center; }
   `;
   document.head.appendChild(navStyle);
 
@@ -147,10 +262,28 @@ document.addEventListener('DOMContentLoaded', async () => {
   navContainer.innerHTML = `
     <header class="nav-header">
       <div class="nav-title">${pageTitle}</div>
-      <button class="hamburger-btn" id="openNavDrawer">
-        <span></span><span></span><span></span>
-      </button>
+      <div class="nav-actions">
+        <button class="notification-btn" id="openNotifications" type="button" aria-label="알림 열기" aria-haspopup="dialog" aria-expanded="false">
+          🔔<span class="notification-badge" id="notificationUnreadBadge" style="display: none;">0</span>
+        </button>
+        <button class="hamburger-btn" id="openNavDrawer" type="button" aria-label="메뉴 열기">
+          <span></span><span></span><span></span>
+        </button>
+      </div>
     </header>
+
+    <div class="notification-overlay" id="notificationOverlay">
+      <section class="notification-dialog" role="dialog" aria-modal="true" aria-labelledby="notificationDialogTitle">
+        <header class="notification-dialog-header">
+          <h2 class="notification-dialog-title" id="notificationDialogTitle">알림</h2>
+          <div class="notification-header-actions">
+            <button class="notification-text-btn" id="markAllNotificationsRead" type="button">모두 읽음</button>
+            <button class="notification-close-btn" id="closeNotifications" type="button" aria-label="닫기">&times;</button>
+          </div>
+        </header>
+        <div class="notification-list" id="notificationList" aria-live="polite"></div>
+      </section>
+    </div>
 
     <div class="drawer-overlay" id="navDrawerOverlay"></div>
     <div class="drawer-menu" id="navDrawerMenu">
@@ -190,6 +323,15 @@ document.addEventListener('DOMContentLoaded', async () => {
   const overlay = document.getElementById('navDrawerOverlay');
   const drawer = document.getElementById('navDrawerMenu');
   const logoutBtn = document.getElementById('navLogoutBtn');
+  const openNotificationsBtn = document.getElementById('openNotifications');
+  const notificationOverlay = document.getElementById('notificationOverlay');
+  const notificationList = document.getElementById('notificationList');
+  const notificationBadge = document.getElementById('notificationUnreadBadge');
+  const markAllReadBtn = document.getElementById('markAllNotificationsRead');
+  const NOTIFICATIONS_API = 'https://jsec-serverless.adobephotoshop.workers.dev/api/notifications';
+  let notificationSession = null;
+  let notifications = [];
+  let unreadNotificationCount = 0;
 
   function toggleDrawer() {
     overlay.classList.toggle('active');
@@ -198,6 +340,164 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   if (openBtn) openBtn.addEventListener('click', toggleDrawer);
   if (overlay) overlay.addEventListener('click', toggleDrawer);
+  if (openNotificationsBtn) {
+    openNotificationsBtn.addEventListener('click', async () => {
+      notificationOverlay.classList.add('active');
+      openNotificationsBtn.setAttribute('aria-expanded', 'true');
+      await refreshNotifications();
+    });
+  }
+  if (document.getElementById('closeNotifications')) {
+    document.getElementById('closeNotifications').addEventListener('click', closeNotifications);
+  }
+  if (notificationOverlay) {
+    notificationOverlay.addEventListener('click', event => {
+      if (event.target === notificationOverlay) closeNotifications();
+    });
+  }
+  document.addEventListener('keydown', event => {
+    if (event.key === 'Escape' && notificationOverlay.classList.contains('active')) {
+      closeNotifications();
+    }
+  });
+
+  function closeNotifications() {
+    notificationOverlay.classList.remove('active');
+    openNotificationsBtn.setAttribute('aria-expanded', 'false');
+  }
+
+  async function notificationRequest(path = '', options = {}) {
+    if (!notificationSession) throw new Error('로그인이 필요합니다.');
+    const response = await fetch(`${NOTIFICATIONS_API}${path}`, {
+      ...options,
+      headers: {
+        Authorization: `Bearer ${notificationSession.access_token}`,
+        ...(options.body ? { 'Content-Type': 'application/json' } : {}),
+        ...options.headers
+      }
+    });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(result.error || `HTTP ${response.status}`);
+    return result;
+  }
+
+  function updateNotificationBadge(unreadCount) {
+    if (!notificationBadge) return;
+    const count = Number(unreadCount) || 0;
+    unreadNotificationCount = count;
+    notificationBadge.textContent = count > 99 ? '99+' : String(count);
+    notificationBadge.style.display = count > 0 ? 'block' : 'none';
+    openNotificationsBtn.setAttribute('aria-label', count > 0 ? `알림 열기, 미확인 ${count}개` : '알림 열기');
+  }
+
+  function showNotificationError(error) {
+    const message = document.createElement('div');
+    message.className = 'notification-empty';
+    message.setAttribute('role', 'alert');
+    message.textContent = `알림 처리에 실패했습니다: ${error.message}`;
+    notificationList.prepend(message);
+  }
+
+  function renderNotifications() {
+    notificationList.replaceChildren();
+    if (notifications.length === 0) {
+      const empty = document.createElement('div');
+      empty.className = 'notification-empty';
+      empty.textContent = '알림이 없습니다.';
+      notificationList.appendChild(empty);
+      return;
+    }
+
+    notifications.forEach(notification => {
+      const item = document.createElement('article');
+      item.className = `notification-item${notification.read_at ? '' : ' unread'}`;
+
+      const content = document.createElement('button');
+      content.type = 'button';
+      content.className = 'notification-content';
+      content.setAttribute('aria-label', `${notification.read_at ? '읽음' : '미확인'}: ${notification.title}`);
+
+      const title = document.createElement('span');
+      title.className = 'notification-item-title';
+      const readState = document.createElement('span');
+      readState.className = 'notification-read-state';
+      readState.textContent = notification.read_at ? '읽음' : '미확인';
+      title.append(readState, document.createTextNode(notification.title));
+
+      const body = document.createElement('span');
+      body.className = 'notification-item-body';
+      body.textContent = notification.body;
+
+      const date = document.createElement('time');
+      date.className = 'notification-item-date';
+      date.dateTime = notification.created_at;
+      date.textContent = new Date(notification.created_at).toLocaleString('ko-KR');
+
+      content.append(title, body, date);
+      content.addEventListener('click', async () => {
+        if (!notification.read_at) {
+          try {
+            await notificationRequest(`/${encodeURIComponent(notification.id)}`, { method: 'PUT' });
+            notification.read_at = new Date().toISOString();
+            updateNotificationBadge(Math.max(0, unreadNotificationCount - 1));
+            renderNotifications();
+          } catch (error) {
+            showNotificationError(error);
+          }
+        }
+      });
+
+      const deleteButton = document.createElement('button');
+      deleteButton.type = 'button';
+      deleteButton.className = 'notification-delete-btn';
+      deleteButton.textContent = '삭제';
+      deleteButton.setAttribute('aria-label', `${notification.title} 알림 삭제`);
+      deleteButton.addEventListener('click', async () => {
+        try {
+          await notificationRequest(`/${encodeURIComponent(notification.id)}`, { method: 'DELETE' });
+          notifications = notifications.filter(itemNotification => itemNotification.id !== notification.id);
+          if (!notification.read_at) updateNotificationBadge(Math.max(0, unreadNotificationCount - 1));
+          renderNotifications();
+        } catch (error) {
+          showNotificationError(error);
+        }
+      });
+
+      item.append(content, deleteButton);
+      notificationList.appendChild(item);
+    });
+  }
+
+  async function refreshNotifications() {
+    try {
+      const result = await notificationRequest();
+      notifications = result.notifications || [];
+      updateNotificationBadge(result.unreadCount);
+      renderNotifications();
+    } catch (error) {
+      notificationList.replaceChildren();
+      const message = document.createElement('div');
+      message.className = 'notification-empty';
+      message.textContent = `알림을 불러오지 못했습니다: ${error.message}`;
+      notificationList.appendChild(message);
+    }
+  }
+
+  if (markAllReadBtn) {
+    markAllReadBtn.addEventListener('click', async () => {
+      if (unreadNotificationCount === 0) return;
+      try {
+        await notificationRequest('/read-all', { method: 'PUT' });
+        notifications.forEach(notification => {
+          if (!notification.read_at) notification.read_at = new Date().toISOString();
+        });
+        updateNotificationBadge(0);
+        renderNotifications();
+      } catch (error) {
+        showNotificationError(error);
+      }
+    });
+  }
 
   if (logoutBtn) {
     logoutBtn.addEventListener('click', async () => {
@@ -212,6 +512,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (typeof supabaseClient !== 'undefined') {
     const { data: { session } } = await supabaseClient.auth.getSession();
     if (session) {
+      notificationSession = session;
+      await refreshNotifications();
+      window.setInterval(refreshNotifications, 60000);
       const { data: profile } = await supabaseClient
         .from('users')
         .select('name, role')
@@ -225,5 +528,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (userRoleEl) userRoleEl.textContent = profile.role === 'admin' ? '관리자 (Admin)' : '일반 회원';
       }
     }
+    supabaseClient.auth.onAuthStateChange((_event, updatedSession) => {
+      notificationSession = updatedSession;
+      if (updatedSession) refreshNotifications();
+      else updateNotificationBadge(0);
+    });
   }
 });
