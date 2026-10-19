@@ -362,21 +362,21 @@ document.addEventListener('DOMContentLoaded', async () => {
     for (let day = 1; day <= days; day += 1) {
       const date = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
       const dayEntries = getEntriesForDate(date);
-      const getNames = typeCode => dayEntries
+      const renderEntries = (typeCode, getIcon) => dayEntries
         .filter(entry => entry.type_code === typeCode)
         .map(entry => {
           const member = teamMembers.find(user => user.id === entry.user_id);
           const name = member?.name || entry.username || '직원';
           const ordinal = ordinalBySlot.get(getAllowanceSlotKey(entry));
           const color = getMemberColor(entry.user_id);
-          return `<span class="allowance-person-tag" style="--member-color:${color}">${escapeHtml(name)} <strong>${ordinal || '-'}회</strong></span>`;
+          return `<span class="allowance-person-tag" style="--member-color:${color}">${getIcon(entry)} ${escapeHtml(name)} <strong>${ordinal || '-'}회</strong></span>`;
         });
-      const shuttleNames = getNames('caddie_shuttle');
-      const ballNames = getNames('ball_pickup');
+      const shuttleEntries = renderEntries('caddie_shuttle', entry => entry.shift === 'afternoon' ? '🚘' : '🚗');
+      const ballEntries = renderEntries('ball_pickup', () => '⛳');
       const status = [
-        shuttleNames.length ? `🚗 ${shuttleNames.join(', ')}` : '',
-        ballNames.length ? `⛳ ${ballNames.join(', ')}` : ''
-      ].filter(Boolean).map(text => `<span>${text}</span>`).join('');
+        shuttleEntries.length ? `<span>${shuttleEntries.join(', ')}</span>` : '',
+        ballEntries.length ? `<span>${ballEntries.join(', ')}</span>` : ''
+      ].filter(Boolean).join('');
       const classes = [
         'allowance-day-cell',
         selectedDate === date ? 'selected' : '',
@@ -399,7 +399,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       return;
     }
     const [year, month, day] = date.split('-').map(Number);
-    selectedDateHeading.textContent = `${year}년 ${month}월 ${day}일 수당 체크`;
+    selectedDateHeading.textContent = `${month}월 ${day}일 수당 체크`;
     const records = getEntriesForDate(date);
     const ordinalBySlot = getAllowanceOrdinals();
     const slots = [

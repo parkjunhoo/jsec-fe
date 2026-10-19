@@ -47,9 +47,11 @@
     .allowance-error { margin: 0 0 14px; color: var(--danger); font-size: 13px; }
     .allowance-secondary-heading { margin-top: 24px; }
     .allowance-entry-view { display: grid; gap: 14px; }
+    .allowance-entry-view[hidden] { display: none; }
     .allowance-entry-calendar-wrap, .allowance-day-panel { border: 1px solid var(--app-border); border-radius: 9px; background: var(--app-surface); }
-    .allowance-entry-calendar-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 14px; border-bottom: 1px solid var(--app-border); }
-    .allowance-entry-calendar-head h2 { margin: 0; color: var(--text-main); font-size: 15px; }
+    .allowance-day-panel-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+    .allowance-day-panel-head h2 { margin: 3px 0 0; color: var(--text-main); font-size: 15px; }
+    .allowance-entry-month-title { margin: 0; color: var(--text-sub); font-size: 12px; font-weight: 700; }
     .allowance-calendar-nav { display: flex; gap: 6px; }
     .allowance-calendar-nav button { width: 34px; height: 34px; border: 1px solid var(--app-border); border-radius: 7px; background: var(--app-surface-raised); color: var(--text-main); font-size: 16px; cursor: pointer; }
     .allowance-entry-calendar { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); }
@@ -72,8 +74,7 @@
     .allowance-target-control { display: flex; align-items: center; gap: 9px; margin-bottom: 12px; color: var(--text-sub); font-size: 12px; }
     .allowance-target-control select { min-height: 36px; min-width: 150px; padding: 0 9px; border: 1px solid var(--app-border); border-radius: 7px; background: var(--input-bg); color: var(--text-main); }
     .allowance-day-panel { padding: 14px; }
-    .allowance-day-panel h2 { margin: 0 0 12px; color: var(--text-main); font-size: 15px; }
-    .allowance-day-hint { margin: -5px 0 13px; color: var(--text-sub); font-size: 12px; line-height: 1.5; }
+    .allowance-day-hint { margin: 0 0 13px; color: var(--text-sub); font-size: 12px; line-height: 1.5; }
     .allowance-slot-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
     .allowance-slot { display: flex; align-items: center; justify-content: space-between; gap: 9px; min-width: 0; padding: 11px; border: 1px solid var(--app-border); border-radius: 8px; background: var(--app-surface-raised); }
     .allowance-slot-info { min-width: 0; }
@@ -92,6 +93,7 @@
       .allowance-table { min-width: 700px; }
       .allowance-table.summary-table { min-width: 660px; }
       .allowance-day-cell { min-height: 72px; padding: 4px 3px; }
+      .allowance-day-panel-head { align-items: flex-start; }
     }
     @media (max-width: 380px) {
       .allowance-controls { display: grid; grid-template-columns: 1fr 1fr; }
@@ -134,17 +136,19 @@
     <section id="allowanceDetails"></section>
     <section id="allowanceEntryView" class="allowance-entry-view" hidden>
       <div class="allowance-entry-calendar-wrap">
-        <header class="allowance-entry-calendar-head">
-          <h2 id="entryCalendarTitle"></h2>
+        <div id="allowanceEntryCalendar" class="allowance-entry-calendar"></div>
+      </div>
+      <section class="allowance-day-panel" aria-labelledby="entrySelectedDate">
+        <header class="allowance-day-panel-head">
+          <div>
+            <p class="allowance-entry-month-title" id="entryCalendarTitle"></p>
+            <h2 id="entrySelectedDate"></h2>
+          </div>
           <div class="allowance-calendar-nav">
             <button id="entryPrevMonth" type="button" aria-label="이전 달">‹</button>
             <button id="entryNextMonth" type="button" aria-label="다음 달">›</button>
           </div>
         </header>
-        <div id="allowanceEntryCalendar" class="allowance-entry-calendar"></div>
-      </div>
-      <section class="allowance-day-panel" aria-labelledby="entrySelectedDate">
-        <h2 id="entrySelectedDate"></h2>
         <p class="allowance-day-hint">오전·오후 셔틀은 각각 1명, 볼수거는 하루 최대 2회까지 등록할 수 있습니다.</p>
         <div class="allowance-target-control" id="entryTargetControl" hidden>
           <label for="entryTargetUser">기록 대상</label>
@@ -162,6 +166,6 @@
   <script src="/js/supabase.js"></script>
   <script src="/js/user-preferences.js"></script>
   <script src="/js/navbar.js"></script>
-  <script src="/js/allowances.js?v=2026102003"></script>
+  <script src="/js/allowances.js?v=2026102005"></script>
 </body>
 </html>
