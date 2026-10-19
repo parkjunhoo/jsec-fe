@@ -3,6 +3,27 @@
   let activeRequests = 0;
   let showTimer;
   let hideTimer;
+  const scriptPromises = new Map();
+
+  function loadScript(src) {
+    const existing = scriptPromises.get(src);
+    if (existing) return existing;
+
+    const script = document.createElement('script');
+    script.src = src;
+    script.async = true;
+    const promise = new Promise((resolve, reject) => {
+      script.onload = () => resolve();
+      script.onerror = () => {
+        script.remove();
+        scriptPromises.delete(src);
+        reject(new Error(`스크립트를 불러오지 못했습니다: ${src}`));
+      };
+    });
+    scriptPromises.set(src, promise);
+    document.head.appendChild(script);
+    return promise;
+  }
 
   function getOverlay() {
     let overlay = document.getElementById('appLoading');
@@ -48,6 +69,7 @@
   window.appLoading = {
     begin,
     fetchWithoutLoading: (...args) => nativeFetch(...args),
+    loadScript,
     async track(operation) {
       const finish = begin();
       try {

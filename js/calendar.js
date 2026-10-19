@@ -587,7 +587,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       const [{ data, error }, noteResult] = await Promise.all([
         supabaseClient
           .from('vacations')
-          .select('*')
+          .select('id, user_id, username, date, leave_type, time_detail, hours_used, memo')
           .gte('date', startDate)
           .lte('date', endDate)
           .order('date', { ascending: true }),
@@ -751,9 +751,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   async function exportWorkSchedule() {
-    if (!window.XLSX || !window.JSZip) {
-      throw new Error('엑셀 라이브러리를 불러오지 못했습니다. 페이지를 새로고침해 주세요.');
-    }
+    if (!window.XLSX) throw new Error('엑셀 라이브러리를 불러오지 못했습니다. 페이지를 새로고침해 주세요.');
 
     const now = new Date();
     const monthOptions = Array.from({ length: 12 }, (_, index) =>
@@ -786,6 +784,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
     });
     if (!selection.isConfirmed) return;
+
+    await window.appLoading.loadScript('/lib/jszip/jszip.min.js');
 
     const { year, month } = selection.value;
     const startDate = `${year}-${String(month).padStart(2, '0')}-01`;

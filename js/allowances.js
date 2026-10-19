@@ -108,20 +108,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   async function loadProfileAndMembers() {
-    const { data, error } = await supabaseClient
+    const { data: users, error } = await supabaseClient
       .from('users')
       .select('id, name, username, role, color')
-      .eq('id', session.user.id)
-      .maybeSingle();
-    if (error) throw error;
-    profile = data;
-    isAdmin = profile?.role === 'admin';
-
-    const { data: users, error: usersError } = await supabaseClient
-      .from('users')
-      .select('id, name, username, color')
       .order('name', { ascending: true });
-    if (usersError) throw usersError;
+    if (error) throw error;
+    profile = users?.find(user => user.id === session.user.id) || null;
+    isAdmin = profile?.role === 'admin';
     teamMembers = (users || []).map(user => ({
       id: user.id,
       name: user.name || user.username || '이름 없음',
@@ -969,13 +962,14 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   async function exportWorkbook() {
-    if (!window.XLSX || !window.JSZip) {
-      setError('엑셀 기능을 불러오지 못했습니다. 페이지를 새로고침해 주세요.');
-      return;
-    }
     exportButton.disabled = true;
     setError();
     try {
+      await Promise.all([
+        window.appLoading.loadScript('/lib/sheetjs/xlsx.full.min.js'),
+        window.appLoading.loadScript('/lib/jszip/jszip.min.js')
+      ]);
+
       const monthParts = getMonthRange(monthInput.value);
       const selectedMembers = (isAdmin && !userFilter.value
         ? teamMembers
