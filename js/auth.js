@@ -1,4 +1,15 @@
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+  try {
+    const { data: { session }, error } = await supabaseClient.auth.getSession();
+    if (error) throw error;
+    if (session) {
+      window.location.replace('/pages/main.html');
+      return;
+    }
+  } catch (err) {
+    console.error('세션 확인 오류:', err);
+  }
+
   const loginForm = document.getElementById('loginForm');
   const loginBtn = document.getElementById('loginBtn');
   const errorMessage = document.getElementById('errorMessage');

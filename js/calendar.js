@@ -66,6 +66,25 @@ document.addEventListener('DOMContentLoaded', async () => {
   const vMemo = document.getElementById('vMemo');
   const targetUserFormGroup = document.getElementById('targetUserFormGroup');
   const vTargetUserId = document.getElementById('vTargetUserId');
+  const VACATIONS_API = 'https://jsec-serverless.adobephotoshop.workers.dev/api/vacations';
+
+  async function mutateVacation(path, method, payload) {
+    const { data: { session }, error: sessionError } = await supabaseClient.auth.getSession();
+    if (sessionError) throw sessionError;
+    if (!session) throw new Error('로그인이 필요합니다.');
+
+    const response = await fetch(`${VACATIONS_API}/${path}`, {
+      method,
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${session.access_token}`
+      },
+      body: payload ? JSON.stringify(payload) : undefined
+    });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(result.error || `HTTP ${response.status}`);
+    return result;
+  }
 
   // 필터 요소
   const locationCheckboxes = document.querySelectorAll('input[name="locFilter"]');
@@ -531,34 +550,20 @@ document.addEventListener('DOMContentLoaded', async () => {
             updatePayload.username = targetUserName;
           }
 
-          const { data, error } = await supabaseClient
-            .from('vacations')
-            .update(updatePayload)
-            .eq('id', vacId)
-            .select('id')
-            .maybeSingle();
-
-          if (error) throw error;
-          if (!data) {
-            throw new Error('수정된 행이 없습니다. Supabase vacations 테이블의 UPDATE RLS 정책에서 현재 사용자에게 해당 행의 수정이 허용되는지 확인해 주세요.');
-          }
+          await mutateVacation(encodeURIComponent(vacId), 'PATCH', updatePayload);
           await Swal.fire({
             icon: 'success',
             text: '휴무 일정이 수정되었습니다.'
           });
         } else {
-          const { error } = await supabaseClient
-            .from('vacations')
-            .insert([{ 
-              user_id: targetUserId, 
-              username: targetUserName, 
-              date, 
-              leave_type, 
-              time_detail, 
-              memo 
-            }]);
-
-          if (error) throw error;
+          await mutateVacation('create', 'POST', {
+            user_id: targetUserId,
+            username: targetUserName,
+            date,
+            leave_type,
+            time_detail,
+            memo
+          });
           await Swal.fire({
             icon: 'success',
             text: '휴무 일정이 등록되었습니다.'
@@ -598,12 +603,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       deleteBtn.disabled = true;
       try {
-        const { error } = await supabaseClient
-          .from('vacations')
-          .delete()
-          .eq('id', vacId);
-
-        if (error) throw error;
+        await mutateVacation(`delete/${encodeURIComponent(vacId)}`, 'DELETE');
         await Swal.fire({
           icon: 'success',
           text: '삭제되었습니다.'
