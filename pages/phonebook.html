@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta name="theme-color" content="#0b1220">
   <title>지산리조트 보안팀 - 직원 전화번호부</title>
+  <link rel="stylesheet" href="/lib/sw2/sweetalert2.min.css">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     :root {
@@ -499,6 +500,8 @@
     </section>
   </div>
 
+  <script src="/lib/sw2/sweetalert2.min.js"></script>
+  <script>window.Swal = window.Sweetalert2;</script>
   <script src="/js/supabase.js"></script>
   <script src="/js/navbar.js"></script>
   <script>
@@ -820,8 +823,17 @@
       }
 
       async function deleteContact(contact) {
-        const confirmed = window.confirm(`${contact.name}님의 연락처를 삭제할까요?\n삭제한 연락처는 복구할 수 없습니다.`);
-        if (!confirmed) return;
+        const confirmation = await Swal.fire({
+          icon: 'warning',
+          title: '연락처를 삭제할까요?',
+          text: `${contact.name}님의 연락처가 영구 삭제됩니다.`,
+          showCancelButton: true,
+          confirmButtonText: '삭제',
+          cancelButtonText: '취소',
+          reverseButtons: true,
+          focusCancel: true
+        });
+        if (!confirmation.isConfirmed) return;
 
         try {
           const { data, error } = await supabaseClient
@@ -836,7 +848,11 @@
           await loadContacts();
         } catch (error) {
           console.error('직원 연락처 삭제 실패:', error);
-          window.alert(`연락처를 삭제하지 못했습니다.\n${error.message || '잠시 후 다시 시도해 주세요.'}`);
+          await Swal.fire({
+            icon: 'error',
+            title: '삭제하지 못했습니다',
+            text: error.message || '잠시 후 다시 시도해 주세요.'
+          });
         }
       }
 
