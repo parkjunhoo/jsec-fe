@@ -548,11 +548,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     return rows;
   }
 
-  function makeShuttleRows(members, monthParts) {
-    const columns = members.flatMap(user => [
-      { ...user, shift: 'morning' },
-      { ...user, shift: 'afternoon' }
-    ]);
+  function makeShuttleRows(columns, monthParts) {
     const rows = [
       [`${monthParts.year}년 ${monthParts.month}월 셔틀운행 일지`],
       [],
@@ -645,14 +641,14 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const shuttleSheet = workbookSheets.shuttle;
     const shuttleTotalRow = monthParts.days + 5;
-    membersByType.shuttle.forEach((member, index) => ['morning', 'afternoon'].forEach((shift, shiftIndex) => {
-      const letter = columnName(index * 2 + shiftIndex + 2);
+    membersByType.shuttleColumns.forEach((column, index) => {
+      const letter = columnName(index + 2);
       const total = entries.filter(entry => entry.type_code === 'caddie_shuttle'
-        && entry.user_id === member.id && entry.shift === shift)
+        && entry.user_id === column.id && entry.shift === column.shift)
         .reduce((sum, entry) => sum + (Number(entry.unit_amount) || 0), 0);
       setFormula(shuttleSheet, `${letter}${shuttleTotalRow}`,
         `SUM(${letter}5:${letter}${shuttleTotalRow - 1})`, total);
-    }));
+    });
 
     const monthSheet = workbookSheets.month;
     const golfName = names.golf.replace(/'/g, "''");
@@ -664,9 +660,13 @@ document.addEventListener('DOMContentLoaded', async () => {
       const shuttleTotal = entries.filter(entry => entry.type_code === 'caddie_shuttle' && entry.user_id === member?.id)
         .reduce((sum, entry) => sum + (Number(entry.unit_amount) || 0), 0);
       const golfIndex = membersByType.golf.findIndex(candidate => candidate.id === member.id);
-      const shuttleIndex = membersByType.shuttle.findIndex(candidate => candidate.id === member.id);
+      const shuttleColumns = membersByType.shuttleColumns
+        .map((column, columnIndex) => ({ ...column, columnIndex }))
+        .filter(column => column.id === member.id);
       const golfFormula = golfIndex < 0 ? '0' : `'${golfName}'!${columnName(golfIndex + 3)}${golfTotalRow}`;
-      const shuttleFormula = shuttleIndex < 0 ? '0' : `SUM('${shuttleName}'!${columnName(shuttleIndex * 2 + 2)}${shuttleTotalRow}:${columnName(shuttleIndex * 2 + 3)}${shuttleTotalRow})`;
+      const shuttleFormula = shuttleColumns.length
+        ? `SUM(${shuttleColumns.map(column => `'${shuttleName}'!${columnName(column.columnIndex + 2)}${shuttleTotalRow}`).join(',')})`
+        : '0';
       setFormula(monthSheet, `${column}3`, golfFormula, golfTotal);
       setFormula(monthSheet, `${column}4`, shuttleFormula, shuttleTotal);
       setFormula(monthSheet, `${column}5`, `SUM(${column}3:${column}4)`, golfTotal + shuttleTotal);
@@ -757,9 +757,9 @@ document.addEventListener('DOMContentLoaded', async () => {
       pageMargins.setAttribute('footer', '0.2');
       const pageSetup = worksheetXml.createElementNS(spreadsheetNamespace, 'pageSetup');
       pageSetup.setAttribute('paperSize', '9');
-      pageSetup.setAttribute('orientation', index === 1 ? 'landscape' : 'portrait');
+      pageSetup.setAttribute('orientation', index === 1 || index === 2 ? 'landscape' : 'portrait');
       pageSetup.setAttribute('fitToWidth', '1');
-      pageSetup.setAttribute('fitToHeight', '0');
+      pageSetup.setAttribute('fitToHeight', index === 0 ? '1' : '0');
       [printOptions, pageMargins, pageSetup].forEach(element => {
         worksheetXml.documentElement.insertBefore(element, ignoredErrors || null);
       });
@@ -900,6 +900,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         entry.user_id === user.id && entry.type_code === 'ball_pickup'));
       const shuttleMembers = selectedMembers.filter(user => entries.some(entry =>
         entry.user_id === user.id && entry.type_code === 'caddie_shuttle'));
+      const shuttleColumns = shuttleMembers.flatMap(user =>
+        ['morning', 'afternoon']
+          .filter(shift => entries.some(entry => entry.user_id === user.id
+            && entry.type_code === 'caddie_shuttle' && entry.shift === shift))
+          .map(shift => ({ ...user, shift })));
       const monthMembers = selectedMembers.filter(user => entries.some(entry => entry.user_id === user.id));
       const [golfTemplate, shuttleTemplate, monthTemplate] = await Promise.all([
         fetchTemplate('/templates/golf_allow.xlsx'),
@@ -916,17 +921,17 @@ document.addEventListener('DOMContentLoaded', async () => {
         month: `${monthParts.year}년${monthParts.month}월 수당`
       };
       const golfRows = makeGolfRows(golfMembers, monthParts);
-      const shuttleRows = makeShuttleRows(shuttleMembers, monthParts);
+      const shuttleRows = makeShuttleRows(shuttleColumns, monthParts);
       const monthRows = makeMonthRows(monthMembers, monthParts);
       const golfColumnCount = Math.max(2, golfMembers.length + 2);
-      const shuttleColumnCount = Math.max(1, shuttleMembers.length * 2 + 1);
+      const shuttleColumnCount = Math.max(1, shuttleColumns.length + 1);
       const monthColumnCount = Math.max(1, monthMembers.length + 1);
       const createHeights = rowCount => Array.from({ length: rowCount }, (_, index) =>
         ({ hpt: index === 0 ? 30 : index === 1 ? 8 : 22 }));
       const golfSheet = createStyledSheet(golfRows, golfColumnCount,
         [14, 3, ...golfMembers.map(() => 16)], createHeights(golfRows.length));
       const shuttleSheet = createStyledSheet(shuttleRows, shuttleColumnCount,
-        [14, ...shuttleMembers.flatMap(() => [16, 16])], createHeights(shuttleRows.length));
+        [14, ...shuttleColumns.map(() => 16)], createHeights(shuttleRows.length));
       const monthSheet = createStyledSheet(monthRows, monthColumnCount,
         [20, ...monthMembers.map(() => 16)], createHeights(monthRows.length));
       const workbook = XLSX.utils.book_new();
@@ -936,6 +941,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       configureFormulas({ golf: golfSheet, shuttle: shuttleSheet, month: monthSheet }, monthParts, names, {
         golf: golfMembers,
         shuttle: shuttleMembers,
+        shuttleColumns,
         month: monthMembers
       });
       const sheetRanges = [
