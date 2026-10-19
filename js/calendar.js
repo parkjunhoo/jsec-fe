@@ -65,6 +65,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const currentMonthDisplay = document.getElementById('currentMonthDisplay');
   const totalMonthVacationCount = document.getElementById('totalMonthVacationCount');
   const statsGridContainer = document.getElementById('statsGridContainer');
+  const schedulePreview = document.getElementById('schedulePreview');
 
   const editVacationId = document.getElementById('editVacationId');
   const editCalendarNote = document.getElementById('editCalendarNote');
@@ -141,6 +142,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   let currentDate = new Date();
   let allVacations = [];
   let allCalendarNotes = [];
+  let scheduleTemplateBuffer;
   let userMap = {}; 
   let allTeamMembers = []; 
   let activeModalTab = 'schedule';
@@ -597,12 +599,142 @@ document.addEventListener('DOMContentLoaded', async () => {
       allCalendarNotes = noteResult || [];
       renderCalendarGrid();
       renderStatistics();
+      await renderSchedulePreview(year, month + 1);
     } catch (err) {
       console.error('휴무 데이터 조회 오류:', err);
       await Swal.fire({
         icon: 'error',
         text: `달력 데이터를 불러오지 못했습니다: ${err.message}`
       });
+    }
+  }
+
+  async function renderSchedulePreview(year, month) {
+    if (!schedulePreview) return;
+    schedulePreview.innerHTML = '<div class="schedule-preview-message">엑셀 미리보기를 불러오는 중...</div>';
+
+    try {
+      if (!window.XLSX) throw new Error('엑셀 라이브러리를 불러오지 못했습니다.');
+      if (!scheduleTemplateBuffer) {
+        const response = await fetch(encodeURI('/templates/휴무일정표.xlsx'));
+        if (!response.ok) throw new Error(`엑셀 양식을 불러오지 못했습니다. (HTTP ${response.status})`);
+        scheduleTemplateBuffer = await response.arrayBuffer();
+      }
+
+      const workbook = XLSX.read(scheduleTemplateBuffer, { type: 'array', cellStyles: true });
+      const sheet = workbook.Sheets['직원근무표'];
+      if (!sheet) throw new Error('직원근무표 시트를 찾을 수 없습니다.');
+      const rows = XLSX.utils.sheet_to_json(sheet, {
+        header: 1,
+        range: 'A2:AH22',
+        defval: '',
+        raw: true
+      });
+      const lastDay = new Date(year, month, 0).getDate();
+      const weekDays = ['일', '월', '화', '수', '목', '금', '토'];
+      rows[1][1] = month;
+      rows[1][33] = year;
+
+      for (let day = 1; day <= 31; day += 1) {
+        const column = day + 1;
+        rows[2][column] = day <= lastDay ? weekDays[new Date(year, month - 1, day).getDay()] : '';
+        rows[3][column] = day <= lastDay ? day : '';
+      }
+
+      const employeeRows = new Map();
+      for (let excelRow = 6; excelRow <= 21; excelRow += 1) {
+        const rowIndex = excelRow - 2;
+        const name = String(rows[rowIndex]?.[1] || '').trim();
+        if (!name) continue;
+        employeeRows.set(name, rowIndex);
+        for (let day = 1; day <= 31; day += 1) rows[rowIndex][day + 1] = '';
+      }
+
+      const priority = { '시간차': 1, '연차': 2, '휴무': 3 };
+      const dateCells = new Map();
+      allVacations.forEach(vacation => {
+        const name = (vacation.username || '').trim();
+        const rowIndex = employeeRows.get(name);
+        if (rowIndex === undefined) return;
+
+        const day = Number(vacation.date.slice(-2));
+        if (!Number.isInteger(day) || day < 1 || day > lastDay) return;
+        let value;
+        if (vacation.leave_type === '휴무') value = '휴';
+        else if (vacation.leave_type === '연차') value = '연';
+        else if (vacation.leave_type === '시간차') {
+          value = Number(vacation.hours_used);
+          if (!Number.isFinite(value) || value <= 0) {
+            throw new Error(`${name} 님의 ${vacation.date} 시간차 사용 시간이 기록되지 않았습니다.`);
+          }
+        } else return;
+
+        const key = `${rowIndex}:${day}`;
+        const existing = dateCells.get(key);
+        if (!existing || priority[vacation.leave_type] > existing.priority) {
+          dateCells.set(key, { rowIndex, day, value, type: vacation.leave_type, priority: priority[vacation.leave_type] });
+        } else if (existing.type === '시간차' && vacation.leave_type === '시간차') {
+          existing.value += value;
+        }
+      });
+
+      dateCells.forEach(({ rowIndex, day, value }) => {
+        rows[rowIndex][day + 1] = value;
+      });
+
+      let totalCount = 0;
+      for (let rowIndex = 4; rowIndex <= 19; rowIndex += 1) {
+        if (!String(rows[rowIndex]?.[1] || '').trim()) continue;
+        const count = rows[rowIndex].slice(2, 33).filter(value => value !== '').length;
+        rows[rowIndex][33] = count;
+        totalCount += count;
+      }
+      if (rows[20]) rows[20][33] = totalCount;
+
+      const columnCount = Math.max(...rows.map(row => row.length));
+      const body = rows.map((row, rowIndex) => {
+        if (rowIndex === 0) {
+          return `<tr><th class="schedule-title" colspan="${columnCount}">${escapeHtml(row[1] || '직원근무표')}</th></tr>`;
+        }
+        if (row.every(value => value === '')) {
+          return `<tr class="schedule-preview-spacer"><td colspan="${columnCount}"></td></tr>`;
+        }
+        if (rowIndex === 1) {
+          return `<tr>${row.map(value => `<td class="schedule-meta">${escapeHtml(value)}</td>`).join('')}</tr>`;
+        }
+        const isDayHeader = rowIndex === 2 || rowIndex === 3;
+        const isEmployee = rowIndex >= 4 && rowIndex <= 19;
+        const isGrandTotal = rowIndex === 20;
+        const cells = row.map((value, columnIndex) => {
+          const classes = [];
+          if (isDayHeader) classes.push('schedule-header');
+          if (isEmployee && columnIndex === 0) classes.push('schedule-shift');
+          if (columnIndex === 33 && (isEmployee || isGrandTotal)) classes.push('schedule-total');
+          if (isDayHeader && columnIndex >= 2 && columnIndex <= 32) {
+            const day = columnIndex - 1;
+            const dayOfWeek = new Date(year, month - 1, day).getDay();
+            if (dayOfWeek === 0) classes.push('schedule-weekend');
+            if (dayOfWeek === 6) classes.push('schedule-saturday');
+          }
+          const cellValue = typeof value === 'number' ? value.toLocaleString('ko-KR') : value;
+          const tag = isDayHeader ? 'th' : 'td';
+          return `<${tag}${classes.length ? ` class="${classes.join(' ')}"` : ''}>${escapeHtml(cellValue)}</${tag}>`;
+        }).join('');
+        return `<tr>${cells}</tr>`;
+      }).join('');
+
+      schedulePreview.innerHTML = `
+        <header class="schedule-preview-heading">
+          <h3>직원 근무표 미리보기</h3>
+          <span>${year}년 ${month}월 · 엑셀 시트 미리보기</span>
+        </header>
+        <div class="schedule-preview-scroll">
+          <table class="schedule-preview-table"><tbody>${body}</tbody></table>
+        </div>
+      `;
+    } catch (error) {
+      console.error('직원 근무표 미리보기 오류:', error);
+      schedulePreview.innerHTML = `<div class="schedule-preview-message">${escapeHtml(`미리보기를 불러오지 못했습니다: ${error.message}`)}</div>`;
     }
   }
 
@@ -758,6 +890,17 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     setCellValue('B3', month);
     setCellValue('AH3', year);
+    const weekdayLabels = ['일', '월', '화', '수', '목', '금', '토'];
+    for (let day = 1; day <= 31; day += 1) {
+      const column = numberToColumn(day + 2);
+      if (day <= lastDay) {
+        setCellValue(`${column}4`, weekdayLabels[new Date(year, month - 1, day).getDay()], true);
+        setCellValue(`${column}5`, day);
+      } else {
+        setCellValue(`${column}4`, '');
+        setCellValue(`${column}5`, '');
+      }
+    }
     const employeeRows = new Map();
     for (let row = 6; row <= 21; row++) {
       const employeeName = String(workbookSheet[`B${row}`]?.v || '').trim();
