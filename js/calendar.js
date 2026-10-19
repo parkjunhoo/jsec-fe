@@ -441,7 +441,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   async function exportWorkSchedule() {
-    if (!window.JSZip) throw new Error('엑셀 내보내기 라이브러리를 불러오지 못했습니다. 페이지를 새로고침해 주세요.');
+    if (!window.XLSX || !window.JSZip) {
+      throw new Error('엑셀 라이브러리를 불러오지 못했습니다. 페이지를 새로고침해 주세요.');
+    }
 
     const now = new Date();
     const monthOptions = Array.from({ length: 12 }, (_, index) =>
@@ -491,7 +493,12 @@ document.addEventListener('DOMContentLoaded', async () => {
       throw new Error(`엑셀 양식을 불러오지 못했습니다. (HTTP ${templateResponse.status})`);
     }
 
-    const zip = await JSZip.loadAsync(await templateResponse.arrayBuffer());
+    const templateBuffer = await templateResponse.arrayBuffer();
+    const workbook = XLSX.read(templateBuffer, { type: 'array', cellStyles: true });
+    const workbookSheet = workbook.Sheets['직원근무표'];
+    if (!workbookSheet) throw new Error('직원근무표 시트를 찾을 수 없습니다.');
+
+    const zip = await JSZip.loadAsync(templateBuffer);
     const workbookPath = 'xl/workbook.xml';
     const relationshipsPath = 'xl/_rels/workbook.xml.rels';
     const workbookXml = new DOMParser().parseFromString(
@@ -528,6 +535,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (worksheetXml.querySelector('parsererror')) throw new Error('직원근무표 시트 XML을 읽지 못했습니다.');
 
     function setCellValue(cellAddress, value, inlineString = false) {
+      if (value === '' && !inlineString) {
+        delete workbookSheet[cellAddress];
+      } else {
+        workbookSheet[cellAddress] = inlineString
+          ? { t: 's', v: String(value) }
+          : { t: 'n', v: Number(value) };
+      }
+
       const rowNumber = Number(cellAddress.match(/\d+$/)[0]);
       const row = Array.from(worksheetXml.getElementsByTagNameNS(spreadsheetNamespace, 'row'))
         .find(item => Number(item.getAttribute('r')) === rowNumber);
@@ -553,18 +568,19 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (child.nodeType === 1 && ['f', 'v', 'is'].includes(child.localName)) cell.removeChild(child);
       }
 
-      if (value === '' && !inlineString) return;
+      const sheetCell = workbookSheet[cellAddress];
+      if (!sheetCell) return;
 
-      if (inlineString) {
+      if (sheetCell.t === 's') {
         cell.setAttribute('t', 'inlineStr');
         const inlineValue = worksheetXml.createElementNS(spreadsheetNamespace, 'is');
         const text = worksheetXml.createElementNS(spreadsheetNamespace, 't');
-        text.textContent = String(value);
+        text.textContent = String(sheetCell.v);
         inlineValue.appendChild(text);
         cell.appendChild(inlineValue);
       } else {
         const numericValue = worksheetXml.createElementNS(spreadsheetNamespace, 'v');
-        numericValue.textContent = String(value);
+        numericValue.textContent = String(sheetCell.v);
         cell.appendChild(numericValue);
       }
     }
@@ -577,23 +593,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     setCellValue('B3', month);
     setCellValue('AH3', year);
     const employeeRows = new Map();
-    let sharedStringsXml;
     for (let row = 6; row <= 21; row++) {
-      const employeeCell = Array.from(worksheetXml.getElementsByTagNameNS(spreadsheetNamespace, 'c'))
-        .find(item => item.getAttribute('r') === `B${row}`);
-      const name = employeeCell?.getElementsByTagNameNS(spreadsheetNamespace, 'v')[0]?.textContent;
-      let employeeName = name || '';
-      if (employeeCell?.getAttribute('t') === 's' && zip.file('xl/sharedStrings.xml')) {
-        if (!sharedStringsXml) {
-          sharedStringsXml = new DOMParser().parseFromString(
-            await zip.file('xl/sharedStrings.xml').async('text'),
-            'application/xml'
-          );
-        }
-        employeeName = sharedStringsXml.getElementsByTagNameNS(spreadsheetNamespace, 'si')[Number(name)]
-          ?.textContent || '';
-      }
-      employeeName = employeeName.trim();
+      const employeeName = String(workbookSheet[`B${row}`]?.v || '').trim();
       if (!employeeName) continue;
       employeeRows.set(employeeName, row);
       for (let day = 1; day <= 31; day++) {
