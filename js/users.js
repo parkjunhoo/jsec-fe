@@ -57,7 +57,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     const selectedLocations = checkedLocations.filter(value =>
       value !== otherLocationFilter && !shiftFilterValues.includes(value)
     );
-    const matchesShift = selectedShifts.some(value => normalizedLocation.includes(value.toLowerCase()));
+    const isNightShift = normalizedLocation.includes('야간');
+    const matchesShift = selectedShifts.some(value => value === '야간' ? isNightShift : !isNightShift);
     const matchesLocation = selectedLocations.some(value => normalizedLocation.includes(value.toLowerCase()))
       || (checkedLocations.includes(otherLocationFilter)
         && !locationFilterValues.some(value => normalizedLocation.includes(value.toLowerCase())));

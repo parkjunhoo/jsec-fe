@@ -61,7 +61,8 @@
       pointer-events: none;
     }
     .welcome-panel::after { right: -2%; bottom: -145%; width: 390px; }
-    .welcome-copy, .welcome-meta { position: relative; z-index: 1; }
+    .welcome-copy, .welcome-info { position: relative; z-index: 1; }
+    .welcome-info { display: flex; flex: 1; min-width: 0; align-items: center; justify-content: flex-end; gap: 12px; }
     .welcome-kicker {
       display: inline-flex;
       align-items: center;
@@ -83,6 +84,7 @@
     .welcome-panel h1 { margin: 0; font-size: clamp(25px, 3.5vw, 33px); font-weight: 730; letter-spacing: -0.055em; line-height: 1.2; }
     .welcome-meta {
       display: grid;
+      flex: 0 0 auto;
       min-width: 155px;
       gap: 8px;
       padding: 12px 15px;
@@ -93,6 +95,43 @@
     }
     .meta-label { color: #9aadc0; font-size: 9px; font-weight: 700; letter-spacing: 0.11em; }
     .welcome-meta time { color: #e8f0f7; font-size: 13px; font-weight: 650; }
+    .today-off-summary {
+      flex: 1;
+      min-width: 0;
+      max-width: 410px;
+      padding: 12px 15px;
+      border: 1px solid rgba(190, 211, 239, 0.11);
+      border-radius: 12px;
+      background: rgba(7, 18, 30, 0.3);
+      backdrop-filter: blur(10px);
+    }
+    .today-off-heading { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+    .today-off-label { color: #b8d0d2; font-size: 10px; font-weight: 750; }
+    .today-off-count {
+      flex: 0 0 auto;
+      padding: 3px 8px;
+      border: 1px solid rgba(118, 212, 179, 0.24);
+      border-radius: 999px;
+      background: rgba(118, 212, 179, 0.1);
+      color: #a8e5c6;
+      font-size: 11px;
+      font-weight: 750;
+    }
+    .today-off-names {
+      display: -webkit-box;
+      margin-top: 6px;
+      overflow: hidden;
+      color: #edf3fa;
+      font-size: 12px;
+      font-weight: 600;
+      line-height: 1.5;
+      overflow-wrap: anywhere;
+      -webkit-box-orient: vertical;
+      -webkit-line-clamp: 2;
+      line-clamp: 2;
+    }
+    .today-off-summary.empty .today-off-count { border-color: rgba(190, 211, 239, 0.16); background: rgba(190, 211, 239, 0.07); color: #c1ccd6; }
+    .today-off-summary.empty .today-off-names { color: #a9bfce; font-weight: 500; }
     .section-heading {
       display: flex;
       align-items: flex-end;
@@ -183,6 +222,9 @@
     @media (max-width: 760px) {
       .home-shell { padding: 22px 16px 38px; }
       .welcome-panel { min-height: 138px; padding: 21px 22px; border-radius: 17px; }
+      .welcome-panel { flex-wrap: wrap; }
+      .welcome-info { flex: 1 1 100%; }
+      .today-off-summary { max-width: none; }
       .welcome-meta { min-width: 135px; }
       .menu-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
       .menu-card { min-height: 148px; padding: 16px; }
@@ -191,7 +233,11 @@
     }
     @media (max-width: 520px) {
       .home-shell { padding: 17px 13px 30px; }
-      .welcome-panel { min-height: 0; align-items: center; flex-direction: row; gap: 10px; padding: 17px 15px; border-radius: 15px; }
+      .welcome-panel { display: grid; grid-template-columns: minmax(0, 1fr) auto; min-height: 0; align-items: center; gap: 10px; padding: 17px 15px; border-radius: 15px; }
+      .welcome-info { grid-column: 1 / -1; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; }
+      .today-off-summary { padding: 9px 11px; }
+      .today-off-label { font-size: 9px; }
+      .today-off-names { font-size: 11px; }
       .welcome-kicker { margin-bottom: 8px; font-size: 8px; letter-spacing: 0.11em; }
       .welcome-panel h1 { max-width: 240px; font-size: 23px; }
       .welcome-meta { display: grid; width: auto; min-width: 0; flex: 0 0 auto; justify-items: end; gap: 5px; padding: 9px 10px; }
@@ -231,9 +277,18 @@
         <div class="welcome-kicker">JISAN RESORT · SECURITY OPERATIONS</div>
         <h1 id="welcomeTitle">보안팀 업무 포털</h1>
       </div>
-      <div class="welcome-meta">
-        <span class="meta-label">TODAY</span>
-        <time id="todayDate"></time>
+      <div class="welcome-info">
+        <section class="today-off-summary" id="todayOffSummary" aria-label="오늘 휴무자" aria-live="polite" aria-busy="true">
+          <div class="today-off-heading">
+            <span class="today-off-label">오늘 휴무</span>
+            <span class="today-off-count" id="todayOffCount">확인 중</span>
+          </div>
+          <p class="today-off-names" id="todayOffNames">휴무 일정을 불러오고 있습니다.</p>
+        </section>
+        <div class="welcome-meta">
+          <span class="meta-label">TODAY</span>
+          <time id="todayDate"></time>
+        </div>
       </div>
     </section>
 
@@ -301,17 +356,52 @@
   <script>
     // 메인 페이지 전용 추가 세션 체크 (필요시)
     document.addEventListener('DOMContentLoaded', async () => {
+      function getKstDateString(date = new Date()) {
+        const parts = new Intl.DateTimeFormat('en-US', {
+          timeZone: 'Asia/Seoul', year: 'numeric', month: '2-digit', day: '2-digit'
+        }).formatToParts(date);
+        const values = Object.fromEntries(parts.map(part => [part.type, part.value]));
+        return `${values.year}-${values.month}-${values.day}`;
+      }
+
       document.getElementById('todayDate').textContent = new Intl.DateTimeFormat('ko-KR', {
         year: 'numeric',
         month: 'long',
         day: 'numeric',
-        weekday: 'long'
+        weekday: 'long',
+        timeZone: 'Asia/Seoul'
       }).format(new Date());
 
       const { data: { session } } = await supabaseClient.auth.getSession();
       if (!session) {
         window.location.href = '/index.html';
         return;
+      }
+
+      const todayOffSummary = document.getElementById('todayOffSummary');
+      const todayOffCount = document.getElementById('todayOffCount');
+      const todayOffNames = document.getElementById('todayOffNames');
+      try {
+        const { data: vacations, error: vacationError } = await supabaseClient
+          .from('vacations')
+          .select('username, leave_type, time_detail')
+          .eq('date', getKstDateString())
+          .order('username', { ascending: true });
+        if (vacationError) throw vacationError;
+
+        const names = [...new Set((vacations || []).map(vacation => vacation.username).filter(Boolean))];
+        todayOffCount.textContent = `${names.length}명`;
+        todayOffSummary.classList.toggle('empty', names.length === 0);
+        todayOffNames.textContent = names.length
+          ? `${names.slice(0, 4).join(' · ')}${names.length > 4 ? ` 외 ${names.length - 4}명` : ''}`
+          : '오늘 등록된 휴무 일정이 없습니다.';
+        todayOffSummary.setAttribute('aria-busy', 'false');
+      } catch (vacationError) {
+        console.error('오늘 휴무 일정 조회 오류:', vacationError);
+        todayOffSummary.classList.add('empty');
+        todayOffCount.textContent = '조회 실패';
+        todayOffNames.textContent = '오늘 휴무 일정을 불러오지 못했습니다.';
+        todayOffSummary.setAttribute('aria-busy', 'false');
       }
 
       const { data: profile, error } = await supabaseClient
