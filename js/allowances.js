@@ -75,6 +75,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     return value === 'morning' ? '오전' : value === 'afternoon' ? '오후' : '일반';
   }
 
+  function getMemberColor(memberId) {
+    const color = teamMembers.find(user => user.id === memberId)?.color;
+    return typeof color === 'string' && /^#(?:[\da-f]{3}|[\da-f]{4}|[\da-f]{6}|[\da-f]{8})$/i.test(color)
+      ? color
+      : '#38bdf8';
+  }
+
   function setError(message = '') {
     errorContainer.textContent = message;
     errorContainer.hidden = !message;
@@ -101,37 +108,33 @@ document.addEventListener('DOMContentLoaded', async () => {
   async function loadProfileAndMembers() {
     const { data, error } = await supabaseClient
       .from('users')
-      .select('id, name, username, role')
+      .select('id, name, username, role, color')
       .eq('id', session.user.id)
       .maybeSingle();
     if (error) throw error;
     profile = data;
     isAdmin = profile?.role === 'admin';
 
+    const { data: users, error: usersError } = await supabaseClient
+      .from('users')
+      .select('id, name, username, color')
+      .order('name', { ascending: true });
+    if (usersError) throw usersError;
+    teamMembers = (users || []).map(user => ({
+      id: user.id,
+      name: user.name || user.username || '이름 없음',
+      color: user.color || '#38bdf8'
+    }));
     if (!isAdmin) {
-      const currentMember = {
-        id: session.user.id,
-        name: profile?.name || profile?.username || '내 수당'
-      };
-      teamMembers = [currentMember];
       userFilter.hidden = true;
       targetControl.hidden = true;
-      targetUser.innerHTML = `<option value="${escapeHtml(currentMember.id)}">${escapeHtml(currentMember.name)}</option>`;
-      targetUser.value = currentMember.id;
+      targetUser.innerHTML = `<option value="${escapeHtml(session.user.id)}">${escapeHtml(profile?.name || profile?.username || '내 수당')}</option>`;
+      targetUser.value = session.user.id;
       return;
     }
 
     userFilter.hidden = false;
     targetControl.hidden = false;
-    const { data: users, error: usersError } = await supabaseClient
-      .from('users')
-      .select('id, name, username')
-      .order('name', { ascending: true });
-    if (usersError) throw usersError;
-    teamMembers = (users || []).map(user => ({
-      id: user.id,
-      name: user.name || user.username || '이름 없음'
-    }));
     const options = teamMembers.map(user =>
       `<option value="${escapeHtml(user.id)}">${escapeHtml(user.name)}</option>`
     ).join('');
@@ -362,19 +365,17 @@ document.addEventListener('DOMContentLoaded', async () => {
       const getNames = typeCode => dayEntries
         .filter(entry => entry.type_code === typeCode)
         .map(entry => {
-          const name = isAdmin
-            ? (teamMembers.find(user => user.id === entry.user_id)?.name || entry.username || '직원')
-            : (entry.user_id === session.user.id
-              ? (profile?.name || profile?.username || entry.username || '나')
-              : (entry.username || '직원'));
+          const member = teamMembers.find(user => user.id === entry.user_id);
+          const name = member?.name || entry.username || '직원';
           const ordinal = ordinalBySlot.get(getAllowanceSlotKey(entry));
-          return `${name} (${ordinal || '-'})`;
+          const color = getMemberColor(entry.user_id);
+          return `<span class="allowance-person-tag" style="--member-color:${color}">${escapeHtml(name)} <strong>${ordinal || '-'}회</strong></span>`;
         });
       const shuttleNames = getNames('caddie_shuttle');
       const ballNames = getNames('ball_pickup');
       const status = [
-        shuttleNames.length ? `셔틀: ${shuttleNames.map(escapeHtml).join(', ')}` : '',
-        ballNames.length ? `볼수거: ${ballNames.map(escapeHtml).join(', ')}` : ''
+        shuttleNames.length ? `셔틀: ${shuttleNames.join(', ')}` : '',
+        ballNames.length ? `볼수거: ${ballNames.join(', ')}` : ''
       ].filter(Boolean).map(text => `<span>${text}</span>`).join('');
       const classes = [
         'allowance-day-cell',
@@ -418,17 +419,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         : null;
       const type = allowanceTypes.find(item => item.code === slot.type);
       let status = '비어 있음';
+      let statusColor = '';
       let action = `<button class="allowance-slot-button claim" type="button" data-action="claim"
         data-type="${slot.type}" data-shift="${slot.shift || ''}" data-slot="${slot.slot || ''}">${isAdmin ? '선택 직원 등록' : '내가 하기'}</button>`;
       if (record) {
         const assignedMember = teamMembers.find(user => user.id === record.user_id);
-        const name = isAdmin
-          ? (assignedMember?.name || record.username || '직원')
-          : (record.user_id === session.user.id
-            ? (profile?.name || profile?.username || record.username || '나')
-            : (record.username || '직원'));
+        const name = assignedMember?.name || record.username || '직원';
         const ordinal = ordinalBySlot.get(getAllowanceSlotKey(record));
-        status = `${name} (${ordinal || '-'})`;
+        status = `${name} · ${ordinal || '-'}회`;
+        statusColor = getMemberColor(record.user_id);
         if (isAdmin || ownEntry) {
           const entryId = isAdmin ? record.id : ownEntry.id;
           action = `<button class="allowance-slot-button delete" type="button" data-action="remove" data-id="${escapeHtml(entryId)}">취소</button>`;
@@ -439,7 +438,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       return `<article class="allowance-slot">
         <div class="allowance-slot-info">
           <div class="allowance-slot-title">${slot.title}</div>
-          <div class="allowance-slot-status ${record ? 'taken' : ''}">${escapeHtml(status)} · ${formatMoney(type?.unit_amount)}</div>
+          <div class="allowance-slot-status ${record ? 'taken' : ''}" ${statusColor ? `style="--member-color:${statusColor}"` : ''}>${escapeHtml(status)} · ${formatMoney(type?.unit_amount)}</div>
         </div>
         <div class="allowance-slot-actions">${action}</div>
       </article>`;
