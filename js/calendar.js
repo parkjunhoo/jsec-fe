@@ -63,7 +63,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   const vDate = document.getElementById('vDate');
   const vLeaveType = document.getElementById('vLeaveType');
   const vTimeDetail = document.getElementById('vTimeDetail');
+  const vHoursUsedGroup = document.getElementById('vHoursUsedGroup');
+  const vHoursUsed = document.getElementById('vHoursUsed');
   const vMemo = document.getElementById('vMemo');
+  const exportExcelBtn = document.getElementById('exportExcelBtn');
   const targetUserFormGroup = document.getElementById('targetUserFormGroup');
   const vTargetUserId = document.getElementById('vTargetUserId');
   const VACATIONS_API = 'https://jsec-serverless.adobephotoshop.workers.dev/api/vacations';
@@ -113,9 +116,19 @@ document.addEventListener('DOMContentLoaded', async () => {
       : ['종일'];
 
     vTimeDetail.innerHTML = timeDetails
-      .map(timeDetail => `<option value="${timeDetail}">${timeDetail}</option>`)
+      .map(timeDetail => `<option value="${timeDetail}">${timeDetail === '시간지정' ? 'N시간 사용' : timeDetail}</option>`)
       .join('');
     vTimeDetail.value = timeDetails.includes(selectedValue) ? selectedValue : timeDetails[0];
+    updateHoursUsedInput(leaveType, vTimeDetail.value);
+  }
+
+  function updateHoursUsedInput(leaveType, timeDetail, selectedHours = '') {
+    const showHours = leaveType === '시간차' && timeDetail === '시간지정';
+    if (vHoursUsedGroup) vHoursUsedGroup.style.display = showHours ? 'block' : 'none';
+    if (vHoursUsed) {
+      vHoursUsed.required = showHours;
+      vHoursUsed.value = showHours ? selectedHours ?? '' : '';
+    }
   }
 
   async function fetchUsersInfo() {
@@ -209,6 +222,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (vLeaveType) {
       vLeaveType.value = vacation.leave_type;
       updateTimeDetailOptions(vLeaveType.value, vacation.time_detail || '종일');
+      updateHoursUsedInput(vLeaveType.value, vTimeDetail.value, vacation.hours_used);
     }
     if (vMemo) vMemo.value = vacation.memo || '';
 
@@ -253,6 +267,11 @@ document.addEventListener('DOMContentLoaded', async () => {
       updateTimeDetailOptions(vLeaveType.value);
     });
   }
+  if (vTimeDetail) {
+    vTimeDetail.addEventListener('change', () => {
+      updateHoursUsedInput(vLeaveType.value, vTimeDetail.value);
+    });
+  }
 
   if (prevMonthBtn) {
     prevMonthBtn.addEventListener('click', () => {
@@ -295,6 +314,159 @@ document.addEventListener('DOMContentLoaded', async () => {
     } catch (err) {
       console.error('휴무 데이터 조회 오류:', err);
     }
+  }
+
+  async function exportWorkSchedule() {
+    if (!window.ExcelJS) throw new Error('Excel 내보내기 라이브러리를 불러오지 못했습니다. 페이지를 새로고침해 주세요.');
+
+    const now = new Date();
+    const monthOptions = Array.from({ length: 12 }, (_, index) =>
+      `<option value="${index + 1}" ${index + 1 === now.getMonth() + 1 ? 'selected' : ''}>${index + 1}월</option>`
+    ).join('');
+    const selection = await Swal.fire({
+      title: '직원 근무표 엑셀 내보내기',
+      html: `
+        <label for="exportYear" style="display:block;text-align:left;margin:8px 0 4px;">년도</label>
+        <input id="exportYear" class="swal2-input" type="number" min="1900" max="9999" value="${now.getFullYear()}">
+        <label for="exportMonth" style="display:block;text-align:left;margin:8px 0 4px;">월</label>
+        <select id="exportMonth" class="swal2-select">${monthOptions}</select>
+      `,
+      focusConfirm: false,
+      showCancelButton: true,
+      confirmButtonText: '엑셀 다운로드',
+      cancelButtonText: '취소',
+      preConfirm: () => {
+        const year = Number(document.getElementById('exportYear').value);
+        const month = Number(document.getElementById('exportMonth').value);
+        if (!Number.isInteger(year) || year < 1900 || year > 9999) {
+          Swal.showValidationMessage('년도를 1900~9999 사이 숫자로 입력해 주세요.');
+          return false;
+        }
+        if (!Number.isInteger(month) || month < 1 || month > 12) {
+          Swal.showValidationMessage('월을 선택해 주세요.');
+          return false;
+        }
+        return { year, month };
+      }
+    });
+    if (!selection.isConfirmed) return;
+
+    const { year, month } = selection.value;
+    const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
+    const lastDay = new Date(year, month, 0).getDate();
+    const endDate = `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+    const { data: vacations, error } = await supabaseClient
+      .from('vacations')
+      .select('username, date, leave_type, time_detail, hours_used')
+      .gte('date', startDate)
+      .lte('date', endDate);
+    if (error) throw error;
+
+    const templateResponse = await fetch(encodeURI('/templates/휴무일정표.xlsx'));
+    if (!templateResponse.ok) {
+      throw new Error(`엑셀 양식을 불러오지 못했습니다. (HTTP ${templateResponse.status})`);
+    }
+
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.load(await templateResponse.arrayBuffer());
+    const worksheet = workbook.getWorksheet('직원근무표') || workbook.worksheets[0];
+    if (!worksheet) throw new Error('직원근무표 시트를 찾을 수 없습니다.');
+
+    worksheet.getCell('B3').value = month;
+    worksheet.getCell('AH3').value = year;
+    workbook.calcProperties = { calcMode: 'auto', fullCalcOnLoad: true, forceFullCalc: true };
+
+    const employeeRows = new Map();
+    for (let row = 6; row <= 21; row++) {
+      const value = worksheet.getCell(`B${row}`).value;
+      const name = typeof value === 'string' ? value.trim() : '';
+      if (!name) continue;
+      employeeRows.set(name, row);
+      for (let day = 1; day <= 31; day++) {
+        worksheet.getCell(row, day + 2).value = null;
+      }
+    }
+
+    const dateCells = new Map();
+    const priority = { '시간차': 1, '연차': 2, '휴무': 3 };
+    const unmatchedNames = new Set();
+    (vacations || []).forEach(vacation => {
+      const name = (vacation.username || '').trim();
+      const row = employeeRows.get(name);
+      if (!row) {
+        if (name) unmatchedNames.add(name);
+        return;
+      }
+
+      const day = Number(vacation.date.slice(-2));
+      if (!Number.isInteger(day) || day < 1 || day > lastDay) return;
+      let cellValue;
+      if (vacation.leave_type === '휴무') {
+        cellValue = '휴';
+      } else if (vacation.leave_type === '연차') {
+        cellValue = '연';
+      } else if (vacation.leave_type === '시간차') {
+        const hours = Number(vacation.hours_used);
+        if (!Number.isFinite(hours) || hours <= 0) {
+          throw new Error(`${name} 님의 ${vacation.date} 시간차 사용 시간이 기록되지 않았습니다. 해당 일정을 수정해 사용 시간을 입력해 주세요.`);
+        }
+        cellValue = hours;
+      } else {
+        return;
+      }
+
+      const key = `${row}:${day}`;
+      const existing = dateCells.get(key);
+      if (!existing || priority[vacation.leave_type] > existing.priority) {
+        dateCells.set(key, {
+          row,
+          day,
+          value: cellValue,
+          type: vacation.leave_type,
+          priority: priority[vacation.leave_type]
+        });
+      } else if (existing.type === '시간차' && vacation.leave_type === '시간차') {
+        existing.value += cellValue;
+      }
+    });
+
+    dateCells.forEach(({ row, day, value }) => {
+      worksheet.getCell(row, day + 2).value = value;
+    });
+
+    const output = await workbook.xlsx.writeBuffer();
+    const blob = new Blob([output], {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    });
+    const downloadUrl = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = downloadUrl;
+    link.download = `직원근무표_${year}년_${month}월.xlsx`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(downloadUrl);
+
+    if (unmatchedNames.size > 0) {
+      await Swal.fire({
+        icon: 'warning',
+        title: '엑셀 다운로드 완료',
+        text: `양식에서 이름을 찾지 못해 제외된 직원: ${[...unmatchedNames].join(', ')}`
+      });
+    }
+  }
+
+  if (exportExcelBtn) {
+    exportExcelBtn.addEventListener('click', async () => {
+      exportExcelBtn.disabled = true;
+      try {
+        await exportWorkSchedule();
+      } catch (error) {
+        await Swal.fire({ icon: 'error', text: `엑셀 내보내기 실패: ${error.message}` });
+      } finally {
+        exportExcelBtn.disabled = false;
+      }
+    });
   }
 
   function renderStatistics() {
@@ -515,6 +687,11 @@ document.addEventListener('DOMContentLoaded', async () => {
       const date = vDate ? vDate.value : '';
       const leave_type = vLeaveType ? vLeaveType.value : '휴무';
       const time_detail = vTimeDetail ? vTimeDetail.value : '종일';
+      const hours_used = leave_type !== '시간차'
+        ? null
+        : time_detail === '시간지정'
+          ? Number(vHoursUsed.value)
+          : 4;
       const memo = vMemo ? vMemo.value.trim() : '';
 
       let targetUserId = userId;
@@ -544,7 +721,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       try {
         if (vacId) {
-          const updatePayload = { date, leave_type, time_detail, memo };
+          const updatePayload = { date, leave_type, time_detail, hours_used, memo };
           if (userRole === 'admin') {
             updatePayload.user_id = targetUserId;
             updatePayload.username = targetUserName;
@@ -562,6 +739,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             date,
             leave_type,
             time_detail,
+            hours_used,
             memo
           });
           await Swal.fire({

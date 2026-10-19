@@ -22,9 +22,11 @@
     body { background-color: var(--bg-main); color: var(--text-main); min-height: 100vh; padding-bottom: 40px; }
     .container { padding: 16px; max-width: 680px; margin: 0 auto; }
 
-    .header-area { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+    .header-area { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 14px; }
     .header-area h2 { font-size: 18px; font-weight: 750; }
     .btn-add-vacation { height: 38px; padding: 0 12px; background: linear-gradient(135deg, #38bdf8 0%, #0284c7 100%); color: #fff; border: none; border-radius: 10px; font-size: 13px; font-weight: 700; cursor: pointer; }
+    .header-actions { display: flex; gap: 8px; }
+    .btn-export-excel { height: 38px; padding: 0 12px; background: rgba(34, 197, 94, 0.16); color: #86efac; border: 1px solid rgba(34, 197, 94, 0.35); border-radius: 10px; font-size: 13px; font-weight: 700; cursor: pointer; }
 
     /* --- 필터 박스 디자인 --- */
     .filter-box {
@@ -293,7 +295,10 @@
   <main class="container">
     <div class="header-area">
       <h2>📅 보안팀 휴무 캘린더</h2>
-      <button class="btn-add-vacation" id="openModalBtn">+ 휴무 등록</button>
+      <div class="header-actions">
+        <button class="btn-export-excel" id="exportExcelBtn" type="button">엑셀 내보내기</button>
+        <button class="btn-add-vacation" id="openModalBtn" type="button">+ 휴무 등록</button>
+      </div>
     </div>
 
     <!-- 필터 및 정렬 박스 -->
@@ -399,8 +404,13 @@
             <option value="종일">종일</option>
             <option value="오전반차">오전반차</option>
             <option value="오후반차">오후반차</option>
-            <option value="시간지정">시간지정</option>
+            <option value="시간지정">N시간 사용</option>
           </select>
+        </div>
+
+        <div class="form-group" id="vHoursUsedGroup" style="display: none;">
+          <label for="vHoursUsed">사용 시간 *</label>
+          <input type="number" id="vHoursUsed" min="0.25" max="24" step="0.25" placeholder="예: 4">
         </div>
 
         <div class="form-group">
@@ -418,6 +428,7 @@
 
   <script src="/lib/sw2/sweetalert2.min.js"></script>
   <script>window.Swal = window.Sweetalert2;</script>
+  <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
   <script src="/js/supabase.js"></script>
   <script src="/js/navbar.js"></script>
   <script src="/js/calendar.js"></script>
