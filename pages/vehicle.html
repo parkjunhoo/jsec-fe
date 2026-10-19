@@ -37,7 +37,7 @@
 
     .container {
       padding: 16px;
-      max-width: 600px;
+      max-width: 980px;
       margin: 0 auto;
     }
 
@@ -133,11 +133,149 @@
       transition: background-color 150ms ease, color 150ms ease, border-color 150ms ease;
     }
 
+    #prefixTabMenu .tab-btn {
+      border: 1px solid var(--border-color);
+      background: var(--input-bg);
+      color: var(--text-sub);
+    }
+    #prefixTabMenu .tab-btn[aria-pressed="true"] {
+      border-color: var(--primary);
+      background: var(--primary);
+      color: #10251b;
+      font-weight: 800;
+    }
+    html[data-theme="light"] #prefixTabMenu .tab-btn[aria-pressed="true"] {
+      color: #fff;
+    }
+    .vehicle-view-controls {
+      display: flex;
+      justify-content: flex-end;
+      gap: 4px;
+      margin: 0 0 10px;
+      padding: 4px;
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      background: var(--card-bg);
+    }
+    .vehicle-view-button {
+      min-height: 36px;
+      padding: 0 14px;
+      border: 1px solid transparent;
+      border-radius: 7px;
+      background: transparent;
+      color: var(--text-sub);
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .vehicle-view-button[aria-pressed="true"] {
+      border-color: var(--primary);
+      background: var(--app-surface-raised, #24332b);
+      color: var(--text-main);
+    }
+
     .empty-state {
       text-align: center;
       padding: 50px 0;
       color: var(--text-sub);
       font-size: 14px;
+    }
+    .vehicle-list { gap: 10px; }
+    .vehicle-card {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      padding: 15px;
+      border: 1px solid var(--app-border, var(--border-color));
+      border-radius: 14px;
+      background: var(--app-surface, #1b2621);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.09);
+    }
+    .vehicle-card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+    .car-number {
+      color: var(--primary);
+      font-size: 20px;
+      font-weight: 850;
+      letter-spacing: 0.02em;
+      overflow-wrap: anywhere;
+    }
+    .vehicle-card-actions { display: flex; align-items: center; gap: 8px; }
+    .car-type-badge {
+      padding: 4px 8px;
+      border: 1px solid var(--app-border, var(--border-color));
+      border-radius: 6px;
+      background: var(--app-surface-raised, #24332b);
+      color: var(--text-sub);
+      font-size: 11px;
+      font-weight: 650;
+      white-space: nowrap;
+    }
+    .btn-edit-card {
+      padding: 5px 10px;
+      border: 1px solid color-mix(in srgb, var(--primary) 42%, transparent);
+      border-radius: 6px;
+      background: color-mix(in srgb, var(--primary) 12%, var(--app-surface));
+      color: var(--primary);
+      font-size: 12px;
+      font-weight: 750;
+      cursor: pointer;
+    }
+    .vehicle-details {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 7px 12px;
+      padding: 10px 12px;
+      border-radius: 9px;
+      background: var(--app-surface-raised, #24332b);
+      color: var(--text-sub);
+      font-size: 13px;
+      overflow-wrap: anywhere;
+    }
+    .vehicle-detail-value { color: var(--text-main); font-weight: 650; }
+    .vehicle-list[data-view="table"] {
+      display: block;
+      overflow-x: auto;
+      border: 1px solid var(--app-border, var(--border-color));
+      border-radius: 12px;
+      background: var(--app-surface, #1b2621);
+    }
+    .vehicle-table {
+      width: 100%;
+      min-width: 700px;
+      border-collapse: collapse;
+      text-align: left;
+    }
+    .vehicle-table th, .vehicle-table td {
+      padding: 11px 12px;
+      border-bottom: 1px solid var(--app-border, var(--border-color));
+      color: var(--text-main);
+      font-size: 13px;
+      vertical-align: middle;
+    }
+    .vehicle-table th {
+      background: var(--app-surface-raised, #24332b);
+      color: var(--text-sub);
+      font-size: 12px;
+      font-weight: 750;
+      white-space: nowrap;
+    }
+    .vehicle-table .vehicle-table-number {
+      color: var(--primary);
+      font-size: 16px;
+      font-weight: 850;
+      white-space: nowrap;
+    }
+    .vehicle-table tr:last-child td { border-bottom: 0; }
+    .vehicle-list[data-view="table"] .empty-state { padding: 32px 16px; }
+    @media (max-width: 480px) {
+      .vehicle-card-header { align-items: flex-start; }
+      .vehicle-card-actions { flex-direction: column-reverse; align-items: flex-end; }
+      .vehicle-details { grid-template-columns: minmax(0, 1fr); }
     }
 
     /* --- 모달 팝업 스타일 (모바일 최적화) --- */
@@ -291,7 +429,12 @@
     </div>
 
     <div class="search-box">
-      <input type="number" id="carSearchInput" class="search-input" placeholder="차량 뒷자리 4자리 숫자 입력..." inputmode="numeric" autocomplete="off">
+      <input type="search" id="carSearchInput" class="search-input" placeholder="차량 뒷자리 4자리 숫자 입력..." inputmode="numeric" autocomplete="off">
+    </div>
+
+    <div class="vehicle-view-controls" role="group" aria-label="차량 표시 방식">
+      <button class="vehicle-view-button" type="button" data-vehicle-view="cards" aria-pressed="true">카드 보기</button>
+      <button class="vehicle-view-button" type="button" data-vehicle-view="table" aria-pressed="false">표 보기</button>
     </div>
 
     <div class="vehicle-list" id="vehicleList">

@@ -8,6 +8,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   const searchInput = document.getElementById('carSearchInput');
   const vehicleList = document.getElementById('vehicleList');
+  const viewButtons = document.querySelectorAll('[data-vehicle-view]');
   const container = document.querySelector('.container') || document.body;
 
   // 건수 카운트 요소
@@ -35,6 +36,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   let allVehicles = [];
   let currentPrefix = 'ALL';
+  let currentView = 'cards';
 
   function escapeHtml(value) {
     return String(value ?? '').replace(/[&<>"']/g, character => ({
@@ -113,25 +115,27 @@ document.addEventListener('DOMContentLoaded', async () => {
     tabContainer.innerHTML = prefixes.map(p => {
       const isActive = currentPrefix === p;
       const label = p === 'ALL' ? '전체' : `${p}`;
-      const activeStyle = isActive 
-        ? 'background: #38bdf8; color: #0f172a; font-weight: 800; border-color: #38bdf8;' 
-        : 'background: rgba(15, 23, 42, 0.6); color: #94a3b8; border-color: rgba(255, 255, 255, 0.1);';
 
       return `
-        <button type="button" data-prefix="${p}" class="tab-btn" aria-pressed="${isActive}" style="
-          border: 1px solid;
-          ${activeStyle}
-        ">${label}</button>
+        <button type="button" data-prefix="${p}" class="tab-btn" aria-pressed="${isActive}">${label}</button>
       `;
     }).join('');
 
-    tabContainer.querySelectorAll('.tab-btn').forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        currentPrefix = e.target.getAttribute('data-prefix');
-        renderPrefixTabs();
-        if (searchInput) searchInput.value = '';
-        filterAndRenderVehicles();
-      });
+    tabContainer.onclick = event => {
+      const button = event.target.closest('[data-prefix]');
+      if (!button) return;
+      currentPrefix = button.getAttribute('data-prefix');
+      renderPrefixTabs();
+      if (searchInput) searchInput.value = '';
+      filterAndRenderVehicles();
+    };
+  }
+
+  function setView(view) {
+    currentView = view === 'table' ? 'table' : 'cards';
+    vehicleList.dataset.view = currentView;
+    viewButtons.forEach(button => {
+      button.setAttribute('aria-pressed', String(button.dataset.vehicleView === currentView));
     });
   }
 
@@ -142,7 +146,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     try {
       const { data, error } = await supabaseClient
         .from('skicar_data')
-        .select('*')
+        .select('id, number, full_number, name, department, car_name, phone, notes')
         .order('number', { ascending: true });
 
       if (error) throw error;
@@ -161,77 +165,91 @@ document.addEventListener('DOMContentLoaded', async () => {
   // 4. 필터링 및 건수 업데이트
   function filterAndRenderVehicles() {
     const keyword = searchInput ? searchInput.value.trim() : '';
-    let list = [...allVehicles];
+    let list = allVehicles;
 
     if (keyword) {
-      list = list.filter(item => {
-        const numStr = (item.number || '').toString().trim();
-        return numStr.includes(keyword);
-      });
+      list = list
+        .map((item, index) => ({ item, index, number: String(item.number ?? '').trim() }))
+        .filter(({ number }) => number.includes(keyword))
+        .sort((a, b) =>
+          Number(!a.number.startsWith(keyword)) - Number(!b.number.startsWith(keyword))
+          || a.index - b.index
+        )
+        .map(({ item }) => item);
     } else if (currentPrefix !== 'ALL') {
       list = list.filter(item => {
-        const numStr = (item.number || '').toString().trim();
+        const numStr = String(item.number ?? '').trim();
         return numStr.startsWith(currentPrefix);
       });
     }
 
     if (displayCountEl) displayCountEl.textContent = list.length;
-    renderVehicleCards(list);
+    renderVehicles(list);
   }
 
-  // 5. 차량 카드 리스트 렌더링 (수정/삭제 버튼 내장)
-  function renderVehicleCards(list) {
+  function renderVehicles(list) {
     if (!list || list.length === 0) {
       vehicleList.innerHTML = `<div class="empty-state">조건에 해당하는 차량이 없습니다.</div>`;
       return;
     }
 
+    if (currentView === 'table') {
+      vehicleList.innerHTML = `
+        <table class="vehicle-table">
+          <thead><tr>
+            <th scope="col">차량 번호</th><th scope="col">차종</th><th scope="col">소유자</th>
+            <th scope="col">부서</th><th scope="col">연락처</th><th scope="col">비고</th><th scope="col">관리</th>
+          </tr></thead>
+          <tbody>${list.map(item => `
+            <tr>
+              <td class="vehicle-table-number">${escapeHtml(item.full_number || item.number || '번호 없음')}</td>
+              <td>${escapeHtml(item.car_name || '-')}</td>
+              <td>${escapeHtml(item.name || '-')}</td>
+              <td>${escapeHtml(item.department || '-')}</td>
+              <td>${escapeHtml(item.phone || '-')}</td>
+              <td>${escapeHtml(item.notes || '-')}</td>
+              <td><button type="button" class="btn-edit-card" data-id="${escapeHtml(item.id || item.full_number)}">수정</button></td>
+            </tr>
+          `).join('')}</tbody>
+        </table>
+      `;
+      return;
+    }
+
     vehicleList.innerHTML = list.map(item => `
-      <div class="vehicle-card" style="
-        background: rgba(30, 41, 59, 0.7);
-        backdrop-filter: blur(12px);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        border-radius: 16px;
-        padding: 16px;
-        display: flex;
-        flex-direction: column;
-        gap: 10px;
-      ">
-        <div class="vehicle-card-header" style="display: flex; justify-content: space-between; align-items: center;">
-          <span class="car-number" style="font-size: 17px; font-weight: 800; color: #38bdf8;">${escapeHtml(item.full_number || item.number || '번호 없음')}</span>
-          <div style="display: flex; align-items: center; gap: 8px;">
-            <span class="car-type-badge" style="font-size: 11px; padding: 4px 8px; border-radius: 6px; background: rgba(255, 255, 255, 0.08); color: #94a3b8; font-weight: 600;">${escapeHtml(item.car_name || '차종 미기재')}</span>
-            <button type="button" class="btn-edit-card" data-id="${escapeHtml(item.id || item.full_number)}" style="
-              background: rgba(56, 189, 248, 0.15);
-              border: 1px solid rgba(56, 189, 248, 0.3);
-              color: #38bdf8;
-              padding: 4px 10px;
-              border-radius: 6px;
-              font-size: 12px;
-              font-weight: 700;
-              cursor: pointer;
-            ">수정</button>
+      <div class="vehicle-card">
+        <div class="vehicle-card-header">
+          <span class="car-number">${escapeHtml(item.full_number || item.number || '번호 없음')}</span>
+          <div class="vehicle-card-actions">
+            <span class="car-type-badge">${escapeHtml(item.car_name || '차종 미기재')}</span>
+            <button type="button" class="btn-edit-card" data-id="${escapeHtml(item.id || item.full_number)}">수정</button>
           </div>
         </div>
 
-        <div class="vehicle-details" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; font-size: 13px; color: #94a3b8; background: rgba(15, 23, 42, 0.4); padding: 10px 12px; border-radius: 10px;">
-          <div>소유자: <span style="color: #f8fafc; font-weight: 600;">${escapeHtml(item.name || '-')}</span></div>
-          <div>부서: <span style="color: #f8fafc; font-weight: 600;">${escapeHtml(item.department || '-')}</span></div>
-          <div style="grid-column: span 2;">연락처: <span style="color: #f8fafc; font-weight: 600;">${escapeHtml(item.phone || '-')}</span></div>
-          ${item.notes ? `<div style="grid-column: span 2;">비고: <span style="color: #f8fafc;">${escapeHtml(item.notes)}</span></div>` : ''}
+        <div class="vehicle-details">
+          <div>소유자: <span class="vehicle-detail-value">${escapeHtml(item.name || '-')}</span></div>
+          <div>부서: <span class="vehicle-detail-value">${escapeHtml(item.department || '-')}</span></div>
+          <div>연락처: <span class="vehicle-detail-value">${escapeHtml(item.phone || '-')}</span></div>
+          ${item.notes ? `<div>비고: <span class="vehicle-detail-value">${escapeHtml(item.notes)}</span></div>` : ''}
         </div>
       </div>
     `).join('');
-
-    // 카드별 수정 버튼 이벤트 연결
-    vehicleList.querySelectorAll('.btn-edit-card').forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        const id = e.target.getAttribute('data-id');
-        const targetCar = allVehicles.find(c => (c.id == id || c.full_number == id));
-        if (targetCar) openEditModal(targetCar);
-      });
-    });
   }
+
+  viewButtons.forEach(button => {
+    button.addEventListener('click', () => {
+      setView(button.dataset.vehicleView);
+      filterAndRenderVehicles();
+    });
+  });
+
+  vehicleList.addEventListener('click', event => {
+    const button = event.target.closest('.btn-edit-card');
+    if (!button) return;
+    const id = button.getAttribute('data-id');
+    const targetCar = allVehicles.find(car => String(car.id) === id || car.full_number === id);
+    if (targetCar) openEditModal(targetCar);
+  });
 
   // 6. 실시간 검색 이벤트
   if (searchInput) {
@@ -363,5 +381,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // 초기화 실행
   initPrefixTabMenu();
+  setView(currentView);
   fetchAllVehicles();
 });
