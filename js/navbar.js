@@ -224,6 +224,18 @@ document.addEventListener('DOMContentLoaded', async () => {
       cursor: pointer;
     }
     .notification-close-btn { color: #94a3b8; font-size: 23px; line-height: 1; }
+    .notification-delete-all-btn {
+      min-height: 32px;
+      padding: 0 9px;
+      border: 1px solid rgba(239, 133, 133, 0.28);
+      border-radius: 7px;
+      background: rgba(239, 133, 133, 0.08);
+      color: #ef9a9a;
+      font-size: 12px;
+      font-weight: 650;
+      cursor: pointer;
+    }
+    .notification-delete-all-btn:disabled { cursor: default; opacity: 0.45; }
     .notification-list {
       overflow-y: auto;
       padding: 8px 12px;
@@ -303,6 +315,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           <h2 class="notification-dialog-title" id="notificationDialogTitle">알림</h2>
           <div class="notification-header-actions">
             <button class="notification-text-btn" id="markAllNotificationsRead" type="button">모두 읽음</button>
+            <button class="notification-delete-all-btn" id="deleteAllNotifications" type="button">모두 삭제</button>
             <button class="notification-close-btn" id="closeNotifications" type="button" aria-label="닫기">&times;</button>
           </div>
         </header>
@@ -367,6 +380,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const notificationList = document.getElementById('notificationList');
   const notificationBadge = document.getElementById('notificationUnreadBadge');
   const markAllReadBtn = document.getElementById('markAllNotificationsRead');
+  const deleteAllNotificationsBtn = document.getElementById('deleteAllNotifications');
   const NOTIFICATIONS_API = 'https://jsec-serverless.adobephotoshop.workers.dev/api/notifications';
   let notificationSession = null;
   let notifications = [];
@@ -457,6 +471,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   function renderNotifications() {
     notificationList.replaceChildren();
+    if (deleteAllNotificationsBtn) deleteAllNotificationsBtn.disabled = notifications.length === 0;
     if (notifications.length === 0) {
       const empty = document.createElement('div');
       empty.className = 'notification-empty';
@@ -551,6 +566,40 @@ document.addEventListener('DOMContentLoaded', async () => {
         updateNotificationBadge(0);
         renderNotifications();
       } catch (error) {
+        showNotificationError(error);
+      }
+    });
+  }
+
+  if (deleteAllNotificationsBtn) {
+    deleteAllNotificationsBtn.addEventListener('click', async () => {
+      if (notifications.length === 0 || deleteAllNotificationsBtn.disabled) return;
+
+      let confirmed = false;
+      if (window.Swal?.fire) {
+        const result = await window.Swal.fire({
+          icon: 'warning',
+          title: '알림을 모두 삭제할까요?',
+          text: '삭제한 알림은 복구할 수 없습니다.',
+          showCancelButton: true,
+          confirmButtonText: '모두 삭제',
+          cancelButtonText: '취소',
+          reverseButtons: true
+        });
+        confirmed = result.isConfirmed;
+      } else {
+        confirmed = window.confirm('모든 알림을 삭제할까요? 삭제한 알림은 복구할 수 없습니다.');
+      }
+      if (!confirmed) return;
+
+      deleteAllNotificationsBtn.disabled = true;
+      try {
+        await notificationRequest('', { method: 'DELETE' });
+        notifications = [];
+        updateNotificationBadge(0);
+        renderNotifications();
+      } catch (error) {
+        deleteAllNotificationsBtn.disabled = false;
         showNotificationError(error);
       }
     });
