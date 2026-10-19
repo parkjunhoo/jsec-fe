@@ -297,6 +297,19 @@
     .modal-btn-group { display: flex; gap: 10px; margin-top: 16px; }
     .btn-submit { flex: 1; height: 46px; background: linear-gradient(135deg, #38bdf8 0%, #0284c7 100%); color: #fff; border: none; border-radius: 12px; font-size: 15px; font-weight: 700; cursor: pointer; }
     .btn-delete { height: 46px; padding: 0 18px; background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.4); border-radius: 12px; font-size: 14px; font-weight: 700; cursor: pointer; display: none; }
+    .date-details-card { background: var(--app-surface, #1e293b); border: 1px solid var(--border-color); border-radius: 18px; width: min(100%, 480px); padding: 20px; max-height: 82vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,0.35); }
+    .date-details-title { font-size: 18px; font-weight: 750; color: var(--text-main); }
+    .date-details-list { display: grid; gap: 10px; }
+    .date-detail-item { padding: 13px; border: 1px solid var(--app-border); border-radius: 10px; background: var(--app-surface-raised); }
+    .date-detail-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+    .date-detail-name { color: var(--text-main); font-size: 14px; font-weight: 700; overflow-wrap: anywhere; }
+    .date-detail-meta, .date-detail-memo, .date-detail-note { margin-top: 6px; color: var(--text-sub); font-size: 13px; line-height: 1.5; overflow-wrap: anywhere; white-space: pre-wrap; }
+    .date-detail-actions { display: flex; flex: 0 0 auto; gap: 6px; }
+    .date-detail-action { min-height: 32px; padding: 0 10px; border: 1px solid var(--app-border); border-radius: 7px; background: var(--app-surface); color: var(--text-main); font-size: 12px; font-weight: 650; cursor: pointer; }
+    .date-detail-action.delete { border-color: rgba(239, 133, 133, 0.38); color: var(--danger); }
+    .date-details-empty { padding: 20px 12px; color: var(--text-sub); font-size: 13px; text-align: center; }
+    .calendar-cell { -webkit-touch-callout: none; touch-action: pan-y; }
+    @media (max-width: 480px) { .date-details-card { align-self: end; border-radius: 18px 18px 0 0; padding: 18px 16px calc(18px + env(safe-area-inset-bottom)); } }
   </style>
   <link rel="stylesheet" href="/css/app-theme.css">
 </head>
@@ -381,6 +394,16 @@
       </div>
     </div>
   </main>
+
+  <div class="modal-overlay" id="dateDetailsModal" aria-hidden="true">
+    <section class="date-details-card" role="dialog" aria-modal="true" aria-labelledby="dateDetailsTitle">
+      <div class="modal-header">
+        <h3 class="date-details-title" id="dateDetailsTitle">날짜 상세</h3>
+        <button class="btn-close-modal" id="closeDateDetailsBtn" type="button" aria-label="닫기">&times;</button>
+      </div>
+      <div class="date-details-list" id="dateDetailsList"></div>
+    </section>
+  </div>
 
   <div class="modal-overlay" id="vacationModal">
     <div class="modal-card">

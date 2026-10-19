@@ -48,6 +48,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   const calendarGrid = document.getElementById('calendarGrid');
+  const dateDetailsModal = document.getElementById('dateDetailsModal');
+  const dateDetailsTitle = document.getElementById('dateDetailsTitle');
+  const dateDetailsList = document.getElementById('dateDetailsList');
+  const closeDateDetailsBtn = document.getElementById('closeDateDetailsBtn');
   const openModalBtn = document.getElementById('openModalBtn');
   const closeModalBtn = document.getElementById('closeModalBtn');
   const vacationModal = document.getElementById('vacationModal');
@@ -359,6 +363,152 @@ document.addEventListener('DOMContentLoaded', async () => {
   function closeModal() {
     if (vacationModal) vacationModal.classList.remove('active');
     if (vacationForm) vacationForm.reset();
+  }
+
+  function closeDateDetails() {
+    if (!dateDetailsModal) return;
+    dateDetailsModal.classList.remove('active');
+    dateDetailsModal.setAttribute('aria-hidden', 'true');
+  }
+
+  function openDateDetails(date) {
+    if (!dateDetailsModal || !dateDetailsList || !dateDetailsTitle) return;
+
+    const dateLabel = new Date(`${date}T00:00:00`).toLocaleDateString('ko-KR', {
+      year: 'numeric', month: 'long', day: 'numeric', weekday: 'long'
+    });
+    const dayVacations = allVacations.filter(vacation => vacation.date === date);
+    const dayNote = allCalendarNotes.find(note => note.date === date);
+    dateDetailsTitle.textContent = dateLabel;
+    dateDetailsModal.dataset.date = date;
+
+    const vacationItems = dayVacations.map(vacation => {
+      const canManage = vacation.user_id === userId || userRole === 'admin';
+      const detail = [vacation.leave_type, vacation.time_detail]
+        .filter(Boolean)
+        .join(' · ');
+      const hours = vacation.hours_used ? ` · ${escapeHtml(vacation.hours_used)}시간` : '';
+      const memo = vacation.memo
+        ? `<p class="date-detail-memo">${escapeHtml(vacation.memo)}</p>`
+        : '';
+      const actions = canManage ? `
+        <div class="date-detail-actions">
+          <button class="date-detail-action" type="button" data-detail-action="edit-vacation" data-id="${escapeHtml(vacation.id)}">수정</button>
+          <button class="date-detail-action delete" type="button" data-detail-action="delete-vacation" data-id="${escapeHtml(vacation.id)}">삭제</button>
+        </div>
+      ` : '';
+
+      return `
+        <article class="date-detail-item">
+          <div class="date-detail-heading">
+            <div>
+              <div class="date-detail-name">${escapeHtml(vacation.username || '이름 없음')}</div>
+              <div class="date-detail-meta">${escapeHtml(detail)}${hours}</div>
+            </div>
+            ${actions}
+          </div>
+          ${memo}
+        </article>
+      `;
+    });
+
+    if (dayNote) {
+      const noteActions = userRole === 'admin' ? `
+        <div class="date-detail-actions">
+          <button class="date-detail-action" type="button" data-detail-action="edit-note">수정</button>
+          <button class="date-detail-action delete" type="button" data-detail-action="delete-note">삭제</button>
+        </div>
+      ` : '';
+      vacationItems.push(`
+        <article class="date-detail-item">
+          <div class="date-detail-heading">
+            <div>
+              <div class="date-detail-name">${escapeHtml(dayNote.emoji || '📝')} 달력 메모</div>
+              <p class="date-detail-note">${escapeHtml(dayNote.content || '내용 없음')}</p>
+            </div>
+            ${noteActions}
+          </div>
+        </article>
+      `);
+    }
+
+    dateDetailsList.innerHTML = vacationItems.length
+      ? vacationItems.join('')
+      : '<div class="date-details-empty">등록된 휴가나 메모가 없습니다.</div>';
+    dateDetailsModal.classList.add('active');
+    dateDetailsModal.setAttribute('aria-hidden', 'false');
+  }
+
+  async function deleteVacationFromDetails(vacation) {
+    if (vacation.user_id !== userId && userRole !== 'admin') return;
+    const result = await Swal.fire({
+      icon: 'warning',
+      text: `${vacation.username || '이 일정'}의 휴무 일정을 삭제하시겠습니까?`,
+      showCancelButton: true,
+      confirmButtonText: '삭제',
+      cancelButtonText: '취소',
+      reverseButtons: true
+    });
+    if (!result.isConfirmed) return;
+
+    try {
+      await mutateVacation(`delete/${encodeURIComponent(vacation.id)}`, 'DELETE');
+      closeDateDetails();
+      await fetchMonthData();
+      await Swal.fire({ icon: 'success', text: '휴무 일정이 삭제되었습니다.' });
+    } catch (error) {
+      await Swal.fire({ icon: 'error', text: `삭제 실패: ${error.message}` });
+    }
+  }
+
+  async function deleteNoteFromDetails(date) {
+    if (userRole !== 'admin') return;
+    const result = await Swal.fire({
+      icon: 'warning',
+      text: '이 날짜의 달력 메모를 삭제하시겠습니까?',
+      showCancelButton: true,
+      confirmButtonText: '삭제',
+      cancelButtonText: '취소',
+      reverseButtons: true
+    });
+    if (!result.isConfirmed) return;
+
+    try {
+      await requestCalendarNotes(`/${encodeURIComponent(date)}`, 'DELETE');
+      closeDateDetails();
+      await fetchMonthData();
+      await Swal.fire({ icon: 'success', text: '달력 메모가 삭제되었습니다.' });
+    } catch (error) {
+      await Swal.fire({ icon: 'error', text: `메모 삭제 실패: ${error.message}` });
+    }
+  }
+
+  if (closeDateDetailsBtn) closeDateDetailsBtn.addEventListener('click', closeDateDetails);
+  if (dateDetailsModal) {
+    dateDetailsModal.addEventListener('click', event => {
+      if (event.target === dateDetailsModal) closeDateDetails();
+    });
+  }
+  if (dateDetailsList) {
+    dateDetailsList.addEventListener('click', event => {
+      const button = event.target.closest('[data-detail-action]');
+      if (!button) return;
+
+      const action = button.dataset.detailAction;
+      const vacation = allVacations.find(item => String(item.id) === button.dataset.id);
+      if (action === 'edit-vacation' && vacation
+        && (vacation.user_id === userId || userRole === 'admin')) {
+        closeDateDetails();
+        openEditModal(vacation);
+      } else if (action === 'delete-vacation' && vacation) {
+        deleteVacationFromDetails(vacation);
+      } else if (action === 'edit-note' && userRole === 'admin') {
+        closeDateDetails();
+        openCalendarNoteModal(dateDetailsModal.dataset.date);
+      } else if (action === 'delete-note' && userRole === 'admin') {
+        deleteNoteFromDetails(dateDetailsModal.dataset.date);
+      }
+    });
   }
 
   if (openModalBtn) openModalBtn.addEventListener('click', () => openAddModal());
@@ -885,7 +1035,44 @@ document.addEventListener('DOMContentLoaded', async () => {
       const dateStr = cell.getAttribute('data-date');
       if (!dateStr) return;
 
+      let longPressTimer;
+      let longPressTriggered = false;
+      let pointerStartX = 0;
+      let pointerStartY = 0;
+
+      function cancelLongPress() {
+        window.clearTimeout(longPressTimer);
+      }
+
+      cell.addEventListener('pointerdown', event => {
+        if (event.pointerType === 'mouse' && event.button !== 0) return;
+        longPressTriggered = false;
+        pointerStartX = event.clientX;
+        pointerStartY = event.clientY;
+        cancelLongPress();
+        longPressTimer = window.setTimeout(() => {
+          longPressTriggered = true;
+          openDateDetails(dateStr);
+        }, 550);
+      });
+      cell.addEventListener('pointermove', event => {
+        if (Math.abs(event.clientX - pointerStartX) > 12 || Math.abs(event.clientY - pointerStartY) > 12) {
+          cancelLongPress();
+        }
+      });
+      cell.addEventListener('pointerup', cancelLongPress);
+      cell.addEventListener('pointercancel', () => {
+        cancelLongPress();
+        longPressTriggered = false;
+      });
+      cell.addEventListener('pointerleave', cancelLongPress);
+
       cell.addEventListener('click', (e) => {
+        if (longPressTriggered) {
+          longPressTriggered = false;
+          e.preventDefault();
+          return;
+        }
         if (e.target.closest('.calendar-note-indicator, .calendar-note-text')) {
           openCalendarNoteModal(dateStr);
           return;
