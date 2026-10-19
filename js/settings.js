@@ -14,8 +14,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   const pushNotificationToggle = document.getElementById('pushNotificationToggle');
   const pushPreferenceStatus = document.getElementById('pushPreferenceStatus');
   const PUSH_PREFERENCE_API = 'https://jsec-serverless.adobephotoshop.workers.dev/api/push/preference';
-
-  let currentUserId = session.user.id;
+  const currentUserId = session.user.id;
+  const UPDATE_PROFILE_API = `https://jsec-serverless.adobephotoshop.workers.dev/api/users/${encodeURIComponent(currentUserId)}`;
   let pushToken = '';
 
   function setPushPreferenceStatus(message) {
@@ -117,24 +117,39 @@ document.addEventListener('DOMContentLoaded', async () => {
     const newPhone = phoneInput.value.trim();
     const newPassword = passwordInput.value.trim();
 
+    if (newPassword && (newPassword.length < 4 || newPassword.length > 16)) {
+      await Swal.fire({
+        icon: 'error',
+        text: '비밀번호는 4자리 이상 16자리 이하로 입력해 주세요.'
+      });
+      return;
+    }
+
     saveBtn.textContent = '저장 중...';
     saveBtn.disabled = true;
 
     try {
-      // A. public.users 테이블의 연락처 정보 업데이트
-      const { error: dbError } = await supabaseClient
-        .from('users')
-        .update({ phone: newPhone })
-        .eq('id', currentUserId);
+      const { data: { session: activeSession }, error: sessionError } = await supabaseClient.auth.getSession();
+      if (sessionError) throw sessionError;
+      if (!activeSession?.access_token) {
+        throw new Error('로그인 세션이 만료되었습니다. 다시 로그인해 주세요.');
+      }
 
-      if (dbError) throw dbError;
+      const profileResponse = await fetch(UPDATE_PROFILE_API, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${activeSession.access_token}`
+        },
+        body: JSON.stringify({ phone: newPhone })
+      });
+      const profileResult = await profileResponse.json().catch(() => ({}));
+      if (!profileResponse.ok) {
+        throw new Error(profileResult.error || `연락처 저장 실패 (HTTP ${profileResponse.status})`);
+      }
 
-      // B. 새 비밀번호를 입력한 경우에만 auth 업데이트 (4~16자리 검증 및 정책 반영)
+      // 새 비밀번호를 입력한 경우에만 auth 업데이트
       if (newPassword) {
-        if (newPassword.length < 4 || newPassword.length > 16) {
-          throw new Error('비밀번호는 4자리 이상 16자리 이하로 입력해 주세요.');
-        }
-
         const securePassword = newPassword + "jsec"; // 백엔드 로그인 정책과 일치시킴
         const { error: authError } = await supabaseClient.auth.updateUser({
           password: securePassword

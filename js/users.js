@@ -47,6 +47,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const WORKER_LIST_USERS_API = 'https://jsec-serverless.adobephotoshop.workers.dev/api/users/list';
   const WORKER_CREATE_USER_API = 'https://jsec-serverless.adobephotoshop.workers.dev/api/users/create';
   const WORKER_DELETE_USER_API = 'https://jsec-serverless.adobephotoshop.workers.dev/api/users/delete';
+  const WORKER_UPDATE_USER_API = 'https://jsec-serverless.adobephotoshop.workers.dev/api/users';
   
   let allUsers = [];
   let isAdmin = false;
@@ -353,12 +354,13 @@ document.addEventListener('DOMContentLoaded', async () => {
             color: color
           };
 
-          const { error } = await supabaseClient
-            .from('users')
-            .update(updateData)
-            .eq('id', userId);
-
-          if (error) throw error;
+          const response = await fetch(`${WORKER_UPDATE_USER_API}/${encodeURIComponent(userId)}`, {
+            method: 'PATCH',
+            headers: await workerHeaders(true),
+            body: JSON.stringify(updateData)
+          });
+          const result = await response.json();
+          if (!response.ok) throw new Error(result.error || '회원 정보 수정에 실패했습니다.');
           await Swal.fire({
             icon: 'success',
             text: '회원 정보가 성공적으로 수정되었습니다.'
