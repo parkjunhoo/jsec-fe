@@ -26,7 +26,13 @@
   --green: var(--primary);
 }
 
-html { min-height: 100%; background: var(--bg-main); scroll-padding-top: 76px; }
+html {
+  min-height: 100%;
+  background: var(--bg-main);
+  scroll-padding-top: 76px;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
 body {
   background-color: var(--bg-main);
   background-image: radial-gradient(ellipse at 86% -12%, rgba(76, 133, 101, 0.16), transparent 38rem);
