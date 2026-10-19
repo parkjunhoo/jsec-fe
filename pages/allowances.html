@@ -66,6 +66,7 @@
     .allowance-target-control select { min-height: 36px; min-width: 150px; padding: 0 9px; border: 1px solid var(--app-border); border-radius: 7px; background: var(--input-bg); color: var(--text-main); }
     .allowance-day-panel { padding: 14px; }
     .allowance-day-panel h2 { margin: 0 0 12px; color: var(--text-main); font-size: 15px; }
+    .allowance-day-hint { margin: -5px 0 13px; color: var(--text-sub); font-size: 12px; line-height: 1.5; }
     .allowance-slot-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
     .allowance-slot { display: flex; align-items: center; justify-content: space-between; gap: 9px; min-width: 0; padding: 11px; border: 1px solid var(--app-border); border-radius: 8px; background: var(--app-surface-raised); }
     .allowance-slot-info { min-width: 0; }
@@ -76,17 +77,6 @@
     .allowance-slot-button { min-height: 32px; padding: 0 9px; border: 1px solid var(--app-border); border-radius: 6px; background: transparent; color: var(--text-main); font: inherit; font-size: 11px; cursor: pointer; white-space: nowrap; }
     .allowance-slot-button.claim { border-color: transparent; background: #367b59; color: #fff; }
     .allowance-slot-button.delete { color: var(--danger); }
-    .allowance-inline-editor { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--app-border); }
-    .allowance-inline-editor[hidden] { display: none; }
-    .allowance-editor-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 10px; }
-    .allowance-editor-wide { grid-column: 1 / -1; }
-    .allowance-day-empty { grid-column: 1 / -1; padding: 12px; color: var(--text-sub); font-size: 12px; text-align: center; }
-    .allowance-form-group { margin-bottom: 13px; }
-    .allowance-form-group label { display: block; margin-bottom: 6px; color: var(--text-sub); font-size: 12px; font-weight: 650; }
-    .allowance-form-group input, .allowance-form-group select, .allowance-form-group textarea { width: 100%; min-height: 42px; padding: 9px 11px; border: 1px solid var(--app-border); border-radius: 7px; background: var(--input-bg); color: var(--text-main); font: inherit; font-size: 14px; }
-    .allowance-form-group textarea { min-height: 84px; resize: vertical; }
-    .allowance-rate { color: var(--primary); font-size: 13px; font-weight: 700; }
-    .allowance-editor-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 10px; }
     @media (max-width: 720px) {
       .allowance-heading { align-items: flex-start; flex-direction: column; }
       .allowance-controls { width: 100%; justify-content: flex-start; }
@@ -103,8 +93,6 @@
       .allowance-controls button { width: 100%; }
       .allowance-total { display: grid; gap: 2px; justify-items: end; }
       .allowance-slot-list { grid-template-columns: 1fr; }
-      .allowance-editor-grid { grid-template-columns: 1fr; }
-      .allowance-editor-wide { grid-column: auto; }
     }
   </style>
   <link rel="stylesheet" href="/css/app-theme.css">
@@ -151,40 +139,12 @@
       </div>
       <section class="allowance-day-panel" aria-labelledby="entrySelectedDate">
         <h2 id="entrySelectedDate"></h2>
+        <p class="allowance-day-hint">오전·오후 셔틀은 각각 1명, 볼수거는 하루 최대 2회까지 등록할 수 있습니다.</p>
         <div class="allowance-target-control" id="entryTargetControl" hidden>
           <label for="entryTargetUser">기록 대상</label>
           <select id="entryTargetUser"></select>
         </div>
         <div id="allowanceDaySlots" class="allowance-slot-list"></div>
-        <form id="allowanceEntryEditor" class="allowance-inline-editor" hidden>
-          <input type="hidden" id="entryEditId">
-          <div class="allowance-editor-grid">
-            <div class="allowance-form-group">
-              <label for="entryEditType">수당 종류</label>
-              <select id="entryEditType" required></select>
-            </div>
-            <div class="allowance-form-group">
-              <label for="entryEditDate">날짜</label>
-              <input id="entryEditDate" type="date" required>
-            </div>
-            <div class="allowance-form-group" id="entryEditShiftGroup" hidden>
-              <label for="entryEditShift">셔틀 시간</label>
-              <select id="entryEditShift"></select>
-            </div>
-            <div class="allowance-form-group" id="entryEditSlotGroup" hidden>
-              <label for="entryEditSlot">볼수거 슬롯</label>
-              <select id="entryEditSlot"></select>
-            </div>
-            <div class="allowance-form-group allowance-editor-wide">
-              <label for="entryEditNote">비고</label>
-              <textarea id="entryEditNote" maxlength="500"></textarea>
-            </div>
-          </div>
-          <div class="allowance-editor-actions">
-            <button class="allowance-cancel" id="cancelEntryEdit" type="button">취소</button>
-            <button class="allowance-primary-button" id="saveEntryEdit" type="submit">저장</button>
-          </div>
-        </form>
       </section>
     </section>
   </main>

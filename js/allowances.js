@@ -8,32 +8,29 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   const monthInput = document.getElementById('allowanceMonth');
   const userFilter = document.getElementById('allowanceUserFilter');
-  const addButton = document.getElementById('addAllowanceBtn');
   const exportButton = document.getElementById('allowanceExportBtn');
   const tabs = document.querySelectorAll('[data-tab]');
   const summaryContainer = document.getElementById('allowanceSummary');
   const detailsContainer = document.getElementById('allowanceDetails');
   const errorContainer = document.getElementById('allowanceError');
-  const modal = document.getElementById('allowanceModal');
-  const form = document.getElementById('allowanceForm');
-  const modalTitle = document.getElementById('allowanceModalTitle');
-  const entryIdInput = document.getElementById('allowanceEntryId');
-  const typeSelect = document.getElementById('allowanceType');
-  const dateInput = document.getElementById('allowanceDate');
-  const shiftGroup = document.getElementById('allowanceShiftGroup');
-  const shiftSelect = document.getElementById('allowanceShift');
-  const rateLabel = document.getElementById('allowanceRate');
-  const noteInput = document.getElementById('allowanceNote');
-  const saveButton = document.getElementById('saveAllowanceBtn');
-  const closeButton = document.getElementById('closeAllowanceModal');
-  const cancelButton = document.getElementById('cancelAllowanceModal');
+  const entryView = document.getElementById('allowanceEntryView');
+  const calendarTitle = document.getElementById('entryCalendarTitle');
+  const calendar = document.getElementById('allowanceEntryCalendar');
+  const selectedDateHeading = document.getElementById('entrySelectedDate');
+  const daySlots = document.getElementById('allowanceDaySlots');
+  const targetControl = document.getElementById('entryTargetControl');
+  const targetUser = document.getElementById('entryTargetUser');
+  const previousMonthButton = document.getElementById('entryPrevMonth');
+  const nextMonthButton = document.getElementById('entryNextMonth');
 
   let profile = null;
   let isAdmin = false;
   let allowanceTypes = [];
   let teamMembers = [];
   let entries = [];
+  let availability = [];
   let activeTab = 'journal';
+  let selectedDate = '';
 
   function getKstParts(date = new Date()) {
     const parts = new Intl.DateTimeFormat('en-US', {
@@ -56,6 +53,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     const [year, month] = monthValue.split('-').map(Number);
     const lastDay = new Date(year, month, 0).getDate();
     return {
+      year,
+      month,
+      days: lastDay,
       start: `${year}-${String(month).padStart(2, '0')}-01`,
       end: `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`
     };
@@ -96,9 +96,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   async function loadTypes() {
     allowanceTypes = await request('/types');
-    typeSelect.innerHTML = allowanceTypes.map(type =>
-      `<option value="${escapeHtml(type.code)}">${escapeHtml(type.label)}</option>`
-    ).join('');
   }
 
   async function loadProfileAndMembers() {
@@ -120,6 +117,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     userFilter.hidden = false;
+    targetControl.hidden = false;
     const { data: users, error: usersError } = await supabaseClient
       .from('users')
       .select('id, name, username')
@@ -129,32 +127,39 @@ document.addEventListener('DOMContentLoaded', async () => {
       id: user.id,
       name: user.name || user.username || '이름 없음'
     }));
-    userFilter.innerHTML = '<option value="">전체 직원</option>' + teamMembers.map(user =>
+    const options = teamMembers.map(user =>
       `<option value="${escapeHtml(user.id)}">${escapeHtml(user.name)}</option>`
     ).join('');
+    userFilter.innerHTML = '<option value="">전체 직원</option>' + options;
+    targetUser.innerHTML = options;
   }
 
   async function loadEntries() {
     setError();
     const { start, end } = getMonthRange(monthInput.value);
     const params = new URLSearchParams({ start, end });
-    if (isAdmin && userFilter.value) params.set('user_id', userFilter.value);
-    entries = await request(`?${params.toString()}`);
+    const availabilityParams = new URLSearchParams({ start, end });
+    const [loadedEntries, loadedAvailability] = await Promise.all([
+      request(`?${params.toString()}`),
+      request(`/availability?${availabilityParams.toString()}`)
+    ]);
+    entries = loadedEntries;
+    availability = loadedAvailability;
     render();
   }
 
   function getVisibleEntries() {
-    if (activeTab === 'ball_pickup' || activeTab === 'caddie_shuttle') {
-      return entries.filter(entry => entry.type_code === activeTab);
-    }
-    return entries;
+    return entries.filter(entry => {
+      if (isAdmin && userFilter.value && entry.user_id !== userFilter.value) return false;
+      if (activeTab === 'ball_pickup' || activeTab === 'caddie_shuttle') {
+        return entry.type_code === activeTab;
+      }
+      return true;
+    });
   }
 
-  function buildSummaries(sourceEntries) {
-    const visibleMembers = isAdmin
-      ? teamMembers.filter(user => !userFilter.value || user.id === userFilter.value)
-      : teamMembers;
-    const summaryById = new Map(visibleMembers.map(user => [user.id, {
+  function emptySummary(user) {
+    return {
       userId: user.id,
       name: user.name,
       countByType: {},
@@ -163,20 +168,21 @@ document.addEventListener('DOMContentLoaded', async () => {
       amountByShift: {},
       totalCount: 0,
       totalAmount: 0
-    }]));
+    };
+  }
+
+  function buildSummaries(sourceEntries) {
+    const visibleMembers = isAdmin
+      ? teamMembers.filter(user => !userFilter.value || user.id === userFilter.value)
+      : teamMembers;
+    const summaryById = new Map(visibleMembers.map(user => [user.id, emptySummary(user)]));
 
     sourceEntries.forEach(entry => {
       if (!summaryById.has(entry.user_id)) {
-        summaryById.set(entry.user_id, {
-          userId: entry.user_id,
-          name: entry.username || '이름 없음',
-          countByType: {},
-          amountByType: {},
-          countByShift: {},
-          amountByShift: {},
-          totalCount: 0,
-          totalAmount: 0
-        });
+        summaryById.set(entry.user_id, emptySummary({
+          id: entry.user_id,
+          name: entry.username || '이름 없음'
+        }));
       }
       const summary = summaryById.get(entry.user_id);
       const amount = Number(entry.unit_amount) || 0;
@@ -191,7 +197,9 @@ document.addEventListener('DOMContentLoaded', async () => {
       summary.totalAmount += amount;
     });
 
-    return [...summaryById.values()].sort((a, b) => a.name.localeCompare(b.name, 'ko'));
+    return [...summaryById.values()]
+      .filter(summary => summary.totalCount > 0)
+      .sort((a, b) => a.name.localeCompare(b.name, 'ko'));
   }
 
   function summaryColumns() {
@@ -237,8 +245,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     const viewLabel = activeTab === 'ball_pickup'
       ? '볼수거 월간 합계'
       : activeTab === 'caddie_shuttle'
-        ? '캐디 셔틀 월간 합계'
-        : activeTab === 'settlement' ? '월말 정산' : '사람별 월간 합계';
+        ? '셔틀 월간 합계'
+        : '사람별 월간 합계';
 
     summaryContainer.innerHTML = `
       <div class="allowance-summary-heading">
@@ -255,104 +263,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         </table>
       </div>
     `;
-  }
-
-  function renderDetails(sourceEntries) {
-    const isSettlement = activeTab === 'settlement';
-    const title = isSettlement ? '월간 수당 일지' : '상세 일지';
-    const body = sourceEntries.length
-      ? sourceEntries.map(entry => {
-        const canManage = isAdmin || entry.user_id === session.user.id;
-        return `<tr>
-          <td class="date">${escapeHtml(entry.work_date)}</td>
-          <td>${escapeHtml(entry.username)}</td>
-          <td>${escapeHtml(entry.type_label)}</td>
-          <td class="shift">${escapeHtml(entry.shift ? shiftLabel(entry.shift) : '-')}</td>
-          <td class="amount">${formatMoney(entry.unit_amount)}</td>
-          <td class="note">${escapeHtml(entry.note || '-')}</td>
-          <td>${canManage ? `<div class="allowance-actions">
-            <button class="allowance-row-action" type="button" data-action="edit" data-id="${escapeHtml(entry.id)}">수정</button>
-            <button class="allowance-row-action delete" type="button" data-action="delete" data-id="${escapeHtml(entry.id)}">삭제</button>
-          </div>` : '<span aria-label="관리 권한 없음">-</span>'}</td>
-        </tr>`;
-      }).join('')
-      : '<tr><td class="allowance-empty" colspan="7">해당 월에 등록된 수당이 없습니다.</td></tr>';
-
-    detailsContainer.innerHTML = `
-      <div class="allowance-summary-heading allowance-secondary-heading">
-        <h2>${title}</h2><p>한 줄이 수당 1건입니다.</p>
-      </div>
-      <div class="allowance-table-wrap">
-        <table class="allowance-table">
-          <thead><tr><th>날짜</th><th>이름</th><th>수당</th><th>구분</th><th>지급액</th><th>비고</th><th>관리</th></tr></thead>
-          <tbody>${body}</tbody>
-        </table>
-      </div>
-    `;
-  }
-
-  function render() {
-    const visibleEntries = getVisibleEntries();
-    tabs.forEach(tab => {
-      const selected = tab.dataset.tab === activeTab;
-      tab.setAttribute('aria-selected', String(selected));
-      tab.tabIndex = selected ? 0 : -1;
-    });
-    renderSummary(visibleEntries);
-    renderDetails(visibleEntries);
-  }
-
-  function renderShiftOptions(type, selected = '') {
-    const options = type?.shift_options || [];
-    shiftGroup.hidden = options.length === 0;
-    shiftSelect.required = options.length > 0;
-    shiftSelect.innerHTML = options.map(shift =>
-      `<option value="${escapeHtml(shift)}">${shiftLabel(shift)}</option>`
-    ).join('');
-    if (options.length) shiftSelect.value = options.includes(selected) ? selected : options[0];
-  }
-
-  function updateRate() {
-    const type = allowanceTypes.find(item => item.code === typeSelect.value);
-    if (!type) {
-      rateLabel.textContent = '';
-      return;
-    }
-    rateLabel.textContent = `1회 ${formatMoney(type.unit_amount)}`;
-    renderShiftOptions(type, shiftSelect.value);
-  }
-
-  function openModal(entry = null) {
-    form.reset();
-    entryIdInput.value = entry?.id || '';
-    modalTitle.textContent = entry ? '수당 기록 수정' : '수당 입력';
-    saveButton.textContent = entry ? '수정 저장' : '등록';
-
-    const allowedTypes = activeTab === 'ball_pickup' || activeTab === 'caddie_shuttle'
-      ? allowanceTypes.filter(type => type.code === activeTab)
-      : allowanceTypes;
-    typeSelect.innerHTML = allowedTypes.map(type =>
-      `<option value="${escapeHtml(type.code)}">${escapeHtml(type.label)}</option>`
-    ).join('');
-    typeSelect.disabled = allowedTypes.length === 1;
-    if (entry) typeSelect.value = entry.type_code;
-
-    const today = getTodayKst();
-    const selectedMonth = monthInput.value;
-    dateInput.value = entry?.work_date || (today.startsWith(selectedMonth) ? today : `${selectedMonth}-01`);
-    noteInput.value = entry?.note || '';
-    updateRate();
-    if (entry?.shift) shiftSelect.value = entry.shift;
-    modal.classList.add('active');
-    modal.setAttribute('aria-hidden', 'false');
-    typeSelect.focus();
-  }
-
-  function closeModal() {
-    modal.classList.remove('active');
-    modal.setAttribute('aria-hidden', 'true');
-    form.reset();
-    typeSelect.disabled = false;
   }
 
   async function deleteEntry(entry) {
@@ -377,121 +287,384 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
-  function exportWorkbook() {
+  function renderDetails(sourceEntries) {
+    const body = sourceEntries.length
+      ? sourceEntries.map(entry => {
+        const canManage = isAdmin || entry.user_id === session.user.id;
+        return `<tr>
+          <td class="date">${escapeHtml(entry.work_date)}</td>
+          <td>${escapeHtml(entry.username)}</td>
+          <td>${escapeHtml(entry.type_label)}</td>
+          <td class="shift">${escapeHtml(entry.shift ? shiftLabel(entry.shift) : '-')}</td>
+          <td class="amount">${formatMoney(entry.unit_amount)}</td>
+          <td class="note">${escapeHtml(entry.note || '-')}</td>
+          <td>${canManage ? `<div class="allowance-actions">
+            <button class="allowance-row-action delete" type="button" data-action="delete" data-id="${escapeHtml(entry.id)}">삭제</button>
+          </div>` : '<span aria-label="관리 권한 없음">-</span>'}</td>
+        </tr>`;
+      }).join('')
+      : '<tr><td class="allowance-empty" colspan="7">해당 월에 등록된 수당이 없습니다.</td></tr>';
+
+    detailsContainer.innerHTML = `
+      <div class="allowance-summary-heading allowance-secondary-heading">
+        <h2>상세 일지</h2><p>한 줄이 수당 1건입니다.</p>
+      </div>
+      <div class="allowance-table-wrap">
+        <table class="allowance-table">
+          <thead><tr><th>날짜</th><th>이름</th><th>수당</th><th>구분</th><th>지급액</th><th>비고</th><th>관리</th></tr></thead>
+          <tbody>${body}</tbody>
+        </table>
+      </div>
+    `;
+  }
+
+  function getEntriesForDate(date) {
+    return availability.filter(entry => entry.work_date === date);
+  }
+
+  function renderCalendar() {
+    const { year, month, days } = getMonthRange(monthInput.value);
+    const firstDay = new Date(year, month - 1, 1).getDay();
+    calendarTitle.textContent = `${year}년 ${month}월`;
+    const weekdays = ['일', '월', '화', '수', '목', '금', '토']
+      .map(day => `<div class="allowance-weekday">${day}</div>`).join('');
+    const cells = Array.from({ length: firstDay }, () => '<div aria-hidden="true"></div>');
+    for (let day = 1; day <= days; day += 1) {
+      const date = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+      const dayEntries = getEntriesForDate(date);
+      const shuttleCount = dayEntries.filter(entry => entry.type_code === 'caddie_shuttle').length;
+      const ballCount = dayEntries.filter(entry => entry.type_code === 'ball_pickup').length;
+      const status = [
+        shuttleCount ? `셔틀 ${shuttleCount}/2` : '',
+        ballCount ? `볼수거 ${ballCount}/2` : ''
+      ].filter(Boolean).map(text => `<span>${text}</span>`).join('');
+      const classes = [
+        'allowance-day-cell',
+        selectedDate === date ? 'selected' : '',
+        getTodayKst() === date ? 'today' : ''
+      ].filter(Boolean).join(' ');
+      cells.push(`<button class="${classes}" type="button" data-date="${date}" aria-pressed="${selectedDate === date}">
+        <span class="allowance-day-number">${day}</span>
+        <span class="allowance-day-summary">${status}</span>
+      </button>`);
+    }
+    calendar.innerHTML = weekdays + cells.join('');
+    renderDaySlots();
+  }
+
+  function renderDaySlots() {
+    const date = selectedDate;
+    if (!date) {
+      selectedDateHeading.textContent = '날짜를 선택해 주세요';
+      daySlots.innerHTML = '';
+      return;
+    }
+    const [year, month, day] = date.split('-').map(Number);
+    selectedDateHeading.textContent = `${year}년 ${month}월 ${day}일 수당 체크`;
+    const records = getEntriesForDate(date);
+    const slots = [
+      { type: 'caddie_shuttle', shift: 'morning', title: '오전 셔틀', slot: null },
+      { type: 'caddie_shuttle', shift: 'afternoon', title: '오후 셔틀', slot: null },
+      { type: 'ball_pickup', shift: null, title: '연습장 볼수거 1', slot: 1 },
+      { type: 'ball_pickup', shift: null, title: '연습장 볼수거 2', slot: 2 }
+    ];
+
+    daySlots.innerHTML = slots.map(slot => {
+      const record = records.find(entry => entry.type_code === slot.type
+        && (slot.shift ? entry.shift === slot.shift : Number(entry.slot_no) === slot.slot));
+      const ownEntry = !isAdmin && record
+        ? entries.find(entry => entry.work_date === date
+          && entry.type_code === slot.type
+          && (slot.shift ? entry.shift === slot.shift : Number(entry.slot_no) === slot.slot))
+        : null;
+      const type = allowanceTypes.find(item => item.code === slot.type);
+      let status = '비어 있음';
+      let action = `<button class="allowance-slot-button claim" type="button" data-action="claim"
+        data-type="${slot.type}" data-shift="${slot.shift || ''}" data-slot="${slot.slot || ''}">${isAdmin ? '선택 직원 등록' : '내가 하기'}</button>`;
+      if (record) {
+        const assignedMember = teamMembers.find(user => user.id === record.user_id);
+        status = isAdmin ? (assignedMember?.name || '직원') : '등록 완료';
+        if (isAdmin || ownEntry) {
+          const entryId = isAdmin ? record.id : ownEntry.id;
+          action = `<button class="allowance-slot-button delete" type="button" data-action="remove" data-id="${escapeHtml(entryId)}">취소</button>`;
+        } else {
+          action = '';
+        }
+      }
+      return `<article class="allowance-slot">
+        <div class="allowance-slot-info">
+          <div class="allowance-slot-title">${slot.title}</div>
+          <div class="allowance-slot-status ${record ? 'taken' : ''}">${escapeHtml(status)} · ${formatMoney(type?.unit_amount)}</div>
+        </div>
+        <div class="allowance-slot-actions">${action}</div>
+      </article>`;
+    }).join('');
+  }
+
+  function render() {
+    const isEntryTab = activeTab === 'entry';
+    summaryContainer.hidden = isEntryTab;
+    detailsContainer.hidden = isEntryTab;
+    entryView.hidden = !isEntryTab;
+    tabs.forEach(tab => {
+      const selected = tab.dataset.tab === activeTab;
+      tab.setAttribute('aria-selected', String(selected));
+      tab.tabIndex = selected ? 0 : -1;
+    });
+    if (isEntryTab) {
+      renderCalendar();
+      return;
+    }
+    const visibleEntries = getVisibleEntries();
+    renderSummary(visibleEntries);
+    renderDetails(visibleEntries);
+  }
+
+  async function setMonth(monthValue) {
+    monthInput.value = monthValue;
+    const { start } = getMonthRange(monthValue);
+    selectedDate = selectedDate.startsWith(monthValue) ? selectedDate : start;
+    await loadEntries();
+  }
+
+  async function changeEntry(actionButton) {
+    const action = actionButton.dataset.action;
+    try {
+      if (action === 'remove') {
+        const entry = entries.find(item => item.id === actionButton.dataset.id);
+        if (entry) await deleteEntry(entry);
+        return;
+      }
+      if (action !== 'claim') return;
+
+      const payload = {
+        type_code: actionButton.dataset.type,
+        work_date: selectedDate,
+        shift: actionButton.dataset.shift || null,
+        slot_no: actionButton.dataset.slot ? Number(actionButton.dataset.slot) : null,
+        note: ''
+      };
+      if (isAdmin) payload.user_id = targetUser.value;
+      actionButton.disabled = true;
+      await request('', { method: 'POST', body: JSON.stringify(payload) });
+      await loadEntries();
+    } catch (error) {
+      setError(`수당을 저장하지 못했습니다: ${error.message}`);
+    } finally {
+      actionButton.disabled = false;
+    }
+  }
+
+  function makeGolfRows(members, monthParts) {
+    const rows = [
+      [`${monthParts.year}년 ${monthParts.month}월 골프연습장 일지`],
+      [],
+      ['일자', '', ...members.map(user => user.name)]
+    ];
+    for (let day = 1; day <= monthParts.days; day += 1) {
+      const date = `${monthInput.value}-${String(day).padStart(2, '0')}`;
+      const entriesForDate = entries.filter(entry => entry.work_date === date && entry.type_code === 'ball_pickup');
+      rows.push([
+        `${monthParts.month}월 ${String(day).padStart(2, '0')}일`,
+        '',
+        ...members.map(user => {
+          const amount = entriesForDate
+            .filter(entry => entry.user_id === user.id)
+            .reduce((sum, entry) => sum + (Number(entry.unit_amount) || 0), 0);
+          return amount ? amount : 'ㅡ';
+        })
+      ]);
+    }
+    return rows;
+  }
+
+  function makeShuttleRows(members, monthParts) {
+    const columns = members.flatMap(user => [
+      { ...user, shift: 'morning' },
+      { ...user, shift: 'afternoon' }
+    ]);
+    const rows = [
+      [`${monthParts.year}년 ${monthParts.month}월 셔틀운행 일지`],
+      [],
+      ['날짜', ...columns.map(user => user.name)],
+      ['', ...columns.map(user => `${shiftLabel(user.shift)}셔틀`)]
+    ];
+    for (let day = 1; day <= monthParts.days; day += 1) {
+      const date = `${monthInput.value}-${String(day).padStart(2, '0')}`;
+      const entriesForDate = entries.filter(entry => entry.work_date === date && entry.type_code === 'caddie_shuttle');
+      rows.push([
+        day === 1 ? `${monthParts.month}월1일` : day,
+        ...columns.map(user => {
+          const record = entriesForDate.find(entry => entry.user_id === user.id && entry.shift === user.shift);
+          return record ? Number(record.unit_amount) || 0 : 'ㅡ';
+        })
+      ]);
+    }
+    const totals = columns.map(user => entries
+      .filter(entry => entry.type_code === 'caddie_shuttle' && entry.user_id === user.id && entry.shift === user.shift)
+      .reduce((sum, entry) => sum + (Number(entry.unit_amount) || 0), 0));
+    rows.push(['금액', ...totals]);
+    return rows;
+  }
+
+  function makeMonthRows(members, monthParts) {
+    const rows = [
+      [`${monthParts.year}년 ${monthParts.month}월 골프연습장/셔틀운행`],
+      [`${monthParts.month}월`, ...members.map(user => user.name)],
+      ['골프연습장', ...members.map(user => entries
+        .filter(entry => entry.user_id === user.id && entry.type_code === 'ball_pickup')
+        .reduce((sum, entry) => sum + (Number(entry.unit_amount) || 0), 0))],
+      ['셔틀운행', ...members.map(user => entries
+        .filter(entry => entry.user_id === user.id && entry.type_code === 'caddie_shuttle')
+        .reduce((sum, entry) => sum + (Number(entry.unit_amount) || 0), 0))],
+      ['합계', ...members.map(user => entries
+        .filter(entry => entry.user_id === user.id)
+        .reduce((sum, entry) => sum + (Number(entry.unit_amount) || 0), 0))]
+    ];
+    return rows;
+  }
+
+  async function fetchTemplate(path) {
+    const response = await fetch(path);
+    if (!response.ok) throw new Error(`${path} 템플릿을 불러오지 못했습니다. (HTTP ${response.status})`);
+    return XLSX.read(await response.arrayBuffer(), { type: 'array' });
+  }
+
+  function buildTemplateSheet(templateWorkbook, rows, sheetName) {
+    const templateSheetName = templateWorkbook.SheetNames[0];
+    if (!templateSheetName) throw new Error('엑셀 템플릿에 시트가 없습니다.');
+    const sheet = XLSX.utils.aoa_to_sheet(rows);
+    delete templateWorkbook.Sheets[templateSheetName];
+    templateWorkbook.Sheets[sheetName] = sheet;
+    templateWorkbook.SheetNames[0] = sheetName;
+    return templateWorkbook.Sheets[sheetName];
+  }
+
+  async function exportWorkbook() {
     if (!window.XLSX) {
       setError('엑셀 기능을 불러오지 못했습니다. 페이지를 새로고침해 주세요.');
       return;
     }
+    exportButton.disabled = true;
+    setError();
+    try {
+      const monthParts = getMonthRange(monthInput.value);
+      const visibleMembers = (isAdmin && !userFilter.value
+        ? teamMembers
+        : teamMembers.filter(user => !isAdmin || user.id === userFilter.value))
+        .filter(user => entries.some(entry => entry.user_id === user.id));
+      const [golfTemplate, shuttleTemplate, monthTemplate] = await Promise.all([
+        fetchTemplate('/templates/golf_allow.xlsx'),
+        fetchTemplate('/templates/shuttle_allow.xlsx'),
+        fetchTemplate('/templates/month_allow.xlsx')
+      ]);
+      const golfSheet = buildTemplateSheet(
+        golfTemplate,
+        makeGolfRows(visibleMembers, monthParts),
+        `${monthParts.year}년${monthParts.month}월 골프`
+      );
+      const shuttleSheet = buildTemplateSheet(
+        shuttleTemplate,
+        makeShuttleRows(visibleMembers, monthParts),
+        `${monthParts.year}년${monthParts.month}월 셔틀`
+      );
+      const monthSheet = buildTemplateSheet(
+        monthTemplate,
+        makeMonthRows(visibleMembers, monthParts),
+        `${monthParts.year}년${monthParts.month}월 수당`
+      );
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, golfSheet, `${monthParts.year}년${monthParts.month}월 골프`);
+      XLSX.utils.book_append_sheet(workbook, shuttleSheet, `${monthParts.year}년${monthParts.month}월 셔틀`);
+      XLSX.utils.book_append_sheet(workbook, monthSheet, `${monthParts.year}년${monthParts.month}월 수당`);
 
-    const visibleEntries = getVisibleEntries();
-    const summaries = buildSummaries(visibleEntries);
-    const details = visibleEntries.map(entry => ({
-      날짜: entry.work_date,
-      이름: entry.username,
-      수당: entry.type_label,
-      구분: entry.shift ? shiftLabel(entry.shift) : '-',
-      지급액: Number(entry.unit_amount) || 0,
-      비고: entry.note || ''
-    }));
-    const summaryRows = summaries.map(summary => {
-      const row = { 이름: summary.name };
-      allowanceTypes.forEach(type => {
-        if (type.shift_options?.length) {
-          type.shift_options.forEach(shift => {
-            const key = `${type.code}_${shift}`;
-            row[`${type.label} ${shiftLabel(shift)} 횟수`] = summary.countByShift[key] || 0;
-            row[`${type.label} ${shiftLabel(shift)} 지급액`] = summary.amountByShift[key] || 0;
-          });
-        } else {
-          row[`${type.label} 횟수`] = summary.countByType[type.code] || 0;
-          row[`${type.label} 지급액`] = summary.amountByType[type.code] || 0;
+      const fileName = `수당_${monthInput.value}.xlsx`;
+      const fileData = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+      if (window.AndroidExcelExporter) {
+        const bytes = new Uint8Array(fileData);
+        let binary = '';
+        for (let offset = 0; offset < bytes.length; offset += 0x8000) {
+          binary += String.fromCharCode(...bytes.subarray(offset, offset + 0x8000));
         }
-      });
-      row['총 지급액'] = summary.totalAmount;
-      return row;
-    });
-
-    const workbook = XLSX.utils.book_new();
-    const detailSheet = XLSX.utils.json_to_sheet(details.length ? details : [{ 안내: '해당 월 수당 기록이 없습니다.' }]);
-    const summarySheet = XLSX.utils.json_to_sheet(summaryRows.length ? summaryRows : [{ 안내: '정산할 기록이 없습니다.' }]);
-    XLSX.utils.book_append_sheet(workbook, detailSheet, '수당 일지');
-    XLSX.utils.book_append_sheet(workbook, summarySheet, '사람별 정산');
-
-    const { start } = getMonthRange(monthInput.value);
-    const month = start.slice(0, 7);
-    const fileName = `수당_${month}_${activeTab}.xlsx`;
-    const fileData = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
-    if (window.AndroidExcelExporter) {
-      const bytes = new Uint8Array(fileData);
-      let binary = '';
-      for (let offset = 0; offset < bytes.length; offset += 0x8000) {
-        binary += String.fromCharCode(...bytes.subarray(offset, offset + 0x8000));
+        window.AndroidExcelExporter.saveExcel(btoa(binary), fileName);
+        return;
       }
-      window.AndroidExcelExporter.saveExcel(btoa(binary), fileName);
-      return;
-    }
 
-    const blob = new Blob([fileData], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-    const downloadUrl = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = downloadUrl;
-    link.download = fileName;
-    link.click();
-    URL.revokeObjectURL(downloadUrl);
+      const blob = new Blob([fileData], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const downloadUrl = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = downloadUrl;
+      link.download = fileName;
+      link.click();
+      URL.revokeObjectURL(downloadUrl);
+    } catch (error) {
+      setError(`엑셀을 만들지 못했습니다: ${error.message}`);
+    } finally {
+      exportButton.disabled = false;
+    }
   }
 
-  typeSelect.addEventListener('change', updateRate);
-  monthInput.addEventListener('change', loadEntries);
-  userFilter.addEventListener('change', loadEntries);
+  monthInput.addEventListener('change', async () => {
+    selectedDate = `${monthInput.value}-01`;
+    try {
+      await loadEntries();
+    } catch (error) {
+      setError(`수당 정보를 불러오지 못했습니다: ${error.message}`);
+    }
+  });
+  userFilter.addEventListener('change', async () => {
+    try {
+      await loadEntries();
+      if (activeTab === 'entry') renderDaySlots();
+    } catch (error) {
+      setError(`수당 정보를 불러오지 못했습니다: ${error.message}`);
+    }
+  });
   tabs.forEach(tab => tab.addEventListener('click', () => {
     activeTab = tab.dataset.tab;
     render();
   }));
-  addButton.addEventListener('click', () => openModal());
   exportButton.addEventListener('click', exportWorkbook);
-  closeButton.addEventListener('click', closeModal);
-  cancelButton.addEventListener('click', closeModal);
-  modal.addEventListener('click', event => {
-    if (event.target === modal) closeModal();
+  previousMonthButton.addEventListener('click', async () => {
+    const [year, month] = monthInput.value.split('-').map(Number);
+    const previous = new Date(year, month - 2, 1);
+    try {
+      await setMonth(`${previous.getFullYear()}-${String(previous.getMonth() + 1).padStart(2, '0')}`);
+    } catch (error) {
+      setError(`수당 정보를 불러오지 못했습니다: ${error.message}`);
+    }
   });
+  nextMonthButton.addEventListener('click', async () => {
+    const [year, month] = monthInput.value.split('-').map(Number);
+    const next = new Date(year, month, 1);
+    try {
+      await setMonth(`${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, '0')}`);
+    } catch (error) {
+      setError(`수당 정보를 불러오지 못했습니다: ${error.message}`);
+    }
+  });
+  calendar.addEventListener('click', event => {
+    const dayButton = event.target.closest('[data-date]');
+    if (!dayButton) return;
+    selectedDate = dayButton.dataset.date;
+    renderCalendar();
+  });
+  daySlots.addEventListener('click', event => {
+    const actionButton = event.target.closest('[data-action]');
+    if (actionButton) changeEntry(actionButton);
+  });
+  targetUser.addEventListener('change', renderDaySlots);
   detailsContainer.addEventListener('click', event => {
-    const button = event.target.closest('[data-action]');
+    const button = event.target.closest('[data-action="delete"]');
     if (!button) return;
     const entry = entries.find(item => item.id === button.dataset.id);
-    if (!entry || (!isAdmin && entry.user_id !== session.user.id)) return;
-    if (button.dataset.action === 'edit') openModal(entry);
-    if (button.dataset.action === 'delete') deleteEntry(entry);
-  });
-
-  form.addEventListener('submit', async event => {
-    event.preventDefault();
-    const payload = {
-      type_code: typeSelect.value,
-      work_date: dateInput.value,
-      shift: shiftGroup.hidden ? null : shiftSelect.value,
-      note: noteInput.value.trim()
-    };
-    const entryId = entryIdInput.value;
-    saveButton.disabled = true;
-    saveButton.textContent = '저장 중...';
-    try {
-      await request(entryId ? `/${encodeURIComponent(entryId)}` : '', {
-        method: entryId ? 'PATCH' : 'POST',
-        body: JSON.stringify(payload)
-      });
-      closeModal();
-      await loadEntries();
-    } catch (error) {
-      setError(`저장하지 못했습니다: ${error.message}`);
-    } finally {
-      saveButton.disabled = false;
-      saveButton.textContent = entryId ? '수정 저장' : '등록';
-    }
+    if (entry && (isAdmin || entry.user_id === session.user.id)) deleteEntry(entry);
   });
 
   async function initialize() {
     try {
       monthInput.value = getCurrentMonth();
+      selectedDate = getTodayKst();
       await loadProfileAndMembers();
       await loadTypes();
       await loadEntries();
