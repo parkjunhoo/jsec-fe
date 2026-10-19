@@ -653,7 +653,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const actionButton = event.target.closest('[data-action]');
     if (actionButton) changeEntry(actionButton);
   });
-  targetUser.addEventListener('change', renderDaySlots);
+  if (targetUser) targetUser.addEventListener('change', renderDaySlots);
   detailsContainer.addEventListener('click', event => {
     const button = event.target.closest('[data-action="delete"]');
     if (!button) return;
