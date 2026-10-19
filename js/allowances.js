@@ -609,14 +609,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     const rows = [
       [`${monthParts.year}년 ${monthParts.month}월 골프연습장 일지`],
       [],
-      ['일자', '', ...members.map(user => user.name)]
+      ['일자', ...members.map(user => user.name)]
     ];
     for (let day = 1; day <= monthParts.days; day += 1) {
       const date = `${monthInput.value}-${String(day).padStart(2, '0')}`;
       const entriesForDate = entries.filter(entry => entry.work_date === date && entry.type_code === 'ball_pickup');
       rows.push([
         `${monthParts.month}월 ${String(day).padStart(2, '0')}일`,
-        '',
         ...members.map(user => {
           const amount = entriesForDate
             .filter(entry => entry.user_id === user.id)
@@ -625,7 +624,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         })
       ]);
     }
-    rows.push(['합계', '', ...members.map(user => entries
+    rows.push(['합계', ...members.map(user => entries
       .filter(entry => entry.user_id === user.id && entry.type_code === 'ball_pickup')
       .reduce((sum, entry) => sum + (Number(entry.unit_amount) || 0), 0))]);
     return rows;
@@ -720,7 +719,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const golfSheet = workbookSheets.golf;
     const golfTotalRow = monthParts.days + 4;
     membersByType.golf.forEach((member, index) => {
-      const letter = columnName(index + 3);
+      const letter = columnName(index + 2);
       setFormula(golfSheet, `${letter}${golfTotalRow}`, `SUM(${letter}4:${letter}${golfTotalRow - 1})`,
         entries.filter(entry => entry.type_code === 'ball_pickup' && entry.user_id === member.id)
           .reduce((sum, entry) => sum + (Number(entry.unit_amount) || 0), 0));
@@ -750,7 +749,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       const shuttleColumns = membersByType.shuttleColumns
         .map((column, columnIndex) => ({ ...column, columnIndex }))
         .filter(column => column.id === member.id);
-      const golfFormula = golfIndex < 0 ? '0' : `'${golfName}'!${columnName(golfIndex + 3)}${golfTotalRow}`;
+      const golfFormula = golfIndex < 0 ? '0' : `'${golfName}'!${columnName(golfIndex + 2)}${golfTotalRow}`;
       const shuttleFormula = shuttleColumns.length
         ? `SUM(${shuttleColumns.map(column => `'${shuttleName}'!${columnName(column.columnIndex + 2)}${shuttleTotalRow}`).join(',')})`
         : '0';
@@ -780,8 +779,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       const rows = Array.from(worksheetXml.getElementsByTagNameNS(spreadsheetNamespace, 'row'));
       rows.forEach(row => {
         const rowNumber = Number(row.getAttribute('r'));
-        if (rowNumber > 1 && !row.hasAttribute('ht')) {
-          row.setAttribute('ht', rowNumber === 2 ? '8' : '22');
+        if (rowNumber > 1) {
+          row.setAttribute('ht', index === 2 && rowNumber === 2 ? '35' : rowNumber === 2 ? '8' : '22');
           row.setAttribute('customHeight', '1');
         }
         Array.from(row.getElementsByTagNameNS(spreadsheetNamespace, 'c')).forEach(cell => {
@@ -796,10 +795,10 @@ document.addEventListener('DOMContentLoaded', async () => {
           else if (index === 1 && rowIndex === 4) style = 3;
           else if (index === 2 && rowIndex === 2) style = col === 'A' ? 3 : 2;
           else if (index === 2 && (rowIndex === 3 || rowIndex === 4) && col === 'A') style = 3;
-          else if (rowIndex === sheetRanges[index].totalRow) style = col === 'A' || col === 'B' ? 4 : 8;
+          else if (rowIndex === sheetRanges[index].totalRow) style = col === 'A' ? 4 : 8;
           else if ((index === 0 || index === 1) && col === 'A') style = 6;
           else if (index === 2 && col !== 'A' && rowIndex >= 3) style = 7;
-          else if ((index === 0 && rowIndex > 3 && col !== 'A' && col !== 'B')
+          else if ((index === 0 && rowIndex > 3 && col !== 'A')
             || (index === 1 && rowIndex > 4 && col !== 'A')) style = 7;
           cell.setAttribute('s', String(style));
         });
@@ -846,7 +845,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       pageSetup.setAttribute('paperSize', '9');
       pageSetup.setAttribute('orientation', index === 1 || index === 2 ? 'landscape' : 'portrait');
       pageSetup.setAttribute('fitToWidth', '1');
-      pageSetup.setAttribute('fitToHeight', index === 0 ? '1' : '0');
+      pageSetup.setAttribute('fitToHeight', '1');
       [printOptions, pageMargins, pageSetup].forEach(element => {
         worksheetXml.documentElement.insertBefore(element, ignoredErrors || null);
       });
@@ -1010,13 +1009,13 @@ document.addEventListener('DOMContentLoaded', async () => {
       const golfRows = makeGolfRows(golfMembers, monthParts);
       const shuttleRows = makeShuttleRows(shuttleColumns, monthParts);
       const monthRows = makeMonthRows(monthMembers, monthParts);
-      const golfColumnCount = Math.max(2, golfMembers.length + 2);
+      const golfColumnCount = Math.max(1, golfMembers.length + 1);
       const shuttleColumnCount = Math.max(1, shuttleColumns.length + 1);
       const monthColumnCount = Math.max(1, monthMembers.length + 1);
       const createHeights = rowCount => Array.from({ length: rowCount }, (_, index) =>
         ({ hpt: index === 0 ? 30 : index === 1 ? 8 : 22 }));
       const golfSheet = createStyledSheet(golfRows, golfColumnCount,
-        [14, 3, ...golfMembers.map(() => 16)], createHeights(golfRows.length));
+        [14, ...golfMembers.map(() => 16)], createHeights(golfRows.length));
       const shuttleSheet = createStyledSheet(shuttleRows, shuttleColumnCount,
         [14, ...shuttleColumns.map(() => 16)], createHeights(shuttleRows.length));
       const monthSheet = createStyledSheet(monthRows, monthColumnCount,
