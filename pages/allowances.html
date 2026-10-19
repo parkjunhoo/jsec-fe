@@ -52,6 +52,22 @@
     .allowance-category-calendar-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 14px; border-bottom: 1px solid var(--app-border); }
     .allowance-category-calendar-head h2 { margin: 0; color: var(--text-main); font-size: 15px; }
     .allowance-category-calendar-head[hidden] { display: none; }
+    .allowance-sheet-preview { min-width: 0; overflow: hidden; border: 1px solid var(--app-border); border-radius: 9px; background: var(--app-surface); }
+    .allowance-sheet-preview[hidden] { display: none; }
+    .allowance-sheet-preview-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; padding: 12px 14px; border-bottom: 1px solid var(--app-border); }
+    .allowance-sheet-preview-heading h2 { margin: 0; color: var(--text-main); font-size: 15px; font-weight: 730; }
+    .allowance-sheet-preview-heading span { color: var(--text-sub); font-size: 11px; }
+    .allowance-sheet-table-wrap { width: 100%; overflow: auto; }
+    .allowance-sheet-table { width: max-content; min-width: 100%; border-collapse: collapse; font-size: 12px; text-align: center; }
+    .allowance-sheet-table th, .allowance-sheet-table td { min-width: 92px; padding: 8px 10px; border: 1px solid var(--app-border); color: var(--text-main); white-space: nowrap; }
+    .allowance-sheet-table .sheet-title { min-width: 180px; padding: 13px; background: #1f5b46; color: #fff; font-size: 15px; font-weight: 800; }
+    .allowance-sheet-table .sheet-spacer { height: 8px; padding: 0; border: 0; }
+    .allowance-sheet-table .sheet-heading { background: #367b59; color: #fff; font-weight: 750; }
+    .allowance-sheet-table .sheet-subheading { background: #e4f1e8; color: #1f5b46; font-weight: 750; }
+    .allowance-sheet-table .sheet-label { background: #f4f8f4; font-weight: 700; }
+    .allowance-sheet-table .sheet-money { font-variant-numeric: tabular-nums; }
+    .allowance-sheet-table .sheet-total td { background: #fff2cc; color: #4f421c; font-weight: 800; }
+    .allowance-sheet-table .sheet-total .sheet-money { color: #4f421c; }
     .allowance-day-panel-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
     .allowance-day-panel-head h2 { margin: 3px 0 0; color: var(--text-main); font-size: 15px; }
     .allowance-entry-month-title { margin: 0; color: var(--text-sub); font-size: 12px; font-weight: 700; }
@@ -146,6 +162,7 @@
         </header>
         <div id="allowanceEntryCalendar" class="allowance-entry-calendar"></div>
       </div>
+      <section class="allowance-sheet-preview" id="allowanceSheetPreview" hidden></section>
       <section class="allowance-day-panel" id="allowanceDayPanel" aria-labelledby="entrySelectedDate">
         <header class="allowance-day-panel-head">
           <div>
@@ -176,6 +193,6 @@
   <script src="/js/supabase.js"></script>
   <script src="/js/user-preferences.js"></script>
   <script src="/js/navbar.js"></script>
-  <script src="/js/allowances.js?v=2026102008"></script>
+  <script src="/js/allowances.js?v=2026102009"></script>
 </body>
 </html>

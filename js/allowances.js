@@ -18,6 +18,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const categoryCalendarTitle = document.getElementById('allowanceCategoryCalendarTitle');
   const calendarTitle = document.getElementById('entryCalendarTitle');
   const calendar = document.getElementById('allowanceEntryCalendar');
+  const sheetPreview = document.getElementById('allowanceSheetPreview');
   const dayPanel = document.getElementById('allowanceDayPanel');
   const selectedDateHeading = document.getElementById('entrySelectedDate');
   const daySlots = document.getElementById('allowanceDaySlots');
@@ -341,6 +342,83 @@ document.addEventListener('DOMContentLoaded', async () => {
     );
   }
 
+  function getSelectedMembers() {
+    return (isAdmin && !userFilter.value
+      ? teamMembers
+      : teamMembers.filter(user => !isAdmin || user.id === userFilter.value));
+  }
+
+  function getWorkbookPreview() {
+    const selectedMembers = getSelectedMembers();
+    const golfMembers = selectedMembers.filter(user => entries.some(entry =>
+      entry.user_id === user.id && entry.type_code === 'ball_pickup'));
+    const shuttleMembers = selectedMembers.filter(user => entries.some(entry =>
+      entry.user_id === user.id && entry.type_code === 'caddie_shuttle'));
+    const shuttleColumns = shuttleMembers.flatMap(user =>
+      ['morning', 'afternoon']
+        .filter(shift => entries.some(entry => entry.user_id === user.id
+          && entry.type_code === 'caddie_shuttle' && entry.shift === shift))
+        .map(shift => ({ ...user, shift })));
+    const monthMembers = selectedMembers.filter(user => entries.some(entry => entry.user_id === user.id));
+    const monthParts = getMonthRange(monthInput.value);
+
+    if (activeTab === 'ball_pickup') {
+      return { kind: 'golf', rows: makeGolfRows(golfMembers, monthParts) };
+    }
+    if (activeTab === 'caddie_shuttle') {
+      return { kind: 'shuttle', rows: makeShuttleRows(shuttleColumns, monthParts) };
+    }
+    return { kind: 'month', rows: makeMonthRows(monthMembers, monthParts) };
+  }
+
+  function renderSheetPreview() {
+    if (activeTab === 'entry') {
+      sheetPreview.hidden = true;
+      sheetPreview.innerHTML = '';
+      return;
+    }
+    const { kind, rows } = getWorkbookPreview();
+    const { year, month } = getMonthRange(monthInput.value);
+    const columnCount = Math.max(1, ...rows.map(row => row.length));
+    const totalRow = rows.length - 1;
+    const body = rows.map((row, rowIndex) => {
+      if (rowIndex === 1 && !row.length) {
+        return `<tr><td class="sheet-spacer" colspan="${columnCount}"></td></tr>`;
+      }
+      if (rowIndex === 0) {
+        return `<tr><th class="sheet-title" colspan="${columnCount}">${escapeHtml(row[0])}</th></tr>`;
+      }
+      const isTotal = rowIndex === totalRow;
+      return `<tr class="${isTotal ? 'sheet-total' : ''}">${row.map((value, columnIndex) => {
+        const isHeader = kind === 'golf' && rowIndex === 2
+          || kind === 'shuttle' && (rowIndex === 2 || rowIndex === 3)
+          || kind === 'month' && rowIndex === 1;
+        const isSubheading = kind === 'shuttle' && rowIndex === 3;
+        const isLabel = columnIndex === 0 && !isHeader;
+        const classes = [
+          isHeader ? (isSubheading ? 'sheet-subheading' : 'sheet-heading') : '',
+          isLabel ? 'sheet-label' : '',
+          typeof value === 'number' ? 'sheet-money' : ''
+        ].filter(Boolean).join(' ');
+        const cellValue = typeof value === 'number' ? formatMoney(value) : value;
+        const tag = isHeader ? 'th' : 'td';
+        return `<${tag} class="${classes}">${escapeHtml(cellValue)}</${tag}>`;
+      }).join('')}</tr>`;
+    }).join('');
+
+    const title = kind === 'golf' ? '연습장 볼수거 일지'
+      : kind === 'shuttle' ? '캐디 셔틀 일지' : '월말 수당 정산';
+    sheetPreview.innerHTML = `
+      <header class="allowance-sheet-preview-heading">
+        <h2>${title}</h2><span>${year}년 ${month}월 · 엑셀 시트 미리보기</span>
+      </header>
+      <div class="allowance-sheet-table-wrap">
+        <table class="allowance-sheet-table"><tbody>${body}</tbody></table>
+      </div>
+    `;
+    sheetPreview.hidden = false;
+  }
+
   function getAllowanceOrdinals() {
     const ordinalBySlot = new Map();
     const ordinalEntries = availability.filter(entry =>
@@ -368,7 +446,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     const { year, month, days } = getMonthRange(monthInput.value);
     const firstDay = new Date(year, month - 1, 1).getDay();
     calendarTitle.textContent = `${year}년 ${month}월`;
-    const calendarLabel = activeTab === 'ball_pickup' ? '연습장 볼수거 달력' : '캐디 셔틀 달력';
+    const calendarLabel = activeTab === 'ball_pickup' ? '연습장 볼수거 달력'
+      : activeTab === 'caddie_shuttle' ? '캐디 셔틀 달력'
+        : activeTab === 'journal' ? '수당 일지 달력' : '수당 입력 달력';
     categoryCalendarTitle.textContent = `${calendarLabel} · ${year}년 ${month}월`;
     const ordinalBySlot = getAllowanceOrdinals();
     const weekdays = ['일', '월', '화', '수', '목', '금', '토']
@@ -462,11 +542,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   function render() {
     const isEntryTab = activeTab === 'entry';
-    const isCalendarTab = isEntryTab || activeTab === 'ball_pickup' || activeTab === 'caddie_shuttle';
-    categoryCalendarHead.hidden = !isCalendarTab || isEntryTab;
+    categoryCalendarHead.hidden = isEntryTab;
     summaryContainer.hidden = isEntryTab;
     detailsContainer.hidden = isEntryTab;
-    entryView.hidden = !isCalendarTab;
+    entryView.hidden = false;
     dayPanel.hidden = !isEntryTab;
     tabs.forEach(tab => {
       const selected = tab.dataset.tab === activeTab;
@@ -475,12 +554,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
     if (isEntryTab) {
       renderCalendar();
+      renderSheetPreview();
       return;
     }
     const visibleEntries = getVisibleEntries();
     renderSummary(visibleEntries);
     renderDetails(visibleEntries);
-    if (isCalendarTab) renderCalendar();
+    renderCalendar();
+    renderSheetPreview();
   }
 
   async function setMonth(monthValue) {
@@ -544,7 +625,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         })
       ]);
     }
-    rows.push(['합계', '', ...members.map(() => '')]);
+    rows.push(['합계', '', ...members.map(user => entries
+      .filter(entry => entry.user_id === user.id && entry.type_code === 'ball_pickup')
+      .reduce((sum, entry) => sum + (Number(entry.unit_amount) || 0), 0))]);
     return rows;
   }
 
@@ -566,7 +649,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         })
       ]);
     }
-    rows.push(['금액', ...columns.map(() => '')]);
+    rows.push(['금액', ...columns.map(user => entries
+      .filter(entry => entry.user_id === user.id && entry.type_code === 'caddie_shuttle' && entry.shift === user.shift)
+      .reduce((sum, entry) => sum + (Number(entry.unit_amount) || 0), 0))]);
     return rows;
   }
 
@@ -580,7 +665,9 @@ document.addEventListener('DOMContentLoaded', async () => {
       ['셔틀운행', ...members.map(user => entries
         .filter(entry => entry.user_id === user.id && entry.type_code === 'caddie_shuttle')
         .reduce((sum, entry) => sum + (Number(entry.unit_amount) || 0), 0))],
-      ['합계', ...members.map(() => '')]
+      ['합계', ...members.map(user => entries
+        .filter(entry => entry.user_id === user.id)
+        .reduce((sum, entry) => sum + (Number(entry.unit_amount) || 0), 0))]
     ];
     return rows;
   }
