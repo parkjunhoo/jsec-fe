@@ -263,7 +263,10 @@ document.addEventListener('DOMContentLoaded', async () => {
       const notes = formNotes.value.trim();
 
       if (!number || number.length !== 4) {
-        alert('검색용 뒷자리 4자리를 정확히 입력해 주세요.');
+        await Swal.fire({
+          icon: 'warning',
+          text: '검색용 뒷자리 4자리를 정확히 입력해 주세요.'
+        });
         return;
       }
 
@@ -286,7 +289,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
           const { error } = await query;
           if (error) throw error;
-          alert('차량 정보가 수정되었습니다.');
+          await Swal.fire({
+            icon: 'success',
+            text: '차량 정보가 수정되었습니다.'
+          });
 
         } else {
           // --- 추가 (INSERT) ---
@@ -295,14 +301,20 @@ document.addEventListener('DOMContentLoaded', async () => {
             .insert([{ number, full_number, name, department, car_name, phone, notes }]);
 
           if (error) throw error;
-          alert('신규 차량이 성공적으로 등록되었습니다.');
+          await Swal.fire({
+            icon: 'success',
+            text: '신규 차량이 성공적으로 등록되었습니다.'
+          });
         }
 
         closeModal();
         fetchAllVehicles(); // 리스트 갱신
 
       } catch (err) {
-        alert(`오류: ${err.message}`);
+        await Swal.fire({
+          icon: 'error',
+          text: `오류: ${err.message}`
+        });
       } finally {
         submitBtn.disabled = false;
       }
@@ -315,7 +327,15 @@ document.addEventListener('DOMContentLoaded', async () => {
       const carId = editCarId.value;
       const fullNum = formFullNumber.value;
 
-      if (!confirm(`정말 [${fullNum || '해당'}] 차량 정보를 삭제하시겠습니까?`)) return;
+      const result = await Swal.fire({
+        icon: 'warning',
+        text: `정말 [${fullNum || '해당'}] 차량 정보를 삭제하시겠습니까?`,
+        showCancelButton: true,
+        confirmButtonText: '삭제',
+        cancelButtonText: '취소',
+        reverseButtons: true
+      });
+      if (!result.isConfirmed) return;
 
       deleteBtn.disabled = true;
 
@@ -331,12 +351,18 @@ document.addEventListener('DOMContentLoaded', async () => {
         const { error } = await query;
         if (error) throw error;
 
-        alert('차량 정보가 삭제되었습니다.');
+        await Swal.fire({
+          icon: 'success',
+          text: '차량 정보가 삭제되었습니다.'
+        });
         closeModal();
         fetchAllVehicles(); // 리스트 갱신
 
       } catch (err) {
-        alert(`삭제 오류: ${err.message}`);
+        await Swal.fire({
+          icon: 'error',
+          text: `삭제 오류: ${err.message}`
+        });
       } finally {
         deleteBtn.disabled = false;
       }

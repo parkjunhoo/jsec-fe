@@ -30,7 +30,10 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
     } catch (err) {
       console.error('정보 로드 실패:', err);
-      alert('회원 정보를 불러오는 데 실패했습니다.');
+      await Swal.fire({
+        icon: 'error',
+        text: '회원 정보를 불러오는 데 실패했습니다.'
+      });
     }
   }
 
@@ -69,11 +72,17 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (authError) throw authError;
       }
 
-      alert('정보가 성공적으로 수정되었습니다.');
+      await Swal.fire({
+        icon: 'success',
+        text: '정보가 성공적으로 수정되었습니다.'
+      });
       passwordInput.value = ''; // 비밀번호 입력창 초기화
 
     } catch (err) {
-      alert(`수정 실패: ${err.message}`);
+      await Swal.fire({
+        icon: 'error',
+        text: `수정 실패: ${err.message}`
+      });
     } finally {
       saveBtn.textContent = '저장하기';
       saveBtn.disabled = false;

@@ -85,7 +85,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   function openEditModal(user) {
     if (!isAdmin) {
-      alert('관리자만 회원 정보를 수정할 수 있습니다.');
+      Swal.fire({
+        icon: 'warning',
+        text: '관리자만 회원 정보를 수정할 수 있습니다.'
+      });
       return;
     }
 
@@ -263,7 +266,10 @@ document.addEventListener('DOMContentLoaded', async () => {
       e.preventDefault();
 
       if (!isAdmin) {
-        alert('관리자 권한이 없습니다.');
+        await Swal.fire({
+          icon: 'warning',
+          text: '관리자 권한이 없습니다.'
+        });
         return;
       }
 
@@ -300,7 +306,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             .eq('id', userId);
 
           if (error) throw error;
-          alert('회원 정보가 성공적으로 수정되었습니다.');
+          await Swal.fire({
+            icon: 'success',
+            text: '회원 정보가 성공적으로 수정되었습니다.'
+          });
 
         } else {
           const response = await fetch(WORKER_CREATE_USER_API, {
@@ -322,14 +331,20 @@ document.addEventListener('DOMContentLoaded', async () => {
 
           const result = await response.json();
           if (!response.ok) throw new Error(result.error || '회원 등록에 실패했습니다.');
-          alert('신규 회원이 성공적으로 등록되었습니다.');
+          await Swal.fire({
+            icon: 'success',
+            text: '신규 회원이 성공적으로 등록되었습니다.'
+          });
         }
 
         closeModal();
         fetchUsers();
 
       } catch (err) {
-        alert(`오류: ${err.message}`);
+        await Swal.fire({
+          icon: 'error',
+          text: `오류: ${err.message}`
+        });
       } finally {
         submitUserBtn.textContent = userId ? '수정 완료' : '등록 완료';
         submitUserBtn.disabled = false;
@@ -341,14 +356,25 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (deleteUserBtn) {
     deleteUserBtn.addEventListener('click', async () => {
       if (!isAdmin) {
-        alert('관리자 권한이 없습니다.');
+        await Swal.fire({
+          icon: 'warning',
+          text: '관리자 권한이 없습니다.'
+        });
         return;
       }
 
       const userId = editUserId.value;
       const userName = newUsername.value;
 
-      if (!confirm(`정말 [${userName}] 회원을 완전히 삭제하시겠습니까?`)) return;
+      const result = await Swal.fire({
+        icon: 'warning',
+        text: `정말 [${userName}] 회원을 완전히 삭제하시겠습니까?`,
+        showCancelButton: true,
+        confirmButtonText: '삭제',
+        cancelButtonText: '취소',
+        reverseButtons: true
+      });
+      if (!result.isConfirmed) return;
 
       deleteUserBtn.disabled = true;
 
@@ -361,12 +387,18 @@ document.addEventListener('DOMContentLoaded', async () => {
         const result = await response.json();
         if (!response.ok) throw new Error(result.error || '회원 삭제에 실패했습니다.');
 
-        alert('회원이 성공적으로 삭제되었습니다.');
+        await Swal.fire({
+          icon: 'success',
+          text: '회원이 성공적으로 삭제되었습니다.'
+        });
         closeModal();
         fetchUsers();
 
       } catch (err) {
-        alert(`삭제 오류: ${err.message}`);
+        await Swal.fire({
+          icon: 'error',
+          text: `삭제 오류: ${err.message}`
+        });
       } finally {
         deleteUserBtn.disabled = false;
       }

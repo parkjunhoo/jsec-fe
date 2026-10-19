@@ -174,7 +174,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   function openEditModal(vacation) {
     if (vacation.user_id !== userId && userRole !== 'admin') {
-      alert('본인이 등록한 일정만 수정할 수 있습니다.');
+      Swal.fire({
+        icon: 'warning',
+        text: '본인이 등록한 일정만 수정할 수 있습니다.'
+      });
       return;
     }
 
@@ -494,7 +497,10 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
 
       if (!date) {
-        alert('날짜를 선택해 주세요.');
+        await Swal.fire({
+          icon: 'warning',
+          text: '날짜를 선택해 주세요.'
+        });
         return;
       }
 
@@ -523,7 +529,10 @@ document.addEventListener('DOMContentLoaded', async () => {
           if (!data) {
             throw new Error('수정된 행이 없습니다. Supabase vacations 테이블의 UPDATE RLS 정책에서 현재 사용자에게 해당 행의 수정이 허용되는지 확인해 주세요.');
           }
-          alert('휴무 일정이 수정되었습니다.');
+          await Swal.fire({
+            icon: 'success',
+            text: '휴무 일정이 수정되었습니다.'
+          });
         } else {
           const { error } = await supabaseClient
             .from('vacations')
@@ -537,7 +546,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             }]);
 
           if (error) throw error;
-          alert('휴무 일정이 등록되었습니다.');
+          await Swal.fire({
+            icon: 'success',
+            text: '휴무 일정이 등록되었습니다.'
+          });
         }
 
         closeModal();
@@ -545,7 +557,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         currentDate = new Date(year, month - 1, 1);
         await fetchMonthData();
       } catch (err) {
-        alert(`오류: ${err.message}`);
+        await Swal.fire({
+          icon: 'error',
+          text: `오류: ${err.message}`
+        });
       } finally {
         if (submitBtn) {
           submitBtn.disabled = false;
@@ -558,7 +573,15 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (deleteBtn) {
     deleteBtn.addEventListener('click', async () => {
       const vacId = editVacationId ? editVacationId.value : '';
-      if (!confirm('정말 이 휴무 일정을 삭제하시겠습니까?')) return;
+      const result = await Swal.fire({
+        icon: 'warning',
+        text: '정말 이 휴무 일정을 삭제하시겠습니까?',
+        showCancelButton: true,
+        confirmButtonText: '삭제',
+        cancelButtonText: '취소',
+        reverseButtons: true
+      });
+      if (!result.isConfirmed) return;
 
       deleteBtn.disabled = true;
       try {
@@ -568,11 +591,17 @@ document.addEventListener('DOMContentLoaded', async () => {
           .eq('id', vacId);
 
         if (error) throw error;
-        alert('삭제되었습니다.');
+        await Swal.fire({
+          icon: 'success',
+          text: '삭제되었습니다.'
+        });
         closeModal();
         fetchMonthData();
       } catch (err) {
-        alert(`삭제 실패: ${err.message}`);
+        await Swal.fire({
+          icon: 'error',
+          text: `삭제 실패: ${err.message}`
+        });
       } finally {
         deleteBtn.disabled = false;
       }
