@@ -33,6 +33,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   const newPassword = document.getElementById('newPassword');
   const newRole = document.getElementById('newRole');
   const newContractType = document.getElementById('newContractType');
+  const employmentStatusGroup = document.getElementById('employmentStatusGroup');
+  const newStatus = document.getElementById('newStatus');
   const newWorkLocation = document.getElementById('newWorkLocation');
   const newHireDate = document.getElementById('newHireDate');
   const newAnnualBaseDate = document.getElementById('newAnnualBaseDate');
@@ -89,6 +91,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     newPassword.required = true;
     userForm.reset();
     editUserId.value = '';
+    if (employmentStatusGroup) employmentStatusGroup.style.display = 'none';
     if (newColor) newColor.value = '#38bdf8';
     if (colorHexText) colorHexText.textContent = '#38bdf8';
     userModal.classList.add('active');
@@ -113,6 +116,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     newUsername.value = user.name || user.username || '';
     newRole.value = user.role || 'user';
     newContractType.value = user.contract_type || '정규직';
+    if (employmentStatusGroup) employmentStatusGroup.style.display = '';
+    if (newStatus) newStatus.value = user.status || '재직';
     newWorkLocation.value = user.work_location || '';
     newHireDate.value = user.hire_date ? user.hire_date.split('T')[0] : '';
     newAnnualBaseDate.value = user.annual_base_date ? user.annual_base_date.split('T')[0] : '';
@@ -289,6 +294,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       const password = newPassword.value.trim();
       const role = newRole.value;
       const contractType = newContractType.value;
+      const status = newStatus ? newStatus.value : '재직';
       const workLocation = newWorkLocation.value.trim();
       const hireDate = newHireDate.value;
       const annualBaseDate = newAnnualBaseDate.value;
@@ -304,10 +310,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             name: username,
             role: role,
             contract_type: contractType,
+            status: status,
             work_location: workLocation,
             hire_date: hireDate || null,
             annual_base_date: annualBaseDate || null,
-            phone: phone,
+            phone: phone || '',
             color: color
           };
 
@@ -335,7 +342,7 @@ document.addEventListener('DOMContentLoaded', async () => {
               work_location: workLocation,
               hire_date: hireDate || null,
               annual_base_date: annualBaseDate || null,
-              phone: phone,
+              phone: phone || '',
               color: color
             })
           });
