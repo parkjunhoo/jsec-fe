@@ -330,9 +330,43 @@ html[data-theme="light"] .stat-card { background: #f4f7f3; }
 html[data-theme="light"] .calendar-note-text { color: #795c12; }
 html[data-theme="light"] .event-pill { color: #18251e; }
 html[data-theme="light"] .btn-export-excel { border-color: #34734c !important; background: #367b51 !important; color: #fff !important; }
+html[data-theme="light"] .allowance-export-button {
+  border-color: #28734c;
+  background: #e7f4e9;
+  color: #185b39;
+}
+html[data-theme="light"] .allowance-export-button:hover:not(:disabled) {
+  border-color: #185b39;
+  background: #d5ebd9;
+}
+html[data-theme="light"] .allowance-export-button:focus-visible { outline-color: #185b39; }
 html[data-theme="light"] .app-card { background: #fff; }
 html[data-theme="light"] main > div[class~="bg-slate-800/80"] { background: #fff; }
 html[data-theme="light"] main > div[class~="bg-slate-800/80"] section[class~="bg-slate-900/60"] { background: #f4f7f3; }
+html[data-theme="light"] #settingsForm label { color: #43594b; }
+html[data-theme="light"] #settingsForm input {
+  border-color: #a9b8ad;
+  background-color: #fff;
+  color: #1b2922;
+}
+html[data-theme="light"] #settingsForm input::placeholder { color: #68776e; opacity: 1; }
+html[data-theme="light"] #settingsForm input:disabled {
+  border-color: #c5cec7;
+  background-color: #edf1ed;
+  color: #58675e;
+  opacity: 1;
+}
+html[data-theme="light"] #settingsForm input:focus {
+  border-color: #197254;
+  box-shadow: 0 0 0 3px rgba(25, 114, 84, 0.14);
+}
+html[data-theme="light"] #settingsForm button[type="submit"] {
+  border: 1px solid #145c40;
+  background-color: #197254;
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(25, 114, 84, 0.22);
+}
+html[data-theme="light"] #settingsForm button[type="submit"]:hover { background-color: #115b42; }
 html[data-theme="light"] .app-card .text-white,
 html[data-theme="light"] main .text-white { color: var(--text-main); }
 html[data-theme="light"] .welcome-panel {
