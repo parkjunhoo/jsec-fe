@@ -12,6 +12,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   const totalUserCountEl = document.getElementById('totalUserCount');
   const sortSelect = document.getElementById('sortSelect');
   const locationCheckboxes = document.querySelectorAll('input[name="locFilter"]');
+  const otherLocationFilter = 'other';
+  const locationFilterValues = Array.from(locationCheckboxes)
+    .map(checkbox => checkbox.value)
+    .filter(value => value !== otherLocationFilter);
   const selectAllBtn = document.getElementById('selectAllBtn');
 
   // 모달 관련 요소
@@ -43,6 +47,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   
   let allUsers = [];
   let isAdmin = false;
+
+  function matchesLocationFilter(location, checkedLocations) {
+    const normalizedLocation = (location || '').toLowerCase();
+    return checkedLocations.some(filterValue => filterValue === otherLocationFilter
+      ? !locationFilterValues.some(value => normalizedLocation.includes(value.toLowerCase()))
+      : normalizedLocation.includes(filterValue.toLowerCase()));
+  }
 
   // 컬러 피커 조작 시 HEX 텍스트 실시간 동기화
   if (newColor && colorHexText) {
@@ -163,7 +174,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       const matchesKeyword = !keyword || name.includes(keyword) || location.includes(keyword);
 
       if (checkedLocations.length === 0) return false;
-      const matchesCheckbox = checkedLocations.some(filterWord => location.includes(filterWord.toLowerCase()));
+      const matchesCheckbox = matchesLocationFilter(location, checkedLocations);
 
       return matchesKeyword && matchesCheckbox;
     });

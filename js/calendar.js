@@ -118,6 +118,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // 필터 요소
   const locationCheckboxes = document.querySelectorAll('input[name="locFilter"]');
+  const otherLocationFilter = 'other';
+  const locationFilterValues = Array.from(locationCheckboxes)
+    .map(checkbox => checkbox.value)
+    .filter(value => value !== otherLocationFilter);
   const selectAllLocBtn = document.getElementById('selectAllLocBtn');
   const userFilterChipsContainer = document.getElementById('userFilterChipsContainer');
   const selectAllUserBtn = document.getElementById('selectAllUserBtn');
@@ -138,6 +142,13 @@ document.addEventListener('DOMContentLoaded', async () => {
       '"': '&quot;',
       "'": '&#39;'
     })[character]);
+  }
+
+  function matchesLocationFilter(location, checkedLocations) {
+    const normalizedLocation = (location || '').toLowerCase();
+    return checkedLocations.some(filterValue => filterValue === otherLocationFilter
+      ? !locationFilterValues.some(value => normalizedLocation.includes(value.toLowerCase()))
+      : normalizedLocation.includes(filterValue.toLowerCase()));
   }
 
   function renderEmojiPicker() {
@@ -841,7 +852,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       dayEvents = dayEvents.filter(ev => {
         const userInfo = userMap[ev.user_id] || userMap[ev.username] || { work_location: '' };
         const userLoc = userInfo.work_location;
-        return checkedLocations.some(filterWord => userLoc.includes(filterWord));
+        return matchesLocationFilter(userLoc, checkedLocations);
       });
 
       dayEvents = dayEvents.filter(ev => {
