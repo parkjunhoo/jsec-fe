@@ -512,15 +512,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             updatePayload.username = targetUserName;
           }
 
-          const { data, error } = await supabaseClient
+          const { error } = await supabaseClient
             .from('vacations')
             .update(updatePayload)
-            .eq('id', vacId)
-            .select('id')
-            .maybeSingle();
+            .eq('id', vacId);
 
           if (error) throw error;
-          if (!data) throw new Error('휴무 일정이 없거나 수정 권한이 없습니다.');
           alert('휴무 일정이 수정되었습니다.');
         } else {
           const { error } = await supabaseClient
