@@ -86,6 +86,19 @@ document.addEventListener('DOMContentLoaded', async () => {
     return `<span style="display: inline-block; width: 8px; height: 8px; background-color: ${userColor}; border-radius: 50%; margin-right: 2px; vertical-align: middle;"></span>`;
   }
 
+  function updateTimeDetailOptions(leaveType, selectedValue = '') {
+    if (!vTimeDetail) return;
+
+    const timeDetails = leaveType === '시간차'
+      ? ['오전반차', '오후반차', '시간지정']
+      : ['종일'];
+
+    vTimeDetail.innerHTML = timeDetails
+      .map(timeDetail => `<option value="${timeDetail}">${timeDetail}</option>`)
+      .join('');
+    vTimeDetail.value = timeDetails.includes(selectedValue) ? selectedValue : timeDetails[0];
+  }
+
   async function fetchUsersInfo() {
     try {
       const { data, error } = await supabaseClient
@@ -147,6 +160,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (vacationForm) vacationForm.reset();
     if (editVacationId) editVacationId.value = '';
     if (vDate) vDate.value = selectedDateStr || getKSTDateString();
+    if (vLeaveType) updateTimeDetailOptions(vLeaveType.value, '종일');
 
     if (userRole === 'admin') {
       if (targetUserFormGroup) targetUserFormGroup.style.display = 'block';
@@ -170,8 +184,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     if (editVacationId) editVacationId.value = vacation.id;
     if (vDate) vDate.value = vacation.date;
-    if (vLeaveType) vLeaveType.value = vacation.leave_type;
-    if (vTimeDetail) vTimeDetail.value = vacation.time_detail || '종일';
+    if (vLeaveType) {
+      vLeaveType.value = vacation.leave_type;
+      updateTimeDetailOptions(vLeaveType.value, vacation.time_detail || '종일');
+    }
     if (vMemo) vMemo.value = vacation.memo || '';
 
     if (userRole === 'admin') {
@@ -198,16 +214,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   if (vLeaveType) {
-    vLeaveType.addEventListener('change', (e) => {
-      if (e.target.value === '연차' || e.target.value === '휴무') {
-        vTimeDetail.innerHTML = '<option value="종일">종일</option>';
-      } else {
-        vTimeDetail.innerHTML = `
-          <option value="오전반차">오전반차</option>
-          <option value="오후반차">오후반차</option>
-          <option value="시간지정">시간지정</option>
-        `;
-      }
+    vLeaveType.addEventListener('change', () => {
+      updateTimeDetailOptions(vLeaveType.value);
     });
   }
 
@@ -490,6 +498,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         return;
       }
 
+      const originalSubmitText = submitBtn ? submitBtn.textContent : '';
       if (submitBtn) {
         submitBtn.disabled = true;
         submitBtn.textContent = '처리 중...';
@@ -503,12 +512,15 @@ document.addEventListener('DOMContentLoaded', async () => {
             updatePayload.username = targetUserName;
           }
 
-          const { error } = await supabaseClient
+          const { data, error } = await supabaseClient
             .from('vacations')
             .update(updatePayload)
-            .eq('id', vacId);
+            .eq('id', vacId)
+            .select('id')
+            .maybeSingle();
 
           if (error) throw error;
+          if (!data) throw new Error('휴무 일정이 없거나 수정 권한이 없습니다.');
           alert('휴무 일정이 수정되었습니다.');
         } else {
           const { error } = await supabaseClient
@@ -527,12 +539,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
 
         closeModal();
-        fetchMonthData();
+        const [year, month] = date.split('-').map(Number);
+        currentDate = new Date(year, month - 1, 1);
+        await fetchMonthData();
       } catch (err) {
         alert(`오류: ${err.message}`);
       } finally {
         if (submitBtn) {
           submitBtn.disabled = false;
+          submitBtn.textContent = originalSubmitText;
         }
       }
     });
