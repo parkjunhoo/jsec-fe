@@ -47,6 +47,7 @@
 
   window.appLoading = {
     begin,
+    fetchWithoutLoading: (...args) => nativeFetch(...args),
     async track(operation) {
       const finish = begin();
       try {

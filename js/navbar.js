@@ -443,7 +443,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   async function notificationRequest(path = '', options = {}) {
     if (!notificationSession) throw new Error('로그인이 필요합니다.');
-    const response = await fetch(`${NOTIFICATIONS_API}${path}`, {
+    const request = window.appLoading?.fetchWithoutLoading || fetch;
+    const response = await request(`${NOTIFICATIONS_API}${path}`, {
       ...options,
       headers: {
         Authorization: `Bearer ${notificationSession.access_token}`,
