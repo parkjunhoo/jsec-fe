@@ -298,6 +298,28 @@ html[data-theme="light"] .form-group select,
 html[data-theme="light"] .form-group textarea,
 html[data-theme="light"] .modal-tabs,
 html[data-theme="light"] .emoji-choice { color: var(--text-main); }
+html[data-theme="light"] #username,
+html[data-theme="light"] #password,
+html[data-theme="light"] #username:focus,
+html[data-theme="light"] #password:focus {
+  border-color: rgba(44, 73, 57, 0.2);
+  background: #fff;
+  color: #17251d;
+  caret-color: #17251d;
+}
+html[data-theme="light"] #username::placeholder,
+html[data-theme="light"] #password::placeholder { color: #68776e; opacity: 1; }
+html[data-theme="light"] #username:focus,
+html[data-theme="light"] #password:focus {
+  border-color: #197254;
+  box-shadow: 0 0 0 4px rgba(25, 114, 84, 0.12);
+}
+html[data-theme="light"] #username:-webkit-autofill,
+html[data-theme="light"] #password:-webkit-autofill {
+  -webkit-text-fill-color: #17251d;
+  box-shadow: 0 0 0 1000px #fff inset;
+  caret-color: #17251d;
+}
 html[data-theme="light"] .day-name { background: #f4f7f3; }
 html[data-theme="light"] .day-name:nth-child(1), html[data-theme="light"] .calendar-cell:nth-child(7n+1) .cell-date { color: #b64249; }
 html[data-theme="light"] .day-name:nth-child(7), html[data-theme="light"] .calendar-cell:nth-child(7n) .cell-date { color: #315f9a; }
@@ -318,6 +340,31 @@ html[data-theme="light"] .welcome-panel {
   background: linear-gradient(116deg, #e6f0e8, #dcebe0 62%, #d1e6d8);
   color: var(--text-main);
   box-shadow: var(--app-shadow);
+}
+html[data-theme="light"] .today-off-summary {
+  border-color: rgba(44, 73, 57, 0.18);
+  background: rgba(255, 255, 255, 0.78);
+  color: #1b2922;
+  box-shadow: 0 8px 20px rgba(32, 55, 41, 0.06);
+}
+html[data-theme="light"] .today-off-label { color: #3f5949; }
+html[data-theme="light"] .today-off-count {
+  border-color: rgba(25, 114, 84, 0.2);
+  background: rgba(25, 114, 84, 0.09);
+  color: #155c43;
+}
+html[data-theme="light"] .today-off-group {
+  border-color: rgba(44, 73, 57, 0.13);
+  background: #f7faf7;
+}
+html[data-theme="light"] .today-off-group-label { color: #52675a; }
+html[data-theme="light"] .today-off-group-members { color: #1b2922; }
+html[data-theme="light"] .today-off-summary.empty .today-off-group-members { color: #7b8980; }
+html[data-theme="light"] .today-off-summary.error .today-off-group-members { color: #a33139; }
+html[data-theme="light"] .today-off-summary.empty .today-off-count {
+  border-color: var(--app-border);
+  background: #f2f5f1;
+  color: #66766d;
 }
 html[data-theme="light"] .welcome-kicker,
 html[data-theme="light"] .meta-label { color: var(--text-sub); }

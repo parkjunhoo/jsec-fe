@@ -98,7 +98,7 @@
     .today-off-summary {
       flex: 1;
       min-width: 0;
-      max-width: 410px;
+      max-width: 720px;
       padding: 12px 15px;
       border: 1px solid rgba(190, 211, 239, 0.11);
       border-radius: 12px;
@@ -118,17 +118,32 @@
       font-weight: 750;
     }
     .today-off-names {
-      display: -webkit-box;
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 7px;
       margin-top: 6px;
-      overflow: hidden;
+    }
+    .today-off-group {
+      min-width: 0;
+      padding: 7px 8px;
+      border: 1px solid rgba(190, 211, 239, 0.1);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.045);
+    }
+    .today-off-group-label { color: #a9bfce; font-size: 9px; font-weight: 700; }
+    .today-off-group-members {
+      margin-top: 4px;
       color: #edf3fa;
-      font-size: 12px;
+      font-size: 11px;
       font-weight: 600;
-      line-height: 1.5;
+      line-height: 1.45;
       overflow-wrap: anywhere;
-      -webkit-box-orient: vertical;
-      -webkit-line-clamp: 2;
-      line-clamp: 2;
+    }
+    .today-off-summary.empty .today-off-group-members { color: #a9bfce; font-weight: 500; }
+    .today-off-summary.error .today-off-group-members { color: #fca5a5; font-weight: 500; }
+    .today-off-summary.empty .today-off-group { background: rgba(190, 211, 239, 0.035); }
+    @media (max-width: 900px) {
+      .today-off-names { grid-template-columns: repeat(3, minmax(0, 1fr)); }
     }
     .today-off-summary.empty .today-off-count { border-color: rgba(190, 211, 239, 0.16); background: rgba(190, 211, 239, 0.07); color: #c1ccd6; }
     .today-off-summary.empty .today-off-names { color: #a9bfce; font-weight: 500; }
@@ -237,7 +252,7 @@
       .welcome-info { grid-column: 1 / -1; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; }
       .today-off-summary { padding: 9px 11px; }
       .today-off-label { font-size: 9px; }
-      .today-off-names { font-size: 11px; }
+      .today-off-names { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .welcome-kicker { margin-bottom: 8px; font-size: 8px; letter-spacing: 0.11em; }
       .welcome-panel h1 { max-width: 240px; font-size: 23px; }
       .welcome-meta { display: grid; width: auto; min-width: 0; flex: 0 0 auto; justify-items: end; gap: 5px; padding: 9px 10px; }
@@ -283,7 +298,14 @@
             <span class="today-off-label">오늘 휴무</span>
             <span class="today-off-count" id="todayOffCount">확인 중</span>
           </div>
-          <p class="today-off-names" id="todayOffNames">휴무 일정을 불러오고 있습니다.</p>
+          <div class="today-off-names" id="todayOffNames" aria-live="polite">
+            <div class="today-off-group" data-off-group="golf-day"><div class="today-off-group-label">골프장 주간</div><div class="today-off-group-members">확인 중</div></div>
+            <div class="today-off-group" data-off-group="golf-night"><div class="today-off-group-label">골프장 야간</div><div class="today-off-group-members">확인 중</div></div>
+            <div class="today-off-group" data-off-group="ski-day"><div class="today-off-group-label">스키장 주간</div><div class="today-off-group-members">확인 중</div></div>
+            <div class="today-off-group" data-off-group="ski-night"><div class="today-off-group-label">스키장 야간</div><div class="today-off-group-members">확인 중</div></div>
+            <div class="today-off-group" data-off-group="front"><div class="today-off-group-label">현관</div><div class="today-off-group-members">확인 중</div></div>
+            <div class="today-off-group" data-off-group="other" hidden><div class="today-off-group-label">기타 근무지</div><div class="today-off-group-members"></div></div>
+          </div>
         </section>
         <div class="welcome-meta">
           <span class="meta-label">TODAY</span>
@@ -388,6 +410,16 @@
       const todayOffSummary = document.getElementById('todayOffSummary');
       const todayOffCount = document.getElementById('todayOffCount');
       const todayOffNames = document.getElementById('todayOffNames');
+      const offGroupLabels = {
+        'golf-day': '골프장 주간',
+        'golf-night': '골프장 야간',
+        'ski-day': '스키장 주간',
+        'ski-night': '스키장 야간',
+        front: '현관',
+        other: '기타 근무지'
+      };
+      const offGroups = new Map([...todayOffNames.querySelectorAll('[data-off-group]')]
+        .map(group => [group.dataset.offGroup, group]));
       try {
         const { data: vacations, error: vacationError } = await supabaseClient
           .from('vacations')
@@ -396,18 +428,52 @@
           .order('username', { ascending: true });
         if (vacationError) throw vacationError;
 
-        const names = [...new Set((vacations || []).map(vacation => vacation.username).filter(Boolean))];
-        todayOffCount.textContent = `${names.length}명`;
-        todayOffSummary.classList.toggle('empty', names.length === 0);
-        todayOffNames.textContent = names.length
-          ? `${names.slice(0, 4).join(' · ')}${names.length > 4 ? ` 외 ${names.length - 4}명` : ''}`
-          : '오늘 등록된 휴무 일정이 없습니다.';
+        const { data: users, error: usersError } = await supabaseClient
+          .from('users')
+          .select('username, name, work_location');
+        if (usersError) throw usersError;
+        const usersByName = new Map();
+        (users || []).forEach(user => {
+          [user.username, user.name].filter(Boolean).forEach(name => {
+            usersByName.set(name.trim().toLocaleLowerCase('ko'), user);
+          });
+        });
+        const groupedNames = new Map(Object.keys(offGroupLabels).map(key => [key, new Set()]));
+        const allNames = new Set();
+        (vacations || []).forEach(vacation => {
+          const name = (vacation.username || '').trim();
+          if (!name) return;
+          allNames.add(name);
+          const user = usersByName.get(name.toLocaleLowerCase('ko'));
+          const location = (user?.work_location || '').toLocaleLowerCase('ko');
+          let groupKey = 'other';
+          if (location.includes('현관')) groupKey = 'front';
+          else if (location.includes('골프장')) groupKey = location.includes('야간') ? 'golf-night' : 'golf-day';
+          else if (location.includes('스키장')) groupKey = location.includes('야간') ? 'ski-night' : 'ski-day';
+          groupedNames.get(groupKey).add(name);
+        });
+
+        offGroups.forEach((group, key) => {
+          group.hidden = key === 'other' && groupedNames.get(key).size === 0;
+          const members = group.querySelector('.today-off-group-members');
+          members.textContent = groupedNames.get(key).size
+            ? [...groupedNames.get(key)].join(' · ')
+            : '없음';
+        });
+        const totalNames = [...allNames];
+        todayOffCount.textContent = `${totalNames.length}명`;
+        todayOffSummary.classList.toggle('empty', totalNames.length === 0);
+        todayOffSummary.classList.remove('error');
         todayOffSummary.setAttribute('aria-busy', 'false');
       } catch (vacationError) {
         console.error('오늘 휴무 일정 조회 오류:', vacationError);
         todayOffSummary.classList.add('empty');
+        todayOffSummary.classList.add('error');
         todayOffCount.textContent = '조회 실패';
-        todayOffNames.textContent = '오늘 휴무 일정을 불러오지 못했습니다.';
+        offGroups.forEach(group => {
+          group.hidden = group.dataset.offGroup === 'other';
+          group.querySelector('.today-off-group-members').textContent = '조회 실패';
+        });
         todayOffSummary.setAttribute('aria-busy', 'false');
       }
 
