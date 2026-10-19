@@ -111,9 +111,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   function updateTimeDetailOptions(leaveType, selectedValue = '') {
     if (!vTimeDetail) return;
 
-    const timeDetails = leaveType === '시간차'
-      ? ['오전반차', '오후반차', '시간지정']
-      : ['종일'];
+    const timeDetails = leaveType === '시간차' ? ['시간지정'] : ['종일'];
 
     vTimeDetail.innerHTML = timeDetails
       .map(timeDetail => `<option value="${timeDetail}">${timeDetail === '시간지정' ? 'N시간 사용' : timeDetail}</option>`)
@@ -317,7 +315,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   async function exportWorkSchedule() {
-    if (!window.ExcelJS) throw new Error('Excel 내보내기 라이브러리를 불러오지 못했습니다. 페이지를 새로고침해 주세요.');
+    if (!window.JSZip) throw new Error('엑셀 내보내기 라이브러리를 불러오지 못했습니다. 페이지를 새로고침해 주세요.');
 
     const now = new Date();
     const monthOptions = Array.from({ length: 12 }, (_, index) =>
@@ -367,24 +365,124 @@ document.addEventListener('DOMContentLoaded', async () => {
       throw new Error(`엑셀 양식을 불러오지 못했습니다. (HTTP ${templateResponse.status})`);
     }
 
-    const workbook = new ExcelJS.Workbook();
-    await workbook.xlsx.load(await templateResponse.arrayBuffer());
-    const worksheet = workbook.getWorksheet('직원근무표') || workbook.worksheets[0];
-    if (!worksheet) throw new Error('직원근무표 시트를 찾을 수 없습니다.');
+    const zip = await JSZip.loadAsync(await templateResponse.arrayBuffer());
+    const workbookPath = 'xl/workbook.xml';
+    const relationshipsPath = 'xl/_rels/workbook.xml.rels';
+    const workbookXml = new DOMParser().parseFromString(
+      await zip.file(workbookPath).async('text'),
+      'application/xml'
+    );
+    const relationshipsXml = new DOMParser().parseFromString(
+      await zip.file(relationshipsPath).async('text'),
+      'application/xml'
+    );
+    if (workbookXml.querySelector('parsererror') || relationshipsXml.querySelector('parsererror')) {
+      throw new Error('엑셀 양식의 통합 문서 구조를 읽지 못했습니다.');
+    }
 
-    worksheet.getCell('B3').value = month;
-    worksheet.getCell('AH3').value = year;
-    workbook.calcProperties = { calcMode: 'auto', fullCalcOnLoad: true, forceFullCalc: true };
+    const relationshipNamespace = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships';
+    const worksheetEntry = Array.from(workbookXml.getElementsByTagNameNS(
+      'http://schemas.openxmlformats.org/spreadsheetml/2006/main',
+      'sheet'
+    )).find(sheet => sheet.getAttribute('name') === '직원근무표');
+    if (!worksheetEntry) throw new Error('직원근무표 시트를 찾을 수 없습니다.');
 
-    const employeeRows = new Map();
-    for (let row = 6; row <= 21; row++) {
-      const value = worksheet.getCell(`B${row}`).value;
-      const name = typeof value === 'string' ? value.trim() : '';
-      if (!name) continue;
-      employeeRows.set(name, row);
-      for (let day = 1; day <= 31; day++) {
-        worksheet.getCell(row, day + 2).value = null;
+    const relationshipId = worksheetEntry.getAttributeNS(relationshipNamespace, 'id');
+    const relationship = Array.from(relationshipsXml.getElementsByTagNameNS(
+      'http://schemas.openxmlformats.org/package/2006/relationships',
+      'Relationship'
+    )).find(item => item.getAttribute('Id') === relationshipId);
+    if (!relationship) throw new Error('직원근무표 시트 경로를 찾을 수 없습니다.');
+
+    const worksheetPath = `xl/${relationship.getAttribute('Target').replace(/^\/?xl\//, '').replace(/^\//, '')}`;
+    const worksheetFile = zip.file(worksheetPath);
+    if (!worksheetFile) throw new Error('직원근무표 시트 파일을 찾을 수 없습니다.');
+    const spreadsheetNamespace = 'http://schemas.openxmlformats.org/spreadsheetml/2006/main';
+    const worksheetXml = new DOMParser().parseFromString(await worksheetFile.async('text'), 'application/xml');
+    if (worksheetXml.querySelector('parsererror')) throw new Error('직원근무표 시트 XML을 읽지 못했습니다.');
+
+    function setCellValue(cellAddress, value, inlineString = false) {
+      const rowNumber = Number(cellAddress.match(/\d+$/)[0]);
+      const row = Array.from(worksheetXml.getElementsByTagNameNS(spreadsheetNamespace, 'row'))
+        .find(item => Number(item.getAttribute('r')) === rowNumber);
+      if (!row) throw new Error(`엑셀 양식에서 ${rowNumber}행을 찾을 수 없습니다.`);
+
+      let cell = Array.from(row.getElementsByTagNameNS(spreadsheetNamespace, 'c'))
+        .find(item => item.getAttribute('r') === cellAddress);
+      if (!cell) {
+        cell = worksheetXml.createElementNS(spreadsheetNamespace, 'c');
+        cell.setAttribute('r', cellAddress);
+        const columnNumber = columnToNumber(cellAddress.replace(/\d+$/, ''));
+        const styledCell = Array.from(row.getElementsByTagNameNS(spreadsheetNamespace, 'c'))
+          .find(item => columnToNumber(item.getAttribute('r').replace(/\d+$/, '')) === columnNumber - 1);
+        if (styledCell && styledCell.hasAttribute('s')) cell.setAttribute('s', styledCell.getAttribute('s'));
+
+        const nextCell = Array.from(row.getElementsByTagNameNS(spreadsheetNamespace, 'c'))
+          .find(item => columnToNumber(item.getAttribute('r').replace(/\d+$/, '')) > columnNumber);
+        row.insertBefore(cell, nextCell || null);
       }
+
+      cell.removeAttribute('t');
+      for (const child of Array.from(cell.childNodes)) {
+        if (child.nodeType === 1 && ['f', 'v', 'is'].includes(child.localName)) cell.removeChild(child);
+      }
+
+      if (value === '' && !inlineString) return;
+
+      if (inlineString) {
+        cell.setAttribute('t', 'inlineStr');
+        const inlineValue = worksheetXml.createElementNS(spreadsheetNamespace, 'is');
+        const text = worksheetXml.createElementNS(spreadsheetNamespace, 't');
+        text.textContent = String(value);
+        inlineValue.appendChild(text);
+        cell.appendChild(inlineValue);
+      } else {
+        const numericValue = worksheetXml.createElementNS(spreadsheetNamespace, 'v');
+        numericValue.textContent = String(value);
+        cell.appendChild(numericValue);
+      }
+    }
+
+    function columnToNumber(column) {
+      return column.toUpperCase().split('').reduce((number, character) =>
+        number * 26 + character.charCodeAt(0) - 64, 0);
+    }
+
+    setCellValue('B3', month);
+    setCellValue('AH3', year);
+    const employeeRows = new Map();
+    let sharedStringsXml;
+    for (let row = 6; row <= 21; row++) {
+      const employeeCell = Array.from(worksheetXml.getElementsByTagNameNS(spreadsheetNamespace, 'c'))
+        .find(item => item.getAttribute('r') === `B${row}`);
+      const name = employeeCell?.getElementsByTagNameNS(spreadsheetNamespace, 'v')[0]?.textContent;
+      let employeeName = name || '';
+      if (employeeCell?.getAttribute('t') === 's' && zip.file('xl/sharedStrings.xml')) {
+        if (!sharedStringsXml) {
+          sharedStringsXml = new DOMParser().parseFromString(
+            await zip.file('xl/sharedStrings.xml').async('text'),
+            'application/xml'
+          );
+        }
+        employeeName = sharedStringsXml.getElementsByTagNameNS(spreadsheetNamespace, 'si')[Number(name)]
+          ?.textContent || '';
+      }
+      employeeName = employeeName.trim();
+      if (!employeeName) continue;
+      employeeRows.set(employeeName, row);
+      for (let day = 1; day <= 31; day++) {
+        setCellValue(`${numberToColumn(day + 2)}${row}`, '', false);
+      }
+    }
+
+    function numberToColumn(number) {
+      let column = '';
+      while (number > 0) {
+        const remainder = (number - 1) % 26;
+        column = String.fromCharCode(65 + remainder) + column;
+        number = Math.floor((number - 1) / 26);
+      }
+      return column;
     }
 
     const dateCells = new Map();
@@ -431,10 +529,19 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     dateCells.forEach(({ row, day, value }) => {
-      worksheet.getCell(row, day + 2).value = value;
+      setCellValue(`${numberToColumn(day + 2)}${row}`, value, typeof value === 'string');
     });
 
-    const output = await workbook.xlsx.writeBuffer();
+    const calculation = workbookXml.getElementsByTagNameNS(spreadsheetNamespace, 'calcPr')[0]
+      || workbookXml.createElementNS(spreadsheetNamespace, 'calcPr');
+    calculation.setAttribute('calcMode', 'auto');
+    calculation.setAttribute('fullCalcOnLoad', '1');
+    calculation.setAttribute('forceFullCalc', '1');
+    if (!calculation.parentNode) workbookXml.documentElement.appendChild(calculation);
+
+    zip.file(workbookPath, new XMLSerializer().serializeToString(workbookXml));
+    zip.file(worksheetPath, new XMLSerializer().serializeToString(worksheetXml));
+    const output = await zip.generateAsync({ type: 'uint8array', compression: 'DEFLATE' });
     const blob = new Blob([output], {
       type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     });
@@ -687,11 +794,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       const date = vDate ? vDate.value : '';
       const leave_type = vLeaveType ? vLeaveType.value : '휴무';
       const time_detail = vTimeDetail ? vTimeDetail.value : '종일';
-      const hours_used = leave_type !== '시간차'
-        ? null
-        : time_detail === '시간지정'
-          ? Number(vHoursUsed.value)
-          : 4;
+      const hours_used = leave_type === '시간차' ? Number(vHoursUsed.value) : null;
       const memo = vMemo ? vMemo.value.trim() : '';
 
       let targetUserId = userId;
