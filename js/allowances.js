@@ -14,8 +14,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   const detailsContainer = document.getElementById('allowanceDetails');
   const errorContainer = document.getElementById('allowanceError');
   const entryView = document.getElementById('allowanceEntryView');
+  const categoryCalendarHead = document.getElementById('allowanceCategoryCalendarHead');
+  const categoryCalendarTitle = document.getElementById('allowanceCategoryCalendarTitle');
   const calendarTitle = document.getElementById('entryCalendarTitle');
   const calendar = document.getElementById('allowanceEntryCalendar');
+  const dayPanel = document.getElementById('allowanceDayPanel');
   const selectedDateHeading = document.getElementById('entrySelectedDate');
   const daySlots = document.getElementById('allowanceDaySlots');
   const targetControl = document.getElementById('entryTargetControl');
@@ -331,9 +334,19 @@ document.addEventListener('DOMContentLoaded', async () => {
     return availability.filter(entry => entry.work_date === date);
   }
 
+  function getEntriesForCalendarTab(date) {
+    return getEntriesForDate(date).filter(entry =>
+      activeTab !== 'ball_pickup' && activeTab !== 'caddie_shuttle'
+      || entry.type_code === activeTab
+    );
+  }
+
   function getAllowanceOrdinals() {
     const ordinalBySlot = new Map();
-    const ordinalEntries = availability.slice()
+    const ordinalEntries = availability.filter(entry =>
+      activeTab !== 'ball_pickup' && activeTab !== 'caddie_shuttle'
+      || entry.type_code === activeTab
+    ).slice()
       .sort((a, b) => a.work_date.localeCompare(b.work_date)
         || (Number(a.slot_no) || 0) - (Number(b.slot_no) || 0));
     const countsByMemberAndType = new Map();
@@ -355,13 +368,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     const { year, month, days } = getMonthRange(monthInput.value);
     const firstDay = new Date(year, month - 1, 1).getDay();
     calendarTitle.textContent = `${year}년 ${month}월`;
+    categoryCalendarTitle.textContent = `${year}년 ${month}월`;
     const ordinalBySlot = getAllowanceOrdinals();
     const weekdays = ['일', '월', '화', '수', '목', '금', '토']
       .map(day => `<div class="allowance-weekday">${day}</div>`).join('');
     const cells = Array.from({ length: firstDay }, () => '<div aria-hidden="true"></div>');
     for (let day = 1; day <= days; day += 1) {
       const date = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-      const dayEntries = getEntriesForDate(date);
+      const dayEntries = getEntriesForCalendarTab(date);
       const renderEntries = (typeCode, getIcon) => dayEntries
         .filter(entry => entry.type_code === typeCode)
         .map(entry => {
@@ -388,7 +402,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       </button>`);
     }
     calendar.innerHTML = weekdays + cells.join('');
-    renderDaySlots();
+    if (activeTab === 'entry') renderDaySlots();
   }
 
   function renderDaySlots() {
@@ -447,9 +461,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   function render() {
     const isEntryTab = activeTab === 'entry';
+    const isCalendarTab = isEntryTab || activeTab === 'ball_pickup' || activeTab === 'caddie_shuttle';
+    categoryCalendarHead.hidden = !isCalendarTab || isEntryTab;
     summaryContainer.hidden = isEntryTab;
     detailsContainer.hidden = isEntryTab;
-    entryView.hidden = !isEntryTab;
+    entryView.hidden = !isCalendarTab;
+    dayPanel.hidden = !isEntryTab;
     tabs.forEach(tab => {
       const selected = tab.dataset.tab === activeTab;
       tab.setAttribute('aria-selected', String(selected));
@@ -462,6 +479,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const visibleEntries = getVisibleEntries();
     renderSummary(visibleEntries);
     renderDetails(visibleEntries);
+    if (isCalendarTab) renderCalendar();
   }
 
   async function setMonth(monthValue) {
@@ -469,6 +487,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     const { start } = getMonthRange(monthValue);
     selectedDate = selectedDate.startsWith(monthValue) ? selectedDate : start;
     await loadEntries();
+  }
+
+  async function moveMonth(offset) {
+    const [year, month] = monthInput.value.split('-').map(Number);
+    const nextMonth = new Date(year, month - 1 + offset, 1);
+    await setMonth(`${nextMonth.getFullYear()}-${String(nextMonth.getMonth() + 1).padStart(2, '0')}`);
   }
 
   async function changeEntry(actionButton) {
@@ -670,19 +694,24 @@ document.addEventListener('DOMContentLoaded', async () => {
   }));
   exportButton.addEventListener('click', exportWorkbook);
   previousMonthButton.addEventListener('click', async () => {
-    const [year, month] = monthInput.value.split('-').map(Number);
-    const previous = new Date(year, month - 2, 1);
     try {
-      await setMonth(`${previous.getFullYear()}-${String(previous.getMonth() + 1).padStart(2, '0')}`);
+      await moveMonth(-1);
     } catch (error) {
       setError(`수당 정보를 불러오지 못했습니다: ${error.message}`);
     }
   });
   nextMonthButton.addEventListener('click', async () => {
-    const [year, month] = monthInput.value.split('-').map(Number);
-    const next = new Date(year, month, 1);
     try {
-      await setMonth(`${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, '0')}`);
+      await moveMonth(1);
+    } catch (error) {
+      setError(`수당 정보를 불러오지 못했습니다: ${error.message}`);
+    }
+  });
+  categoryCalendarHead.addEventListener('click', async event => {
+    const button = event.target.closest('[data-month-offset]');
+    if (!button) return;
+    try {
+      await moveMonth(Number(button.dataset.monthOffset));
     } catch (error) {
       setError(`수당 정보를 불러오지 못했습니다: ${error.message}`);
     }

@@ -49,6 +49,9 @@
     .allowance-entry-view { display: grid; gap: 14px; }
     .allowance-entry-view[hidden] { display: none; }
     .allowance-entry-calendar-wrap, .allowance-day-panel { border: 1px solid var(--app-border); border-radius: 9px; background: var(--app-surface); }
+    .allowance-category-calendar-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 14px; border-bottom: 1px solid var(--app-border); }
+    .allowance-category-calendar-head h2 { margin: 0; color: var(--text-main); font-size: 15px; }
+    .allowance-category-calendar-head[hidden] { display: none; }
     .allowance-day-panel-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
     .allowance-day-panel-head h2 { margin: 3px 0 0; color: var(--text-main); font-size: 15px; }
     .allowance-entry-month-title { margin: 0; color: var(--text-sub); font-size: 12px; font-weight: 700; }
@@ -136,9 +139,16 @@
     <section id="allowanceDetails"></section>
     <section id="allowanceEntryView" class="allowance-entry-view" hidden>
       <div class="allowance-entry-calendar-wrap">
+        <header class="allowance-category-calendar-head" id="allowanceCategoryCalendarHead" hidden>
+          <h2 id="allowanceCategoryCalendarTitle"></h2>
+          <div class="allowance-calendar-nav">
+            <button type="button" data-month-offset="-1" aria-label="이전 달">‹</button>
+            <button type="button" data-month-offset="1" aria-label="다음 달">›</button>
+          </div>
+        </header>
         <div id="allowanceEntryCalendar" class="allowance-entry-calendar"></div>
       </div>
-      <section class="allowance-day-panel" aria-labelledby="entrySelectedDate">
+      <section class="allowance-day-panel" id="allowanceDayPanel" aria-labelledby="entrySelectedDate">
         <header class="allowance-day-panel-head">
           <div>
             <p class="allowance-entry-month-title" id="entryCalendarTitle"></p>
@@ -166,6 +176,6 @@
   <script src="/js/supabase.js"></script>
   <script src="/js/user-preferences.js"></script>
   <script src="/js/navbar.js"></script>
-  <script src="/js/allowances.js?v=2026102005"></script>
+  <script src="/js/allowances.js?v=2026102007"></script>
 </body>
 </html>
