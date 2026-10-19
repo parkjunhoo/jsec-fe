@@ -146,14 +146,14 @@
       align-items: center;
       justify-content: flex-start;
       gap: 4px;
-      border-radius: 50%;
       flex-shrink: 0;
     }
+    .cell-date > span:first-child { width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; border-radius: 50%; flex-shrink: 0; }
     .calendar-note-indicator { font-size: 13px; line-height: 1; }
     .calendar-note-text { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #fde68a; font-size: 10px; font-weight: 600; }
     .calendar-cell:nth-child(7n+1) .cell-date { color: #f87171; }
     .calendar-cell:nth-child(7n) .cell-date { color: #60a5fa; }
-    .calendar-cell.today .cell-date { background: var(--primary); color: #0f172a; }
+    .calendar-cell.today .cell-date > span:first-child { background: var(--primary); color: #0f172a; }
 
     .cell-events {
       display: flex;
