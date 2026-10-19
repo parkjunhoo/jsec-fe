@@ -272,6 +272,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   else if (currentPath.includes('users.html')) pageTitle = '회원 조회 및 관리';
   else if (currentPath.includes('vehicle.html')) pageTitle = '차량 조회';
   else if (currentPath.includes('calendar.html')) pageTitle = '휴무 캘린더';
+  else if (currentPath.includes('manuals.html')) pageTitle = '업무 매뉴얼';
 
   // 공통 HTML 템플릿 주입 (톱니바퀴 아이콘 포함)
   navContainer.innerHTML = `
@@ -330,6 +331,9 @@ document.addEventListener('DOMContentLoaded', async () => {
           </a>
           <a href="/pages/calendar.html" class="drawer-item ${currentPath.includes('calendar.html') ? 'active' : ''}">
             <span>📅</span> 휴무 캘린더
+          </a>
+          <a href="/pages/manuals.html" class="drawer-item ${currentPath.includes('manuals.html') ? 'active' : ''}">
+            <span>📖</span> 업무 매뉴얼
           </a>
         </nav>
       </div>
