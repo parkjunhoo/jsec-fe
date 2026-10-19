@@ -512,12 +512,17 @@ document.addEventListener('DOMContentLoaded', async () => {
             updatePayload.username = targetUserName;
           }
 
-          const { error } = await supabaseClient
+          const { data, error } = await supabaseClient
             .from('vacations')
             .update(updatePayload)
-            .eq('id', vacId);
+            .eq('id', vacId)
+            .select('id')
+            .maybeSingle();
 
           if (error) throw error;
+          if (!data) {
+            throw new Error('수정된 행이 없습니다. Supabase vacations 테이블의 UPDATE RLS 정책에서 현재 사용자에게 해당 행의 수정이 허용되는지 확인해 주세요.');
+          }
           alert('휴무 일정이 수정되었습니다.');
         } else {
           const { error } = await supabaseClient
