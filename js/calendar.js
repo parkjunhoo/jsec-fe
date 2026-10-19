@@ -963,7 +963,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (activeModalTab === 'note') {
           if (userRole !== 'admin') throw new Error('관리자만 달력 메모를 등록할 수 있습니다.');
           const content = calendarNoteContent ? calendarNoteContent.value.trim() : '';
-          if (!content) throw new Error('메모 내용을 입력해 주세요.');
           await requestCalendarNotes('', 'PUT', {
             date,
             emoji: selectedNoteEmoji,
