@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta name="theme-color" content="#0b1220">
   <title>지산리조트 보안팀 - 직원 전화번호부</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -49,10 +49,10 @@
 
     .search-panel {
       padding: 15px;
-      border: 1px solid rgba(190, 211, 239, 0.13);
-      border-radius: 18px;
-      background: linear-gradient(145deg, rgba(20, 33, 51, 0.96), rgba(14, 24, 39, 0.96));
-      box-shadow: 0 16px 38px rgba(0, 0, 0, 0.2), inset 0 1px rgba(255, 255, 255, 0.025);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: rgba(18, 29, 46, 0.88);
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.12);
     }
     .search-wrap { position: relative; }
     .search-icon {
@@ -76,7 +76,6 @@
       font-size: 14px;
       transition: border-color 160ms ease, box-shadow 160ms ease;
     }
-    .search-input::-webkit-search-cancel-button { -webkit-appearance: none; appearance: none; }
     .search-input::placeholder { color: #72839a; }
     .search-input:focus { border-color: rgba(114, 199, 255, 0.7); box-shadow: 0 0 0 3px rgba(114, 199, 255, 0.1); }
     .clear-search {
@@ -104,119 +103,35 @@
       gap: 10px;
       margin: 17px 1px 9px;
     }
-    .filter-heading span:first-child { color: #aabbd0; font-size: 12px; font-weight: 750; letter-spacing: 0.01em; }
+    .filter-heading span:first-child { color: #aabbd0; font-size: 11px; font-weight: 750; letter-spacing: 0.08em; }
     .filter-heading span:last-child { color: var(--muted); font-size: 11px; }
-    .department-filters { position: relative; }
-    .department-filter-trigger {
-      display: flex;
+    .department-filters {
+      position: relative;
+    }
+    .department-filter {
       width: 100%;
-      min-height: 50px;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-      padding: 8px 13px;
+      min-height: 44px;
+      appearance: none;
+      padding: 0 42px 0 13px;
       border: 1px solid rgba(190, 211, 239, 0.15);
-      border-radius: 12px;
-      background: linear-gradient(135deg, rgba(13, 23, 38, 0.98), rgba(16, 30, 47, 0.98));
+      border-radius: 11px;
+      outline: 0;
+      background: #0d1726;
       color: var(--text);
-      text-align: left;
+      font-size: 14px;
       cursor: pointer;
-      transition: border-color 150ms ease, background 150ms ease, box-shadow 150ms ease;
     }
-    .department-filter-trigger:hover,
-    .department-filter-trigger[aria-expanded="true"] {
-      border-color: rgba(114, 199, 255, 0.42);
-      background: linear-gradient(135deg, rgba(16, 31, 49, 0.99), rgba(19, 38, 58, 0.99));
-    }
-    .department-filter-trigger:focus-visible { outline: 0; border-color: rgba(114, 199, 255, 0.7); box-shadow: 0 0 0 3px rgba(114, 199, 255, 0.1); }
-    .department-filter-copy { display: grid; min-width: 0; gap: 3px; }
-    .department-filter-label { color: var(--muted); font-size: 10px; font-weight: 650; }
-    .department-filter-value { overflow: hidden; font-size: 14px; font-weight: 750; text-overflow: ellipsis; white-space: nowrap; }
-    .department-filter-meta { display: flex; flex: 0 0 auto; align-items: center; gap: 11px; color: var(--muted); font-size: 11px; }
+    .department-filter:focus { border-color: rgba(114, 199, 255, 0.7); box-shadow: 0 0 0 3px rgba(114, 199, 255, 0.09); }
+    .department-filter option { background: #121d2e; color: var(--text); }
     .department-filter-chevron {
-      color: var(--blue);
-      font-size: 12px;
-      transition: transform 150ms ease;
-    }
-    .department-filter-trigger[aria-expanded="true"] .department-filter-chevron { transform: rotate(180deg); }
-    .department-filter-panel {
-      position: absolute;
-      z-index: 20;
-      top: calc(100% + 8px);
-      right: 0;
-      left: 0;
-      padding: 10px;
-      border: 1px solid rgba(190, 211, 239, 0.16);
-      border-radius: 14px;
-      background: #111c2b;
-      box-shadow: 0 18px 44px rgba(0, 0, 0, 0.4);
-    }
-    .department-filter-panel[hidden] { display: none; }
-    .department-picker-search-wrap { position: relative; margin-bottom: 8px; }
-    .department-picker-search-wrap span {
       position: absolute;
       top: 50%;
-      left: 11px;
-      color: var(--muted);
-      font-size: 15px;
+      right: 15px;
+      color: var(--blue);
+      font-size: 12px;
       pointer-events: none;
       transform: translateY(-50%);
     }
-    .department-picker-search {
-      width: 100%;
-      height: 40px;
-      padding: 0 12px 0 34px;
-      border: 1px solid rgba(190, 211, 239, 0.12);
-      border-radius: 9px;
-      outline: 0;
-      background: #0b1523;
-      color: var(--text);
-      font-size: 13px;
-    }
-    .department-picker-search:focus { border-color: rgba(114, 199, 255, 0.58); box-shadow: 0 0 0 3px rgba(114, 199, 255, 0.08); }
-    .department-picker-search::placeholder { color: #72839a; }
-    .department-filter-options { display: grid; max-height: min(300px, 45vh); gap: 3px; overflow-y: auto; overscroll-behavior: contain; }
-    .department-option {
-      display: flex;
-      min-height: 42px;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-      padding: 0 10px;
-      border: 1px solid transparent;
-      border-radius: 9px;
-      background: transparent;
-      color: #d8e3ef;
-      text-align: left;
-      cursor: pointer;
-      transition: background 130ms ease, border-color 130ms ease, color 130ms ease;
-    }
-    .department-option:hover { background: rgba(255, 255, 255, 0.045); }
-    .department-option[aria-pressed="true"] {
-      border-color: rgba(114, 199, 255, 0.2);
-      background: rgba(74, 157, 201, 0.13);
-      color: #a7ddff;
-    }
-    .department-option[hidden] { display: none; }
-    .department-option-name { overflow: hidden; font-size: 13px; font-weight: 650; text-overflow: ellipsis; white-space: nowrap; }
-    .department-option-count { flex: 0 0 auto; color: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; }
-    .department-picker-empty { margin: 0; padding: 15px 10px; color: var(--muted); font-size: 12px; text-align: center; }
-    .department-picker-empty[hidden] { display: none; }
-    .active-filter {
-      display: inline-flex;
-      align-items: center;
-      gap: 7px;
-      margin-top: 9px;
-      padding: 5px 9px;
-      border: 1px solid rgba(114, 199, 255, 0.18);
-      border-radius: 999px;
-      background: rgba(74, 157, 201, 0.09);
-      color: #a9dfff;
-      font-size: 11px;
-      font-weight: 650;
-    }
-    .active-filter[hidden] { display: none; }
-    .active-filter button { padding: 0; border: 0; background: transparent; color: inherit; font-size: 15px; line-height: 1; cursor: pointer; }
     .directory-toolbar {
       display: flex;
       align-items: center;
@@ -224,21 +139,17 @@
       gap: 12px;
       margin: 19px 2px 10px;
     }
-    .result-count { margin: 0; color: var(--muted); font-size: 12px; }
-    .result-count strong { color: var(--text); font-size: 15px; font-variant-numeric: tabular-nums; }
-    .directory-actions { display: flex; flex: 0 0 auto; align-items: center; gap: 12px; }
+    .result-count { color: var(--muted); font-size: 12px; }
+    .result-count strong { color: var(--text); font-size: 14px; }
     .reset-filters {
-      min-height: 36px;
-      padding: 6px 9px;
+      padding: 6px 0 6px 8px;
       border: 0;
-      border-radius: 9px;
-      background: rgba(255, 255, 255, 0.045);
-      color: #b9c9dc;
-      font-size: 12px;
+      background: transparent;
+      color: var(--blue);
+      font-size: 11px;
       font-weight: 650;
       cursor: pointer;
     }
-    .reset-filters:hover { background: rgba(255, 255, 255, 0.08); color: var(--text); }
     .contact-list { display: grid; gap: 16px; }
     .department-section {
       min-width: 0;
@@ -283,9 +194,7 @@
       min-height: 81px;
       padding: 11px 2px;
       border-bottom: 1px solid rgba(190, 211, 239, 0.075);
-      transition: background-color 140ms ease, padding-inline 140ms ease;
     }
-    .contact-card:hover { padding-inline: 8px; border-radius: 10px; background: rgba(255, 255, 255, 0.025); }
     .contact-card:nth-last-child(-n + 2) { border-bottom-color: transparent; }
     .person-avatar {
       display: grid;
@@ -487,12 +396,7 @@
       .search-panel { padding: 12px; border-radius: 14px; }
       .search-input { height: 48px; font-size: 16px; }
       .filter-heading { margin-top: 15px; }
-      .directory-toolbar { align-items: center; flex-wrap: wrap; margin-top: 15px; }
-      .directory-actions { gap: 7px; }
-      .reset-filters { min-height: 38px; padding-inline: 8px; }
-      .add-contact { min-height: 40px; padding-inline: 10px; }
-      .department-filter-panel { position: fixed; top: auto; right: 14px; bottom: 14px; left: 14px; max-height: min(70vh, 560px); padding: 12px; border-radius: 18px; }
-      .department-filter-options { max-height: calc(min(70vh, 560px) - 76px); }
+      .directory-toolbar { margin-top: 15px; }
       .contact-list { gap: 12px; }
       .department-section { border-radius: 14px; }
       .department-section-header { min-height: 55px; padding: 9px 12px; }
@@ -530,38 +434,20 @@
         <button class="clear-search" id="clearSearch" type="button" aria-label="검색어 지우기" hidden>&times;</button>
       </div>
       <div class="filter-heading">
-        <span>부서별 필터</span>
-        <span id="departmentCount">부서 불러오는 중</span>
+        <span>부서별 보기</span>
+        <span id="departmentCount">불러오는 중</span>
       </div>
       <div class="department-filters">
-        <button class="department-filter-trigger" id="departmentFilterTrigger" type="button" aria-expanded="false" aria-controls="departmentFilterPanel">
-          <span class="department-filter-copy">
-            <span class="department-filter-label">현재 선택</span>
-            <span class="department-filter-value" id="selectedDepartmentLabel">전체 부서</span>
-          </span>
-          <span class="department-filter-meta">
-            <span id="selectedDepartmentCount">불러오는 중</span>
-            <span class="department-filter-chevron" aria-hidden="true">▼</span>
-          </span>
-        </button>
-        <div class="department-filter-panel" id="departmentFilterPanel" hidden>
-          <label class="department-picker-search-wrap">
-            <span aria-hidden="true">⌕</span>
-            <input class="department-picker-search" id="departmentPickerSearch" type="search" placeholder="부서 이름으로 찾기" autocomplete="off" aria-label="부서 목록 검색">
-          </label>
-          <div class="department-filter-options" id="departmentFilterOptions" aria-label="부서 선택 목록"></div>
-          <p class="department-picker-empty" id="departmentPickerEmpty" hidden>일치하는 부서가 없습니다.</p>
-        </div>
-      </div>
-      <div class="active-filter" id="activeDepartmentFilter" hidden>
-        <span id="activeDepartmentFilterLabel"></span>
-        <button id="clearDepartmentFilter" type="button" aria-label="부서 필터 해제">&times;</button>
+        <select class="department-filter" id="departmentFilters" aria-label="부서 선택">
+          <option value="">전체 부서</option>
+        </select>
+        <span class="department-filter-chevron" aria-hidden="true">▼</span>
       </div>
     </section>
 
     <div class="directory-toolbar">
       <p class="result-count" id="resultCount" aria-live="polite">직원 정보를 불러오고 있습니다.</p>
-      <div class="directory-actions">
+      <div style="display: flex; align-items: center; gap: 12px;">
         <button class="reset-filters" id="resetFilters" type="button" hidden>초기화</button>
         <button class="add-contact" id="addContactButton" type="button">＋ 연락처 등록</button>
       </div>
@@ -619,18 +505,8 @@
     document.addEventListener('DOMContentLoaded', async () => {
       const searchInput = document.getElementById('contactSearch');
       const clearSearchButton = document.getElementById('clearSearch');
-      const departmentFilters = document.querySelector('.department-filters');
-      const departmentFilterTrigger = document.getElementById('departmentFilterTrigger');
-      const departmentFilterPanel = document.getElementById('departmentFilterPanel');
-      const departmentFilterOptions = document.getElementById('departmentFilterOptions');
-      const departmentPickerSearch = document.getElementById('departmentPickerSearch');
-      const departmentPickerEmpty = document.getElementById('departmentPickerEmpty');
+      const departmentFilters = document.getElementById('departmentFilters');
       const departmentCount = document.getElementById('departmentCount');
-      const selectedDepartmentLabel = document.getElementById('selectedDepartmentLabel');
-      const selectedDepartmentCount = document.getElementById('selectedDepartmentCount');
-      const activeDepartmentFilter = document.getElementById('activeDepartmentFilter');
-      const activeDepartmentFilterLabel = document.getElementById('activeDepartmentFilterLabel');
-      const clearDepartmentFilterButton = document.getElementById('clearDepartmentFilter');
       const contactList = document.getElementById('contactList');
       const resultCount = document.getElementById('resultCount');
       const resetButton = document.getElementById('resetFilters');
@@ -651,7 +527,7 @@
       let saving = false;
 
       function normalize(value) {
-        return String(value || '').toLocaleLowerCase('ko-KR').replace(/[\s()+.-]/g, '');
+        return String(value || '').toLocaleLowerCase('ko-KR').replace(/[\s()-]/g, '');
       }
 
       function showState(title, description, retry) {
@@ -676,77 +552,26 @@
       function renderDepartmentFilters() {
         const departments = [...new Set(contacts.map(contact => contact.department))].sort(collator.compare);
         if (selectedDepartment && !departments.includes(selectedDepartment)) selectedDepartment = '';
-        const departmentTotals = new Map();
-        contacts.forEach(contact => departmentTotals.set(
-          contact.department,
-          (departmentTotals.get(contact.department) || 0) + 1
-        ));
-        departmentFilterOptions.replaceChildren();
-
-        const addDepartmentOption = (department, count) => {
-          const option = document.createElement('button');
-          option.className = 'department-option';
-          option.type = 'button';
-          option.dataset.department = department;
-          option.setAttribute('aria-pressed', String(selectedDepartment === department));
-          const name = document.createElement('span');
-          name.className = 'department-option-name';
-          name.textContent = department || '전체 부서';
-          const total = document.createElement('span');
-          total.className = 'department-option-count';
-          total.textContent = `${count}명`;
-          option.append(name, total);
-          departmentFilterOptions.append(option);
-        };
-
-        addDepartmentOption('', contacts.length);
+        departmentFilters.replaceChildren();
+        const allOption = document.createElement('option');
+        allOption.value = '';
+        allOption.textContent = `전체 부서 · ${contacts.length}명`;
+        departmentFilters.append(allOption);
 
         departments.forEach(department => {
-          addDepartmentOption(department, departmentTotals.get(department));
+          const option = document.createElement('option');
+          option.value = department;
+          option.textContent = `${department} · ${contacts.filter(contact => contact.department === department).length}명`;
+          departmentFilters.append(option);
         });
-        selectedDepartmentLabel.textContent = selectedDepartment || '전체 부서';
-        selectedDepartmentCount.textContent = selectedDepartment
-          ? `${departmentTotals.get(selectedDepartment) || 0}명`
-          : `전체 ${contacts.length}명`;
-        departmentFilterTrigger.setAttribute('aria-expanded', String(!departmentFilterPanel.hidden));
-        activeDepartmentFilter.hidden = !selectedDepartment;
-        activeDepartmentFilterLabel.textContent = selectedDepartment ? `부서 · ${selectedDepartment}` : '';
-        departmentPickerSearch.value = '';
-        departmentPickerEmpty.hidden = true;
+        departmentFilters.value = selectedDepartment;
         departmentSuggestions.replaceChildren();
         departments.forEach(department => {
           const option = document.createElement('option');
           option.value = department;
           departmentSuggestions.append(option);
         });
-        departmentCount.textContent = `${departments.length}개 부서`;
-      }
-
-      function closeDepartmentPicker(returnFocus) {
-        departmentFilterPanel.hidden = true;
-        departmentFilterTrigger.setAttribute('aria-expanded', 'false');
-        if (returnFocus) departmentFilterTrigger.focus();
-      }
-
-      function filterDepartmentOptions() {
-        const query = normalize(departmentPickerSearch.value);
-        let matchingDepartments = 0;
-        departmentFilterOptions.querySelectorAll('.department-option').forEach(option => {
-          const isAllDepartments = option.dataset.department === '';
-          const matches = query
-            ? !isAllDepartments && normalize(option.dataset.department).includes(query)
-            : true;
-          option.hidden = !matches;
-          if (!isAllDepartments && matches) matchingDepartments += 1;
-        });
-        departmentPickerEmpty.hidden = !query || matchingDepartments > 0;
-      }
-
-      function selectDepartment(department) {
-        selectedDepartment = department;
-        closeDepartmentPicker(false);
-        renderDepartmentFilters();
-        renderContacts();
+        departmentCount.textContent = `${departments.length}개 부서 · 선택해 이동`;
       }
 
       function makeContactCard(contact) {
@@ -853,9 +678,7 @@
         const count = document.createElement('strong');
         count.textContent = String(filtered.length);
         resultCount.append(count, document.createTextNode(`명 표시 · 전체 ${contacts.length}명`));
-        resetButton.hidden = !selectedDepartment && !searchInput.value.trim();
-        activeDepartmentFilter.hidden = !selectedDepartment;
-        activeDepartmentFilterLabel.textContent = selectedDepartment ? `부서 · ${selectedDepartment}` : '';
+        resetButton.hidden = !selectedDepartment && !searchInput.value;
         directoryState.hidden = true;
 
         if (filtered.length === 0) {
@@ -1027,33 +850,15 @@
         searchInput.focus();
         renderContacts();
       });
-      departmentFilterTrigger.addEventListener('click', () => {
-        const shouldOpen = departmentFilterPanel.hidden;
-        departmentFilterPanel.hidden = !shouldOpen;
-        departmentFilterTrigger.setAttribute('aria-expanded', String(shouldOpen));
-        if (shouldOpen) {
-          departmentPickerSearch.value = '';
-          filterDepartmentOptions();
-          departmentPickerSearch.focus();
-        }
-      });
-      departmentPickerSearch.addEventListener('input', filterDepartmentOptions);
-      departmentFilterOptions.addEventListener('click', event => {
-        const option = event.target.closest('[data-department]');
-        if (option) selectDepartment(option.dataset.department);
-      });
-      clearDepartmentFilterButton.addEventListener('click', () => {
-        selectDepartment('');
-        departmentFilterTrigger.focus();
-      });
-      document.addEventListener('pointerdown', event => {
-        if (!departmentFilters.contains(event.target)) closeDepartmentPicker(false);
+      departmentFilters.addEventListener('change', () => {
+        selectedDepartment = departmentFilters.value;
+        renderContacts();
       });
       resetButton.addEventListener('click', () => {
         selectedDepartment = '';
         searchInput.value = '';
         clearSearchButton.hidden = true;
-        closeDepartmentPicker(false);
+        departmentFilters.value = '';
         renderDepartmentFilters();
         renderContacts();
       });
@@ -1065,12 +870,7 @@
         if (event.target === contactModal) closeContactForm();
       });
       document.addEventListener('keydown', event => {
-        if (event.key !== 'Escape') return;
-        if (!departmentFilterPanel.hidden) {
-          closeDepartmentPicker(true);
-          return;
-        }
-        if (contactModal.classList.contains('active')) closeContactForm();
+        if (event.key === 'Escape' && contactModal.classList.contains('active')) closeContactForm();
       });
       contactList.addEventListener('click', event => {
         const button = event.target.closest('[data-contact-action]');
