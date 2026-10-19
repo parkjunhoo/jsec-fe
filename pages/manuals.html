@@ -431,8 +431,6 @@
       let renderGeneration = 0;
       let touchStart = null;
 
-      if (window.pdfjsLib) pdfjsLib.GlobalWorkerOptions.workerSrc = workerSource;
-
       function setStatus(message, isError) {
         status.hidden = !message;
         status.textContent = message;
@@ -723,13 +721,27 @@
         if (pdfDocument && viewMode === 'page') goToPage(currentPage);
       });
 
-      const initialId = new URLSearchParams(window.location.search).get('doc');
-      const selectedId = initialId && manuals[initialId] ? initialId : 'action';
-      selectManual(selectedId, false);
-
       document.addEventListener('DOMContentLoaded', async () => {
-        const { data: { session } } = await supabaseClient.auth.getSession();
-        if (!session) window.location.href = '/index.html';
+        try {
+          const { data: { session }, error } = await supabaseClient.auth.getSession();
+          if (error) throw error;
+          if (!session) {
+            window.location.href = '/index.html';
+            return;
+          }
+
+          if (!window.pdfjsLib) {
+            setStatus('PDF 뷰어 파일을 불러오지 못했습니다. 연결을 확인한 뒤 다시 열어 주세요.', true);
+            return;
+          }
+          pdfjsLib.GlobalWorkerOptions.workerSrc = workerSource;
+          const initialId = new URLSearchParams(window.location.search).get('doc');
+          const selectedId = initialId && manuals[initialId] ? initialId : 'action';
+          selectManual(selectedId, false);
+        } catch (error) {
+          console.error('매뉴얼 페이지 초기화 실패:', error);
+          setStatus('매뉴얼 페이지를 초기화하지 못했습니다. 다시 열어 주세요.', true);
+        }
       });
     })();
   </script>

@@ -675,87 +675,6 @@
             return;
           }
 
-          async function saveContact(event) {
-            event.preventDefault();
-            if (saving) return;
-
-            const name = document.getElementById('contactName').value.trim();
-            const department = document.getElementById('contactDepartment').value.trim();
-            const subDepartment = document.getElementById('contactSubDepartment').value.trim();
-            const position = document.getElementById('contactPosition').value.trim();
-            const phoneNumber = document.getElementById('contactPhone').value.trim();
-            const digits = phoneNumber.replace(/\D/g, '');
-            if (!name || !department || !phoneNumber) {
-              formError.textContent = '이름, 부서, 전화번호를 입력해 주세요.';
-              formError.hidden = false;
-              return;
-            }
-            if (digits.length < 7 || digits.length > 15) {
-              formError.textContent = '전화번호 숫자를 7~15자리로 입력해 주세요.';
-              formError.hidden = false;
-              return;
-            }
-
-            const id = contactIdInput.value;
-            const values = {
-              name,
-              department,
-              sub_department: subDepartment || null,
-              position: position || null,
-              phone_number: phoneNumber
-            };
-            saving = true;
-            saveContactButton.disabled = true;
-            formCancelButton.disabled = true;
-            modalCloseButton.disabled = true;
-            saveContactButton.textContent = id ? '저장 중...' : '등록 중...';
-            formError.hidden = true;
-
-            try {
-              const operation = id
-                ? supabaseClient.from('phonebook').update(values).eq('id', id).select('id').maybeSingle()
-                : supabaseClient.from('phonebook').insert(values).select('id').single();
-              const { data, error } = await operation;
-              if (error) throw error;
-              if (!data) throw new Error('연락처를 변경하지 못했습니다. 권한 또는 기존 데이터를 확인해 주세요.');
-
-              saving = false;
-              closeContactForm();
-              await loadContacts();
-            } catch (error) {
-              console.error('직원 연락처 저장 실패:', error);
-              formError.textContent = `저장하지 못했습니다: ${error.message || '잠시 후 다시 시도해 주세요.'}`;
-              formError.hidden = false;
-            } finally {
-              saving = false;
-              saveContactButton.disabled = false;
-              formCancelButton.disabled = false;
-              modalCloseButton.disabled = false;
-              saveContactButton.textContent = id ? '변경사항 저장' : '등록';
-            }
-          }
-
-          async function deleteContact(contact) {
-            const confirmed = window.confirm(`${contact.name}님의 연락처를 삭제할까요?\n삭제한 연락처는 복구할 수 없습니다.`);
-            if (!confirmed) return;
-
-            try {
-              const { data, error } = await supabaseClient
-                .from('phonebook')
-                .delete()
-                .eq('id', contact.id)
-                .select('id');
-              if (error) throw error;
-              if (!data || data.length === 0) {
-                throw new Error('삭제되지 않았습니다. 권한 또는 이미 삭제된 데이터를 확인해 주세요.');
-              }
-              await loadContacts();
-            } catch (error) {
-              console.error('직원 연락처 삭제 실패:', error);
-              window.alert(`연락처를 삭제하지 못했습니다.\n${error.message || '잠시 후 다시 시도해 주세요.'}`);
-            }
-          }
-
           const { data, error } = await supabaseClient
             .from('phonebook')
             .select('id, department, sub_department, position, name, phone_number')
@@ -777,6 +696,87 @@
           console.error('직원 전화번호부 조회 실패:', error);
           departmentCount.textContent = '조회 실패';
           showState('전화번호부를 불러오지 못했습니다', '연결을 확인하고 다시 시도해 주세요. 문제가 계속되면 관리자에게 문의해 주세요.', true);
+        }
+      }
+
+      async function saveContact(event) {
+        event.preventDefault();
+        if (saving) return;
+
+        const name = document.getElementById('contactName').value.trim();
+        const department = document.getElementById('contactDepartment').value.trim();
+        const subDepartment = document.getElementById('contactSubDepartment').value.trim();
+        const position = document.getElementById('contactPosition').value.trim();
+        const phoneNumber = document.getElementById('contactPhone').value.trim();
+        const digits = phoneNumber.replace(/\D/g, '');
+        if (!name || !department || !phoneNumber) {
+          formError.textContent = '이름, 부서, 전화번호를 입력해 주세요.';
+          formError.hidden = false;
+          return;
+        }
+        if (digits.length < 7 || digits.length > 15) {
+          formError.textContent = '전화번호 숫자를 7~15자리로 입력해 주세요.';
+          formError.hidden = false;
+          return;
+        }
+
+        const id = contactIdInput.value;
+        const values = {
+          name,
+          department,
+          sub_department: subDepartment || null,
+          position: position || null,
+          phone_number: phoneNumber
+        };
+        saving = true;
+        saveContactButton.disabled = true;
+        formCancelButton.disabled = true;
+        modalCloseButton.disabled = true;
+        saveContactButton.textContent = id ? '저장 중...' : '등록 중...';
+        formError.hidden = true;
+
+        try {
+          const operation = id
+            ? supabaseClient.from('phonebook').update(values).eq('id', id).select('id').maybeSingle()
+            : supabaseClient.from('phonebook').insert(values).select('id').single();
+          const { data, error } = await operation;
+          if (error) throw error;
+          if (!data) throw new Error('연락처를 변경하지 못했습니다. 권한 또는 기존 데이터를 확인해 주세요.');
+
+          saving = false;
+          closeContactForm();
+          await loadContacts();
+        } catch (error) {
+          console.error('직원 연락처 저장 실패:', error);
+          formError.textContent = `저장하지 못했습니다: ${error.message || '잠시 후 다시 시도해 주세요.'}`;
+          formError.hidden = false;
+        } finally {
+          saving = false;
+          saveContactButton.disabled = false;
+          formCancelButton.disabled = false;
+          modalCloseButton.disabled = false;
+          saveContactButton.textContent = id ? '변경사항 저장' : '등록';
+        }
+      }
+
+      async function deleteContact(contact) {
+        const confirmed = window.confirm(`${contact.name}님의 연락처를 삭제할까요?\n삭제한 연락처는 복구할 수 없습니다.`);
+        if (!confirmed) return;
+
+        try {
+          const { data, error } = await supabaseClient
+            .from('phonebook')
+            .delete()
+            .eq('id', contact.id)
+            .select('id');
+          if (error) throw error;
+          if (!data || data.length === 0) {
+            throw new Error('삭제되지 않았습니다. 권한 또는 이미 삭제된 데이터를 확인해 주세요.');
+          }
+          await loadContacts();
+        } catch (error) {
+          console.error('직원 연락처 삭제 실패:', error);
+          window.alert(`연락처를 삭제하지 못했습니다.\n${error.message || '잠시 후 다시 시도해 주세요.'}`);
         }
       }
 
