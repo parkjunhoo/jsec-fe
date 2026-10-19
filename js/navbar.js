@@ -25,6 +25,21 @@ document.addEventListener('DOMContentLoaded', async () => {
       font-weight: 700;
       color: #f8fafc;
     }
+    .nav-brand-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 0;
+      color: inherit;
+      text-decoration: none;
+    }
+    .nav-brand-logo {
+      display: block;
+      width: 36px;
+      height: 36px;
+      object-fit: contain;
+      flex: 0 0 auto;
+    }
     .nav-actions {
       display: flex;
       align-items: center;
@@ -261,7 +276,12 @@ document.addEventListener('DOMContentLoaded', async () => {
   // 공통 HTML 템플릿 주입 (톱니바퀴 아이콘 포함)
   navContainer.innerHTML = `
     <header class="nav-header">
-      <div class="nav-title">${pageTitle}</div>
+      <div class="nav-title">
+        <a class="nav-brand-link" href="/pages/main.html" aria-label="${pageTitle} - 메인으로 이동">
+          <img class="nav-brand-logo" src="/logo.png" alt="">
+          <span>${pageTitle}</span>
+        </a>
+      </div>
       <div class="nav-actions">
         <button class="notification-btn" id="openNotifications" type="button" aria-label="알림 열기" aria-haspopup="dialog" aria-expanded="false">
           🔔<span class="notification-badge" id="notificationUnreadBadge" style="display: none;">0</span>

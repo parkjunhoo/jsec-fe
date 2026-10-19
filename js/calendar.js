@@ -669,17 +669,28 @@ document.addEventListener('DOMContentLoaded', async () => {
     zip.file(workbookPath, new XMLSerializer().serializeToString(workbookXml));
     zip.file(worksheetPath, new XMLSerializer().serializeToString(worksheetXml));
     const output = await zip.generateAsync({ type: 'uint8array', compression: 'DEFLATE' });
-    const blob = new Blob([output], {
-      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-    });
-    const downloadUrl = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = downloadUrl;
-    link.download = `직원근무표_${year}년_${month}월.xlsx`;
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    URL.revokeObjectURL(downloadUrl);
+    const fileName = `직원근무표_${year}년_${month}월.xlsx`;
+    if (window.AndroidExcelExporter) {
+      const bytes = output;
+      let binary = '';
+      const chunkSize = 0x8000;
+      for (let offset = 0; offset < bytes.length; offset += chunkSize) {
+        binary += String.fromCharCode(...bytes.subarray(offset, offset + chunkSize));
+      }
+      window.AndroidExcelExporter.saveExcel(btoa(binary), fileName);
+    } else {
+      const blob = new Blob([output], {
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+      });
+      const downloadUrl = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = downloadUrl;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(downloadUrl);
+    }
 
     if (unmatchedNames.size > 0) {
       await Swal.fire({
