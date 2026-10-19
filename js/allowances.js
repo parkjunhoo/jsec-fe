@@ -245,7 +245,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         label: '캐디 셔틀',
         value: row => `${(row.countByShift.caddie_shuttle_morning || 0)
           + (row.countByShift.caddie_shuttle_afternoon || 0)}회 (${formatMoney(row.amountByType.caddie_shuttle || 0)})`
-      }
+      },
+      { label: '총 수당', value: row => formatMoney(row.totalAmount), amount: true }
     ];
   }
 
@@ -367,7 +368,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     const { year, month, days } = getMonthRange(monthInput.value);
     const firstDay = new Date(year, month - 1, 1).getDay();
     calendarTitle.textContent = `${year}년 ${month}월`;
-    categoryCalendarTitle.textContent = `${year}년 ${month}월`;
+    const calendarLabel = activeTab === 'ball_pickup' ? '연습장 볼수거 달력' : '캐디 셔틀 달력';
+    categoryCalendarTitle.textContent = `${calendarLabel} · ${year}년 ${month}월`;
     const ordinalBySlot = getAllowanceOrdinals();
     const weekdays = ['일', '월', '화', '수', '목', '금', '토']
       .map(day => `<div class="allowance-weekday">${day}</div>`).join('');
