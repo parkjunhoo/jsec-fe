@@ -36,6 +36,16 @@ document.addEventListener('DOMContentLoaded', async () => {
   let allVehicles = [];
   let currentPrefix = 'ALL';
 
+  function escapeHtml(value) {
+    return String(value ?? '').replace(/[&<>"']/g, character => ({
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#39;'
+    })[character]);
+  }
+
   // --- 모달 제어 함수 ---
   function openAddModal() {
     modalTitle.textContent = '신규 차량 등록';
@@ -188,10 +198,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         gap: 10px;
       ">
         <div class="vehicle-card-header" style="display: flex; justify-content: space-between; align-items: center;">
-          <span class="car-number" style="font-size: 17px; font-weight: 800; color: #38bdf8;">${item.full_number || item.number || '번호 없음'}</span>
+          <span class="car-number" style="font-size: 17px; font-weight: 800; color: #38bdf8;">${escapeHtml(item.full_number || item.number || '번호 없음')}</span>
           <div style="display: flex; align-items: center; gap: 8px;">
-            <span class="car-type-badge" style="font-size: 11px; padding: 4px 8px; border-radius: 6px; background: rgba(255, 255, 255, 0.08); color: #94a3b8; font-weight: 600;">${item.car_name || '차종 미기재'}</span>
-            <button type="button" class="btn-edit-card" data-id="${item.id || item.full_number}" style="
+            <span class="car-type-badge" style="font-size: 11px; padding: 4px 8px; border-radius: 6px; background: rgba(255, 255, 255, 0.08); color: #94a3b8; font-weight: 600;">${escapeHtml(item.car_name || '차종 미기재')}</span>
+            <button type="button" class="btn-edit-card" data-id="${escapeHtml(item.id || item.full_number)}" style="
               background: rgba(56, 189, 248, 0.15);
               border: 1px solid rgba(56, 189, 248, 0.3);
               color: #38bdf8;
@@ -205,10 +215,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         </div>
 
         <div class="vehicle-details" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; font-size: 13px; color: #94a3b8; background: rgba(15, 23, 42, 0.4); padding: 10px 12px; border-radius: 10px;">
-          <div>소유자: <span style="color: #f8fafc; font-weight: 600;">${item.name || '-'}</span></div>
-          <div>부서: <span style="color: #f8fafc; font-weight: 600;">${item.department || '-'}</span></div>
-          <div style="grid-column: span 2;">연락처: <span style="color: #f8fafc; font-weight: 600;">${item.phone || '-'}</span></div>
-          ${item.notes ? `<div style="grid-column: span 2;">비고: <span style="color: #f8fafc;">${item.notes}</span></div>` : ''}
+          <div>소유자: <span style="color: #f8fafc; font-weight: 600;">${escapeHtml(item.name || '-')}</span></div>
+          <div>부서: <span style="color: #f8fafc; font-weight: 600;">${escapeHtml(item.department || '-')}</span></div>
+          <div style="grid-column: span 2;">연락처: <span style="color: #f8fafc; font-weight: 600;">${escapeHtml(item.phone || '-')}</span></div>
+          ${item.notes ? `<div style="grid-column: span 2;">비고: <span style="color: #f8fafc;">${escapeHtml(item.notes)}</span></div>` : ''}
         </div>
       </div>
     `).join('');

@@ -51,6 +51,30 @@ document.addEventListener('DOMContentLoaded', async () => {
   let allUsers = [];
   let isAdmin = false;
 
+  function escapeHtml(value) {
+    return String(value ?? '').replace(/[&<>"']/g, character => ({
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#39;'
+    })[character]);
+  }
+
+  function safeUserColor(value) {
+    return typeof value === 'string' && /^#[\da-f]{6}$/i.test(value) ? value : '#38bdf8';
+  }
+
+  async function workerHeaders(json = false) {
+    const { data: { session: activeSession }, error } = await supabaseClient.auth.getSession();
+    if (error) throw error;
+    if (!activeSession?.access_token) throw new Error('로그인 세션이 만료되었습니다. 다시 로그인해 주세요.');
+    return {
+      Authorization: `Bearer ${activeSession.access_token}`,
+      ...(json ? { 'Content-Type': 'application/json' } : {})
+    };
+  }
+
   function matchesLocationFilter(location, checkedLocations) {
     const normalizedLocation = (location || '').toLowerCase();
     const selectedShifts = checkedLocations.filter(value => shiftFilterValues.includes(value));
@@ -156,7 +180,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   // 3. 전체 회원 목록 불러오기
   async function fetchUsers() {
     try {
-      const response = await fetch(WORKER_LIST_USERS_API);
+      const response = await fetch(WORKER_LIST_USERS_API, {
+        headers: await workerHeaders()
+      });
       const data = await response.json();
 
       if (!response.ok) {
@@ -169,7 +195,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       filterAndRenderUsers();
     } catch (err) {
       console.error('회원 목록 조회 에러:', err);
-      userListContainer.innerHTML = `<div class="empty-state">${err.message}</div>`;
+      userListContainer.innerHTML = `<div class="empty-state">${escapeHtml(err.message || '회원 목록을 불러오지 못했습니다.')}</div>`;
     }
   }
 
@@ -222,27 +248,27 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     userListContainer.innerHTML = users.map(user => {
-      const userColor = user.color || '#38bdf8';
+      const userColor = safeUserColor(user.color);
       return `
         <div class="user-card" style="border-left: 4px solid ${userColor};">
           <div class="user-card-header">
             <div class="user-name-box">
-              <span class="user-name">${user.name || user.username || '이름 없음'}</span>
+              <span class="user-name">${escapeHtml(user.name || user.username || '이름 없음')}</span>
               <span class="role-badge ${user.role === 'admin' ? 'admin' : 'user'}">
                 ${user.role === 'admin' ? '관리자' : '회원'}
               </span>
             </div>
             <div style="display: flex; align-items: center; gap: 8px;">
-              <span class="status-badge">${user.status || '재직'}</span>
-              ${isAdmin ? `<button type="button" class="btn-card-edit" data-id="${user.id}">수정</button>` : ''}
+              <span class="status-badge">${escapeHtml(user.status || '재직')}</span>
+              ${isAdmin ? `<button type="button" class="btn-card-edit" data-id="${escapeHtml(user.id)}">수정</button>` : ''}
             </div>
           </div>
 
           <div class="user-details">
-            <div>근무지: <span>${user.work_location || '-'}</span></div>
-            <div>계약형태: <span>${user.contract_type || '-'}</span></div>
-            <div>연락처: <span>${user.phone || '-'}</span></div>
-            <div>입사일: <span>${user.hire_date ? user.hire_date.split('T')[0] : '-'}</span></div>
+            <div>근무지: <span>${escapeHtml(user.work_location || '-')}</span></div>
+            <div>계약형태: <span>${escapeHtml(user.contract_type || '-')}</span></div>
+            <div>연락처: <span>${escapeHtml(user.phone || '-')}</span></div>
+            <div>입사일: <span>${escapeHtml(user.hire_date ? user.hire_date.split('T')[0] : '-')}</span></div>
           </div>
         </div>
       `;
@@ -341,7 +367,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         } else {
           const response = await fetch(WORKER_CREATE_USER_API, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: await workerHeaders(true),
             body: JSON.stringify({
               username: username,
               name: username,
@@ -408,7 +434,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       try {
         const response = await fetch(`${WORKER_DELETE_USER_API}/${userId}`, {
           method: 'DELETE',
-          headers: { 'Content-Type': 'application/json' }
+          headers: await workerHeaders()
         });
 
         const result = await response.json();

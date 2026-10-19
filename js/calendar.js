@@ -156,6 +156,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     })[character]);
   }
 
+  function safeMemberColor(value) {
+    return typeof value === 'string' && /^#(?:[\da-f]{3}|[\da-f]{6})$/i.test(value)
+      ? value
+      : '#38bdf8';
+  }
+
   function matchesLocationFilter(location, checkedLocations) {
     const normalizedLocation = (location || '').toLowerCase();
     const selectedShifts = checkedLocations.filter(value => shiftFilterValues.includes(value));
@@ -268,7 +274,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             id: u.id,
             name: keyName,
             work_location: u.work_location || '',
-            color: u.color || '#38bdf8'
+            color: safeMemberColor(u.color)
           };
           if (keyName) userMap[keyName] = userInfo;
           if (u.id) userMap[u.id] = userInfo;
@@ -278,7 +284,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (vTargetUserId) {
           vTargetUserId.innerHTML = data.map(u => {
             const memberName = u.name || u.username;
-            return `<option value="${u.id}" data-name="${memberName}">${memberName}</option>`;
+            return `<option value="${escapeHtml(u.id)}" data-name="${escapeHtml(memberName)}">${escapeHtml(memberName)}</option>`;
           }).join('');
         }
       }
@@ -894,8 +900,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     let totalMonthCount = 0;
 
     statsGridContainer.innerHTML = targetMembers.map(member => {
-      const mName = member.name || member.username;
-      const mColor = member.color || '#38bdf8';
+      const mName = member.name || member.username || '이름 없음';
+      const mColor = safeMemberColor(member.color);
 
       const memberVacations = allVacations.filter(v => v.username === mName);
       totalMonthCount += memberVacations.length;
@@ -923,7 +929,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       return `
         <div class="stat-card" style="border-left: 3px solid ${mColor};">
           <div class="stat-card-top">
-            <div class="stat-name">${mName}</div>
+            <div class="stat-name">${escapeHtml(mName)}</div>
             <div style="display: flex; align-items: center; gap: 6px;">
               <div style="background: rgba(56,189,248,0.15); border: 1px solid rgba(56,189,248,0.3); padding: 2px 8px; border-radius: 8px; font-size: 13px; font-weight: 800; color: var(--primary);">
                 총 <span style="font-size: 15px;">${usageCount}</span>일
@@ -941,7 +947,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
           <div class="stat-dates">
             <span class="stat-dates-title">📅 사용일:</span>
-            <span class="stat-dates-list">${datesString}</span>
+            <span class="stat-dates-list">${escapeHtml(datesString)}</span>
           </div>
         </div>
       `;
@@ -1012,14 +1018,15 @@ document.addEventListener('DOMContentLoaded', async () => {
           <div class="cell-events">
             ${dayEvents.map(ev => {
               const userInfo = userMap[ev.user_id] || userMap[ev.username] || { color: '#38bdf8' };
-              const userColor = userInfo.color;
+              const userColor = safeMemberColor(userInfo.color);
+              const leaveTypeClass = ['휴무', '연차', '시간차'].includes(ev.leave_type) ? ev.leave_type : '';
               
               // ★ 수정: getLeaveIndicator 호출 시 userColor 전달
               const leaveIndicator = getLeaveIndicator(ev.leave_type, userColor);
               
               return `
-                <div class="event-pill ${ev.leave_type}" data-id="${ev.id}" title="${ev.username} (${ev.leave_type} -${ev.time_detail})" style="--event-color: ${userColor};">
-                  ${leaveIndicator}${ev.username}
+                <div class="event-pill ${leaveTypeClass}" data-id="${escapeHtml(ev.id)}" title="${escapeHtml(`${ev.username || '이름 없음'} (${ev.leave_type || '휴무'} -${ev.time_detail || '종일'})`)}" style="--event-color: ${userColor};">
+                  ${leaveIndicator}${escapeHtml(ev.username || '이름 없음')}
                 </div>
               `;
             }).join('')}
