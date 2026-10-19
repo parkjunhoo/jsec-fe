@@ -106,31 +106,31 @@
     .filter-heading span:first-child { color: #aabbd0; font-size: 11px; font-weight: 750; letter-spacing: 0.08em; }
     .filter-heading span:last-child { color: var(--muted); font-size: 11px; }
     .department-filters {
-      display: flex;
-      gap: 7px;
-      padding-bottom: 1px;
-      overflow-x: auto;
-      scrollbar-width: none;
-      -webkit-overflow-scrolling: touch;
+      position: relative;
     }
-    .department-filters::-webkit-scrollbar { display: none; }
     .department-filter {
-      min-height: 34px;
-      flex: 0 0 auto;
-      padding: 0 12px;
-      border: 1px solid var(--line);
-      border-radius: 18px;
-      background: rgba(11, 18, 32, 0.56);
-      color: #aabbd0;
-      font-size: 12px;
+      width: 100%;
+      min-height: 44px;
+      appearance: none;
+      padding: 0 42px 0 13px;
+      border: 1px solid rgba(190, 211, 239, 0.15);
+      border-radius: 11px;
+      outline: 0;
+      background: #0d1726;
+      color: var(--text);
+      font-size: 14px;
       cursor: pointer;
-      transition: background 140ms ease, border-color 140ms ease, color 140ms ease;
     }
-    .department-filter[aria-pressed="true"] {
-      border-color: rgba(114, 199, 255, 0.58);
-      background: rgba(56, 144, 199, 0.16);
-      color: #9bd8ff;
-      font-weight: 700;
+    .department-filter:focus { border-color: rgba(114, 199, 255, 0.7); box-shadow: 0 0 0 3px rgba(114, 199, 255, 0.09); }
+    .department-filter option { background: #121d2e; color: var(--text); }
+    .department-filter-chevron {
+      position: absolute;
+      top: 50%;
+      right: 15px;
+      color: var(--blue);
+      font-size: 12px;
+      pointer-events: none;
+      transform: translateY(-50%);
     }
     .directory-toolbar {
       display: flex;
@@ -150,19 +150,52 @@
       font-weight: 650;
       cursor: pointer;
     }
-    .contact-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+    .contact-list { display: grid; gap: 16px; }
+    .department-section {
+      min-width: 0;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: linear-gradient(155deg, rgba(18, 29, 46, 0.9), rgba(13, 22, 36, 0.94));
+    }
+    .department-section-header {
+      display: flex;
+      min-height: 60px;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 11px 15px;
+      border-bottom: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.018);
+    }
+    .department-section-title { display: flex; min-width: 0; align-items: center; gap: 10px; }
+    .department-index {
+      display: grid;
+      width: 32px;
+      height: 32px;
+      flex: 0 0 32px;
+      place-items: center;
+      border: 1px solid rgba(114, 199, 255, 0.16);
+      border-radius: 10px;
+      background: rgba(114, 199, 255, 0.08);
+      color: var(--blue);
+      font-size: 10px;
+      font-weight: 800;
+      font-variant-numeric: tabular-nums;
+    }
+    .department-section-title h2 { margin: 0; overflow: hidden; font-size: 15px; font-weight: 750; letter-spacing: -0.02em; text-overflow: ellipsis; white-space: nowrap; }
+    .department-section-count { flex: 0 0 auto; color: var(--muted); font-size: 11px; }
+    .department-contacts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 16px; padding: 0 15px; }
     .contact-card {
       display: flex;
       min-width: 0;
       align-items: center;
       gap: 12px;
-      padding: 14px;
-      border: 1px solid var(--line);
-      border-radius: 15px;
-      background: linear-gradient(145deg, rgba(23, 36, 56, 0.94), rgba(16, 27, 44, 0.95));
-      transition: border-color 150ms ease, transform 150ms ease;
+      min-height: 81px;
+      padding: 11px 2px;
+      border-bottom: 1px solid rgba(190, 211, 239, 0.075);
     }
-    .contact-card:hover { border-color: rgba(114, 199, 255, 0.27); transform: translateY(-1px); }
+    .contact-card:nth-last-child(-n + 2) { border-bottom-color: transparent; }
     .person-avatar {
       display: grid;
       width: 44px;
@@ -364,8 +397,14 @@
       .search-input { height: 48px; font-size: 16px; }
       .filter-heading { margin-top: 15px; }
       .directory-toolbar { margin-top: 15px; }
-      .contact-list { grid-template-columns: 1fr; gap: 8px; }
-      .contact-card { min-height: 78px; gap: 9px; padding: 11px 10px; }
+      .contact-list { gap: 12px; }
+      .department-section { border-radius: 14px; }
+      .department-section-header { min-height: 55px; padding: 9px 12px; }
+      .department-section-title h2 { font-size: 14px; }
+      .department-contacts { grid-template-columns: 1fr; padding: 0 12px; }
+      .contact-card { min-height: 75px; gap: 9px; }
+      .contact-card:nth-last-child(-n + 2) { border-bottom-color: rgba(190, 211, 239, 0.075); }
+      .contact-card:last-child { border-bottom-color: transparent; }
       .person-avatar { width: 42px; height: 42px; flex-basis: 42px; border-radius: 13px; }
       .contact-actions { gap: 4px; }
       .contact-edit, .contact-delete { width: 32px; height: 34px; }
@@ -397,8 +436,11 @@
         <span>부서별 보기</span>
         <span id="departmentCount">불러오는 중</span>
       </div>
-      <div class="department-filters" id="departmentFilters" role="group" aria-label="부서 필터">
-        <button class="department-filter" type="button" data-department="" aria-pressed="true">전체</button>
+      <div class="department-filters">
+        <select class="department-filter" id="departmentFilters" aria-label="부서 선택">
+          <option value="">전체 부서</option>
+        </select>
+        <span class="department-filter-chevron" aria-hidden="true">▼</span>
       </div>
     </section>
 
@@ -510,30 +552,25 @@
         const departments = [...new Set(contacts.map(contact => contact.department))].sort(collator.compare);
         if (selectedDepartment && !departments.includes(selectedDepartment)) selectedDepartment = '';
         departmentFilters.replaceChildren();
-        const all = document.createElement('button');
-        all.className = 'department-filter';
-        all.type = 'button';
-        all.dataset.department = '';
-        all.setAttribute('aria-pressed', String(selectedDepartment === ''));
-        all.textContent = '전체';
-        departmentFilters.append(all);
+        const allOption = document.createElement('option');
+        allOption.value = '';
+        allOption.textContent = `전체 부서 · ${contacts.length}명`;
+        departmentFilters.append(allOption);
 
         departments.forEach(department => {
-          const button = document.createElement('button');
-          button.className = 'department-filter';
-          button.type = 'button';
-          button.dataset.department = department;
-          button.setAttribute('aria-pressed', String(selectedDepartment === department));
-          button.textContent = department;
-          departmentFilters.append(button);
+          const option = document.createElement('option');
+          option.value = department;
+          option.textContent = `${department} · ${contacts.filter(contact => contact.department === department).length}명`;
+          departmentFilters.append(option);
         });
+        departmentFilters.value = selectedDepartment;
         departmentSuggestions.replaceChildren();
         departments.forEach(department => {
           const option = document.createElement('option');
           option.value = department;
           departmentSuggestions.append(option);
         });
-        departmentCount.textContent = `${departments.length}개 부서`;
+        departmentCount.textContent = `${departments.length}개 부서 · 선택해 이동`;
       }
 
       function makeContactCard(contact) {
@@ -653,10 +690,32 @@
           if (!groups.has(contact.department)) groups.set(contact.department, []);
           groups.get(contact.department).push(contact);
         });
-        [...groups.keys()].sort(collator.compare).forEach(department => {
+        [...groups.keys()].sort(collator.compare).forEach((department, index) => {
+          const section = document.createElement('section');
+          section.className = 'department-section';
+          const header = document.createElement('header');
+          header.className = 'department-section-header';
+          const titleGroup = document.createElement('div');
+          titleGroup.className = 'department-section-title';
+          const number = document.createElement('span');
+          number.className = 'department-index';
+          number.setAttribute('aria-hidden', 'true');
+          number.textContent = String(index + 1).padStart(2, '0');
+          const heading = document.createElement('h2');
+          heading.textContent = department;
+          titleGroup.append(number, heading);
+          const countLabel = document.createElement('span');
+          countLabel.className = 'department-section-count';
+          countLabel.textContent = `${groups.get(department).length}명`;
+          header.append(titleGroup, countLabel);
+
+          const list = document.createElement('div');
+          list.className = 'department-contacts';
           groups.get(department)
             .sort((a, b) => collator.compare(a.name, b.name) || collator.compare(a.position || '', b.position || ''))
-            .forEach(contact => contactList.append(makeContactCard(contact)));
+            .forEach(contact => list.append(makeContactCard(contact)));
+          section.append(header, list);
+          contactList.append(section);
         });
       }
 
@@ -790,17 +849,15 @@
         searchInput.focus();
         renderContacts();
       });
-      departmentFilters.addEventListener('click', event => {
-        const button = event.target.closest('[data-department]');
-        if (!button) return;
-        selectedDepartment = button.dataset.department;
-        renderDepartmentFilters();
+      departmentFilters.addEventListener('change', () => {
+        selectedDepartment = departmentFilters.value;
         renderContacts();
       });
       resetButton.addEventListener('click', () => {
         selectedDepartment = '';
         searchInput.value = '';
         clearSearchButton.hidden = true;
+        departmentFilters.value = '';
         renderDepartmentFilters();
         renderContacts();
       });
