@@ -109,10 +109,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     isAdmin = profile?.role === 'admin';
 
     if (!isAdmin) {
-      teamMembers = [{
+      const currentMember = {
         id: session.user.id,
         name: profile?.name || profile?.username || '내 수당'
-      }];
+      };
+      teamMembers = [currentMember];
+      userFilter.hidden = true;
+      targetControl.hidden = true;
+      targetUser.innerHTML = `<option value="${escapeHtml(currentMember.id)}">${escapeHtml(currentMember.name)}</option>`;
+      targetUser.value = currentMember.id;
       return;
     }
 
@@ -132,6 +137,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     ).join('');
     userFilter.innerHTML = '<option value="">전체 직원</option>' + options;
     targetUser.innerHTML = options;
+    targetUser.value = session.user.id;
   }
 
   async function loadEntries() {
@@ -322,21 +328,53 @@ document.addEventListener('DOMContentLoaded', async () => {
     return availability.filter(entry => entry.work_date === date);
   }
 
+  function getAllowanceOrdinals() {
+    const ordinalBySlot = new Map();
+    const ordinalEntries = availability.slice()
+      .sort((a, b) => a.work_date.localeCompare(b.work_date)
+        || (Number(a.slot_no) || 0) - (Number(b.slot_no) || 0));
+    const countsByMemberAndType = new Map();
+    ordinalEntries.forEach(entry => {
+      const memberKey = `${entry.user_id || session.user.id}:${entry.type_code}`;
+      const ordinal = (countsByMemberAndType.get(memberKey) || 0) + 1;
+      countsByMemberAndType.set(memberKey, ordinal);
+      const slotKey = `${entry.work_date}:${entry.type_code}:${entry.shift || ''}:${entry.slot_no || ''}`;
+      ordinalBySlot.set(slotKey, ordinal);
+    });
+    return ordinalBySlot;
+  }
+
+  function getAllowanceSlotKey(entry) {
+    return `${entry.work_date}:${entry.type_code}:${entry.shift || ''}:${entry.slot_no || ''}`;
+  }
+
   function renderCalendar() {
     const { year, month, days } = getMonthRange(monthInput.value);
     const firstDay = new Date(year, month - 1, 1).getDay();
     calendarTitle.textContent = `${year}년 ${month}월`;
+    const ordinalBySlot = getAllowanceOrdinals();
     const weekdays = ['일', '월', '화', '수', '목', '금', '토']
       .map(day => `<div class="allowance-weekday">${day}</div>`).join('');
     const cells = Array.from({ length: firstDay }, () => '<div aria-hidden="true"></div>');
     for (let day = 1; day <= days; day += 1) {
       const date = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
       const dayEntries = getEntriesForDate(date);
-      const shuttleCount = dayEntries.filter(entry => entry.type_code === 'caddie_shuttle').length;
-      const ballCount = dayEntries.filter(entry => entry.type_code === 'ball_pickup').length;
+      const getNames = typeCode => dayEntries
+        .filter(entry => entry.type_code === typeCode)
+        .map(entry => {
+          const name = isAdmin
+            ? (teamMembers.find(user => user.id === entry.user_id)?.name || entry.username || '직원')
+            : (entry.user_id === session.user.id
+              ? (profile?.name || profile?.username || entry.username || '나')
+              : (entry.username || '직원'));
+          const ordinal = ordinalBySlot.get(getAllowanceSlotKey(entry));
+          return `${name} (${ordinal || '-'})`;
+        });
+      const shuttleNames = getNames('caddie_shuttle');
+      const ballNames = getNames('ball_pickup');
       const status = [
-        shuttleCount ? `셔틀 ${shuttleCount}/2` : '',
-        ballCount ? `볼수거 ${ballCount}/2` : ''
+        shuttleNames.length ? `셔틀: ${shuttleNames.map(escapeHtml).join(', ')}` : '',
+        ballNames.length ? `볼수거: ${ballNames.map(escapeHtml).join(', ')}` : ''
       ].filter(Boolean).map(text => `<span>${text}</span>`).join('');
       const classes = [
         'allowance-day-cell',
@@ -362,6 +400,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const [year, month, day] = date.split('-').map(Number);
     selectedDateHeading.textContent = `${year}년 ${month}월 ${day}일 수당 체크`;
     const records = getEntriesForDate(date);
+    const ordinalBySlot = getAllowanceOrdinals();
     const slots = [
       { type: 'caddie_shuttle', shift: 'morning', title: '오전 셔틀', slot: null },
       { type: 'caddie_shuttle', shift: 'afternoon', title: '오후 셔틀', slot: null },
@@ -383,7 +422,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         data-type="${slot.type}" data-shift="${slot.shift || ''}" data-slot="${slot.slot || ''}">${isAdmin ? '선택 직원 등록' : '내가 하기'}</button>`;
       if (record) {
         const assignedMember = teamMembers.find(user => user.id === record.user_id);
-        status = isAdmin ? (assignedMember?.name || '직원') : '등록 완료';
+        const name = isAdmin
+          ? (assignedMember?.name || record.username || '직원')
+          : (record.user_id === session.user.id
+            ? (profile?.name || profile?.username || record.username || '나')
+            : (record.username || '직원'));
+        const ordinal = ordinalBySlot.get(getAllowanceSlotKey(record));
+        status = `${name} (${ordinal || '-'})`;
         if (isAdmin || ownEntry) {
           const entryId = isAdmin ? record.id : ownEntry.id;
           action = `<button class="allowance-slot-button delete" type="button" data-action="remove" data-id="${escapeHtml(entryId)}">취소</button>`;
