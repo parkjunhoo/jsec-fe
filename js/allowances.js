@@ -24,8 +24,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   const daySlots = document.getElementById('allowanceDaySlots');
   const targetControl = document.getElementById('entryTargetControl');
   const targetUser = document.getElementById('entryTargetUser');
-  const previousMonthButton = document.getElementById('entryPrevMonth');
-  const nextMonthButton = document.getElementById('entryNextMonth');
 
   let profile = null;
   let isAdmin = false;
@@ -1086,20 +1084,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     render();
   }));
   exportButton.addEventListener('click', exportWorkbook);
-  previousMonthButton.addEventListener('click', async () => {
-    try {
-      await moveMonth(-1);
-    } catch (error) {
-      setError(`수당 정보를 불러오지 못했습니다: ${error.message}`);
-    }
-  });
-  nextMonthButton.addEventListener('click', async () => {
-    try {
-      await moveMonth(1);
-    } catch (error) {
-      setError(`수당 정보를 불러오지 못했습니다: ${error.message}`);
-    }
-  });
   categoryCalendarHead.addEventListener('click', async event => {
     const button = event.target.closest('[data-month-offset]');
     if (!button) return;
