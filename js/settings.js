@@ -11,8 +11,79 @@ document.addEventListener('DOMContentLoaded', async () => {
   const passwordInput = document.getElementById('settingPassword');
   const settingsForm = document.getElementById('settingsForm');
   const saveBtn = document.getElementById('saveBtn');
+  const pushNotificationToggle = document.getElementById('pushNotificationToggle');
+  const pushPreferenceStatus = document.getElementById('pushPreferenceStatus');
+  const PUSH_PREFERENCE_API = 'https://jsec-serverless.adobephotoshop.workers.dev/api/push/preference';
 
   let currentUserId = session.user.id;
+  let pushToken = '';
+
+  function setPushPreferenceStatus(message) {
+    if (pushPreferenceStatus) pushPreferenceStatus.textContent = message;
+  }
+
+  async function loadPushPreference(token) {
+    if (!token || !pushNotificationToggle) return;
+    pushToken = token;
+    pushNotificationToggle.disabled = true;
+    setPushPreferenceStatus('알림 설정을 불러오는 중...');
+
+    try {
+      const response = await fetch(
+        `${PUSH_PREFERENCE_API}?token=${encodeURIComponent(token)}`,
+        { headers: { Authorization: `Bearer ${session.access_token}` } }
+      );
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(result.error || `HTTP ${response.status}`);
+
+      pushNotificationToggle.checked = result.enabled;
+      pushNotificationToggle.disabled = false;
+      setPushPreferenceStatus(result.enabled ? '알림을 받고 있습니다.' : '알림이 꺼져 있습니다.');
+    } catch (error) {
+      setPushPreferenceStatus('알림 설정을 불러오지 못했습니다.');
+      await Swal.fire({ icon: 'error', text: `푸시 설정 조회 실패: ${error.message}` });
+    }
+  }
+
+  if (pushNotificationToggle) {
+    pushNotificationToggle.addEventListener('change', async () => {
+      const enabled = pushNotificationToggle.checked;
+      pushNotificationToggle.disabled = true;
+      setPushPreferenceStatus('설정을 저장하는 중...');
+
+      try {
+        const response = await fetch(PUSH_PREFERENCE_API, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${session.access_token}`
+          },
+          body: JSON.stringify({ token: pushToken, enabled })
+        });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(result.error || `HTTP ${response.status}`);
+
+        setPushPreferenceStatus(enabled ? '알림을 받고 있습니다.' : '알림이 꺼져 있습니다.');
+      } catch (error) {
+        pushNotificationToggle.checked = !enabled;
+        setPushPreferenceStatus('설정을 저장하지 못했습니다.');
+        await Swal.fire({ icon: 'error', text: `푸시 설정 저장 실패: ${error.message}` });
+      } finally {
+        pushNotificationToggle.disabled = false;
+      }
+    });
+  }
+
+  window.addEventListener('native-push-token-ready', event => {
+    loadPushPreference(event.detail);
+  });
+  const existingPushToken = window.getNativePushToken && window.getNativePushToken();
+  if (existingPushToken) {
+    await loadPushPreference(existingPushToken);
+  } else {
+    if (pushNotificationToggle) pushNotificationToggle.disabled = true;
+    setPushPreferenceStatus('Android 앱에서 이 페이지를 열면 설정할 수 있습니다.');
+  }
 
   // 2. 기존 회원 정보 불러오기
   async function loadMyProfile() {

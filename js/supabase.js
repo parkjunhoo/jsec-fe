@@ -35,16 +35,20 @@ async function syncNativePushToken(session) {
   }
 }
 
-window.onNativePushToken = token => {
+window.onNativePushToken = async token => {
   if (typeof token !== 'string' || !token) return;
   nativePushToken = token;
-  supabaseClient.auth.getSession()
-    .then(({ data, error }) => {
-      if (error) throw error;
-      return syncNativePushToken(data.session);
-    })
-    .catch(error => console.error('푸시 세션 확인 오류:', error));
+  try {
+    const { data, error } = await supabaseClient.auth.getSession();
+    if (error) throw error;
+    await syncNativePushToken(data.session);
+    window.dispatchEvent(new CustomEvent('native-push-token-ready', { detail: token }));
+  } catch (error) {
+    console.error('푸시 세션 확인 오류:', error);
+  }
 };
+
+window.getNativePushToken = () => nativePushToken;
 
 supabaseClient.auth.onAuthStateChange((_event, session) => {
   if (session) {
