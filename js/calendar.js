@@ -968,6 +968,46 @@ document.addEventListener('DOMContentLoaded', async () => {
       setCellValue(`${numberToColumn(day + 2)}${row}`, value, typeof value === 'string');
     });
 
+    const calcChainRelationship = Array.from(relationshipsXml.getElementsByTagNameNS(
+      'http://schemas.openxmlformats.org/package/2006/relationships',
+      'Relationship'
+    )).find(item => item.getAttribute('Type').endsWith('/calcChain'));
+    if (calcChainRelationship) {
+      const calcChainTarget = calcChainRelationship.getAttribute('Target');
+      const calcChainPathParts = (calcChainTarget.startsWith('/')
+        ? calcChainTarget.slice(1)
+        : `xl/${calcChainTarget}`).split('/');
+      const normalizedCalcChainPath = [];
+      calcChainPathParts.forEach(part => {
+        if (part === '..') normalizedCalcChainPath.pop();
+        else if (part !== '.' && part !== '') normalizedCalcChainPath.push(part);
+      });
+      const calcChainPath = normalizedCalcChainPath.join('/');
+      const contentTypesPath = '[Content_Types].xml';
+      const contentTypesFile = zip.file(contentTypesPath);
+      if (!contentTypesFile) throw new Error('엑셀 양식의 콘텐츠 형식 정보를 찾을 수 없습니다.');
+
+      const contentTypesXml = new DOMParser().parseFromString(
+        await contentTypesFile.async('text'),
+        'application/xml'
+      );
+      if (contentTypesXml.querySelector('parsererror')) {
+        throw new Error('엑셀 양식의 콘텐츠 형식 정보를 읽지 못했습니다.');
+      }
+
+      const contentTypesNamespace = 'http://schemas.openxmlformats.org/package/2006/content-types';
+      const calcChainOverride = Array.from(contentTypesXml.getElementsByTagNameNS(
+        contentTypesNamespace,
+        'Override'
+      )).find(item => item.getAttribute('PartName') === `/${calcChainPath}`);
+      if (calcChainOverride) calcChainOverride.parentNode.removeChild(calcChainOverride);
+
+      calcChainRelationship.parentNode.removeChild(calcChainRelationship);
+      zip.remove(calcChainPath);
+      zip.file(contentTypesPath, new XMLSerializer().serializeToString(contentTypesXml));
+      zip.file(relationshipsPath, new XMLSerializer().serializeToString(relationshipsXml));
+    }
+
     const calculation = workbookXml.getElementsByTagNameNS(spreadsheetNamespace, 'calcPr')[0]
       || workbookXml.createElementNS(spreadsheetNamespace, 'calcPr');
     calculation.setAttribute('calcMode', 'auto');
