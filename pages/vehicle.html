@@ -103,6 +103,36 @@
       gap: 10px;
     }
 
+    #prefixTabMenu {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: flex-start;
+      gap: 6px;
+      max-width: 100%;
+      margin-bottom: 16px;
+      padding: 8px;
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+    }
+
+    #prefixTabMenu .tab-btn {
+      display: inline-flex;
+      flex: 0 0 40px;
+      align-items: center;
+      justify-content: center;
+      width: 40px;
+      min-width: 40px;
+      height: 40px;
+      padding: 0;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 650;
+      cursor: pointer;
+      transition: background-color 150ms ease, color 150ms ease, border-color 150ms ease;
+    }
+
     .empty-state {
       text-align: center;
       padding: 50px 0;

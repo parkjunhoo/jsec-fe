@@ -82,16 +82,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (!tabContainer) {
       tabContainer = document.createElement('div');
       tabContainer.id = 'prefixTabMenu';
-      tabContainer.style.cssText = `
-        display: flex;
-        flex-wrap: wrap;
-        gap: 6px;
-        margin-bottom: 16px;
-        background: rgba(30, 41, 59, 0.5);
-        padding: 8px;
-        border-radius: 12px;
-        border: 1px solid rgba(255, 255, 255, 0.08);
-      `;
 
       const searchBox = document.querySelector('.search-box');
       if (searchBox) {
@@ -118,16 +108,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         : 'background: rgba(15, 23, 42, 0.6); color: #94a3b8; border-color: rgba(255, 255, 255, 0.1);';
 
       return `
-        <button type="button" data-prefix="${p}" class="tab-btn" style="
-          flex: 1;
-          min-width: 36px;
-          height: 36px;
-          border-radius: 8px;
+        <button type="button" data-prefix="${p}" class="tab-btn" aria-pressed="${isActive}" style="
           border: 1px solid;
-          font-size: 13px;
-          font-weight: 600;
-          cursor: pointer;
-          transition: all 0.2s;
           ${activeStyle}
         ">${label}</button>
       `;
