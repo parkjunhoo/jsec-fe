@@ -94,7 +94,7 @@
       .allowance-controls .allowance-control:first-child { flex: 1; min-width: 132px; }
       .allowance-heading h1 { font-size: 22px; }
       .allowance-table { min-width: 700px; }
-      .allowance-table.summary-table { min-width: 660px; }
+      .allowance-table.summary-table { min-width: 540px; }
       .allowance-day-cell { min-height: 72px; padding: 4px 3px; }
       .allowance-day-panel-head { align-items: flex-start; }
     }
@@ -130,7 +130,6 @@
       <button class="allowance-tab" id="tab-journal" role="tab" type="button" data-tab="journal" aria-selected="true">수당 일지</button>
       <button class="allowance-tab" id="tab-ball_pickup" role="tab" type="button" data-tab="ball_pickup" aria-selected="false">연습장 볼수거</button>
       <button class="allowance-tab" id="tab-caddie_shuttle" role="tab" type="button" data-tab="caddie_shuttle" aria-selected="false">캐디 셔틀</button>
-      <button class="allowance-tab" id="tab-settlement" role="tab" type="button" data-tab="settlement" aria-selected="false">월말 정산</button>
       <button class="allowance-tab" id="tab-entry" role="tab" type="button" data-tab="entry" aria-selected="false">수당 입력</button>
     </nav>
 
@@ -172,10 +171,11 @@
   <script src="/lib/sw2/sweetalert2.min.js"></script>
   <script>window.Swal = window.Sweetalert2;</script>
   <script src="/lib/sheetjs/xlsx.full.min.js"></script>
+  <script src="/lib/jszip/jszip.min.js"></script>
   <script src="/js/app-loading.js"></script>
   <script src="/js/supabase.js"></script>
   <script src="/js/user-preferences.js"></script>
   <script src="/js/navbar.js"></script>
-  <script src="/js/allowances.js?v=2026102007"></script>
+  <script src="/js/allowances.js?v=2026102008"></script>
 </body>
 </html>

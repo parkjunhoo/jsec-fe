@@ -218,36 +218,35 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (activeTab === 'ball_pickup') {
       return [
         { label: '이름', value: row => row.name },
-        { label: '횟수', value: row => `${row.countByType.ball_pickup || 0}회` },
-        { label: '지급액', value: row => formatMoney(row.amountByType.ball_pickup || 0), amount: true }
+        {
+          label: '연습장 볼수거',
+          value: row => `${row.countByType.ball_pickup || 0}회 (${formatMoney(row.amountByType.ball_pickup || 0)})`
+        }
       ];
     }
     if (activeTab === 'caddie_shuttle') {
       return [
         { label: '이름', value: row => row.name },
-        { label: '오전', value: row => `${row.countByShift.caddie_shuttle_morning || 0}회` },
-        { label: '오전 지급액', value: row => formatMoney(row.amountByShift.caddie_shuttle_morning || 0), amount: true },
-        { label: '오후', value: row => `${row.countByShift.caddie_shuttle_afternoon || 0}회` },
-        { label: '오후 지급액', value: row => formatMoney(row.amountByShift.caddie_shuttle_afternoon || 0), amount: true },
-        { label: '합계', value: row => formatMoney(row.amountByType.caddie_shuttle || 0), amount: true }
+        {
+          label: '캐디 셔틀',
+          value: row => `${(row.countByShift.caddie_shuttle_morning || 0)
+            + (row.countByShift.caddie_shuttle_afternoon || 0)}회 (${formatMoney(row.amountByType.caddie_shuttle || 0)})`
+        }
       ];
     }
 
-    const columns = [{ label: '이름', value: row => row.name }];
-    allowanceTypes.forEach(type => {
-      if (type.shift_options?.length) {
-        type.shift_options.forEach(shift => {
-          const shiftKey = `${type.code}_${shift}`;
-          columns.push({ label: `${type.label} ${shiftLabel(shift)}`, value: row => `${row.countByShift[shiftKey] || 0}회` });
-          columns.push({ label: `${shiftLabel(shift)} 지급액`, value: row => formatMoney(row.amountByShift[shiftKey] || 0), amount: true });
-        });
-      } else {
-        columns.push({ label: `${type.label} 횟수`, value: row => `${row.countByType[type.code] || 0}회` });
-        columns.push({ label: `${type.label} 지급액`, value: row => formatMoney(row.amountByType[type.code] || 0), amount: true });
+    return [
+      { label: '이름', value: row => row.name },
+      {
+        label: '연습장 볼수거',
+        value: row => `${row.countByType.ball_pickup || 0}회 (${formatMoney(row.amountByType.ball_pickup || 0)})`
+      },
+      {
+        label: '캐디 셔틀',
+        value: row => `${(row.countByShift.caddie_shuttle_morning || 0)
+          + (row.countByShift.caddie_shuttle_afternoon || 0)}회 (${formatMoney(row.amountByType.caddie_shuttle || 0)})`
       }
-    });
-    columns.push({ label: '총 지급액', value: row => formatMoney(row.totalAmount), amount: true });
-    return columns;
+    ];
   }
 
   function renderSummary(sourceEntries) {
@@ -543,6 +542,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         })
       ]);
     }
+    rows.push(['합계', '', ...members.map(() => '')]);
     return rows;
   }
 
@@ -568,10 +568,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         })
       ]);
     }
-    const totals = columns.map(user => entries
-      .filter(entry => entry.type_code === 'caddie_shuttle' && entry.user_id === user.id && entry.shift === user.shift)
-      .reduce((sum, entry) => sum + (Number(entry.unit_amount) || 0), 0));
-    rows.push(['금액', ...totals]);
+    rows.push(['금액', ...columns.map(() => '')]);
     return rows;
   }
 
@@ -585,9 +582,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       ['셔틀운행', ...members.map(user => entries
         .filter(entry => entry.user_id === user.id && entry.type_code === 'caddie_shuttle')
         .reduce((sum, entry) => sum + (Number(entry.unit_amount) || 0), 0))],
-      ['합계', ...members.map(user => entries
-        .filter(entry => entry.user_id === user.id)
-        .reduce((sum, entry) => sum + (Number(entry.unit_amount) || 0), 0))]
+      ['합계', ...members.map(() => '')]
     ];
     return rows;
   }
@@ -598,18 +593,297 @@ document.addEventListener('DOMContentLoaded', async () => {
     return XLSX.read(await response.arrayBuffer(), { type: 'array' });
   }
 
-  function buildTemplateSheet(templateWorkbook, rows, sheetName) {
-    const templateSheetName = templateWorkbook.SheetNames[0];
-    if (!templateSheetName) throw new Error('엑셀 템플릿에 시트가 없습니다.');
+  function columnName(index) {
+    let column = '';
+    while (index > 0) {
+      const remainder = (index - 1) % 26;
+      column = String.fromCharCode(65 + remainder) + column;
+      index = Math.floor((index - 1) / 26);
+    }
+    return column;
+  }
+
+  function setFormula(sheet, address, formula, value) {
+    sheet[address] = { t: 'n', f: formula, v: value };
+    const range = XLSX.utils.decode_range(sheet['!ref']);
+    const cell = XLSX.utils.decode_cell(address);
+    range.e.r = Math.max(range.e.r, cell.r);
+    range.e.c = Math.max(range.e.c, cell.c);
+    sheet['!ref'] = XLSX.utils.encode_range(range);
+  }
+
+  function addTitleMerge(sheet, columnCount) {
+    sheet['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: Math.max(0, columnCount - 1) } }];
+  }
+
+  function createStyledSheet(rows, columnCount, widths, heights) {
     const sheet = XLSX.utils.aoa_to_sheet(rows);
-    delete templateWorkbook.Sheets[templateSheetName];
-    templateWorkbook.Sheets[sheetName] = sheet;
-    templateWorkbook.SheetNames[0] = sheetName;
-    return templateWorkbook.Sheets[sheetName];
+    addTitleMerge(sheet, columnCount);
+    sheet['!cols'] = widths.map(width => ({ wch: width }));
+    sheet['!rows'] = heights;
+    rows.forEach((row, rowIndex) => {
+      for (let columnIndex = 0; columnIndex < columnCount; columnIndex += 1) {
+        const address = `${columnName(columnIndex + 1)}${rowIndex + 1}`;
+        if (!sheet[address]) sheet[address] = { t: 's', v: '' };
+      }
+    });
+    sheet['!ref'] = `A1:${columnName(columnCount)}${rows.length}`;
+    return sheet;
+  }
+
+  function configureFormulas(workbookSheets, monthParts, names, membersByType) {
+    const golfSheet = workbookSheets.golf;
+    const golfTotalRow = monthParts.days + 4;
+    membersByType.golf.forEach((member, index) => {
+      const letter = columnName(index + 3);
+      setFormula(golfSheet, `${letter}${golfTotalRow}`, `SUM(${letter}4:${letter}${golfTotalRow - 1})`,
+        entries.filter(entry => entry.type_code === 'ball_pickup' && entry.user_id === member.id)
+          .reduce((sum, entry) => sum + (Number(entry.unit_amount) || 0), 0));
+    });
+
+    const shuttleSheet = workbookSheets.shuttle;
+    const shuttleTotalRow = monthParts.days + 5;
+    membersByType.shuttle.forEach((member, index) => ['morning', 'afternoon'].forEach((shift, shiftIndex) => {
+      const letter = columnName(index * 2 + shiftIndex + 2);
+      const total = entries.filter(entry => entry.type_code === 'caddie_shuttle'
+        && entry.user_id === member.id && entry.shift === shift)
+        .reduce((sum, entry) => sum + (Number(entry.unit_amount) || 0), 0);
+      setFormula(shuttleSheet, `${letter}${shuttleTotalRow}`,
+        `SUM(${letter}5:${letter}${shuttleTotalRow - 1})`, total);
+    }));
+
+    const monthSheet = workbookSheets.month;
+    const golfName = names.golf.replace(/'/g, "''");
+    const shuttleName = names.shuttle.replace(/'/g, "''");
+    membersByType.month.forEach((member, index) => {
+      const column = columnName(index + 2);
+      const golfTotal = entries.filter(entry => entry.type_code === 'ball_pickup' && entry.user_id === member?.id)
+        .reduce((sum, entry) => sum + (Number(entry.unit_amount) || 0), 0);
+      const shuttleTotal = entries.filter(entry => entry.type_code === 'caddie_shuttle' && entry.user_id === member?.id)
+        .reduce((sum, entry) => sum + (Number(entry.unit_amount) || 0), 0);
+      const golfIndex = membersByType.golf.findIndex(candidate => candidate.id === member.id);
+      const shuttleIndex = membersByType.shuttle.findIndex(candidate => candidate.id === member.id);
+      const golfFormula = golfIndex < 0 ? '0' : `'${golfName}'!${columnName(golfIndex + 3)}${golfTotalRow}`;
+      const shuttleFormula = shuttleIndex < 0 ? '0' : `SUM('${shuttleName}'!${columnName(shuttleIndex * 2 + 2)}${shuttleTotalRow}:${columnName(shuttleIndex * 2 + 3)}${shuttleTotalRow})`;
+      setFormula(monthSheet, `${column}3`, golfFormula, golfTotal);
+      setFormula(monthSheet, `${column}4`, shuttleFormula, shuttleTotal);
+      setFormula(monthSheet, `${column}5`, `SUM(${column}3:${column}4)`, golfTotal + shuttleTotal);
+    });
+  }
+
+  function applyPrintSettings(zip, workbookSheetNames, sheetRanges) {
+    const spreadsheetNamespace = 'http://schemas.openxmlformats.org/spreadsheetml/2006/main';
+    const workbookPath = 'xl/workbook.xml';
+    return Promise.all(workbookSheetNames.map(async (sheetName, index) => {
+      const worksheetPath = `xl/worksheets/sheet${index + 1}.xml`;
+      const worksheetFile = zip.file(worksheetPath);
+      if (!worksheetFile) throw new Error(`${sheetName} 시트 파일을 찾을 수 없습니다.`);
+      const worksheetXml = new DOMParser().parseFromString(await worksheetFile.async('text'), 'application/xml');
+      if (worksheetXml.querySelector('parsererror')) throw new Error(`${sheetName} 시트 서식을 적용하지 못했습니다.`);
+
+      const sheetData = worksheetXml.getElementsByTagNameNS(spreadsheetNamespace, 'sheetData')[0];
+      if (!sheetData) throw new Error(`${sheetName} 시트에 데이터가 없습니다.`);
+      const titleRow = worksheetXml.getElementsByTagNameNS(spreadsheetNamespace, 'row')[0];
+      if (titleRow) {
+        titleRow.setAttribute('ht', '30');
+        titleRow.setAttribute('customHeight', '1');
+      }
+      const rows = Array.from(worksheetXml.getElementsByTagNameNS(spreadsheetNamespace, 'row'));
+      rows.forEach(row => {
+        const rowNumber = Number(row.getAttribute('r'));
+        if (rowNumber > 1 && !row.hasAttribute('ht')) {
+          row.setAttribute('ht', rowNumber === 2 ? '8' : '22');
+          row.setAttribute('customHeight', '1');
+        }
+        Array.from(row.getElementsByTagNameNS(spreadsheetNamespace, 'c')).forEach(cell => {
+          const match = cell.getAttribute('r').match(/^([A-Z]+)(\d+)$/);
+          if (!match) return;
+          const col = match[1];
+          const rowIndex = Number(match[2]);
+          let style = 5;
+          if (rowIndex === 1) style = 1;
+          else if (index === 0 && rowIndex === 3) style = 2;
+          else if (index === 1 && rowIndex === 3) style = 2;
+          else if (index === 1 && rowIndex === 4) style = 3;
+          else if (index === 2 && rowIndex === 2) style = col === 'A' ? 3 : 2;
+          else if (index === 2 && (rowIndex === 3 || rowIndex === 4) && col === 'A') style = 3;
+          else if (rowIndex === sheetRanges[index].totalRow) style = col === 'A' || col === 'B' ? 4 : 8;
+          else if ((index === 0 || index === 1) && col === 'A') style = 6;
+          else if (index === 2 && col !== 'A' && rowIndex >= 3) style = 7;
+          else if ((index === 0 && rowIndex > 3 && col !== 'A' && col !== 'B')
+            || (index === 1 && rowIndex > 4 && col !== 'A')) style = 7;
+          cell.setAttribute('s', String(style));
+        });
+      });
+
+      let mergeCells = worksheetXml.getElementsByTagNameNS(spreadsheetNamespace, 'mergeCells')[0];
+      if (!mergeCells) {
+        mergeCells = worksheetXml.createElementNS(spreadsheetNamespace, 'mergeCells');
+        worksheetXml.documentElement.insertBefore(mergeCells, sheetData.nextSibling);
+      }
+      const mergeCell = mergeCells.getElementsByTagNameNS(spreadsheetNamespace, 'mergeCell')[0]
+        || worksheetXml.createElementNS(spreadsheetNamespace, 'mergeCell');
+      mergeCell.setAttribute('ref', `A1:${sheetRanges[index].lastColumn}1`);
+      while (mergeCells.firstChild) mergeCells.removeChild(mergeCells.firstChild);
+      mergeCells.appendChild(mergeCell);
+      mergeCells.setAttribute('count', '1');
+
+      let sheetPr = worksheetXml.getElementsByTagNameNS(spreadsheetNamespace, 'sheetPr')[0];
+      if (!sheetPr) {
+        sheetPr = worksheetXml.createElementNS(spreadsheetNamespace, 'sheetPr');
+        worksheetXml.documentElement.insertBefore(sheetPr, worksheetXml.documentElement.firstChild);
+      }
+      let pageSetupProperties = sheetPr.getElementsByTagNameNS(spreadsheetNamespace, 'pageSetUpPr')[0];
+      if (!pageSetupProperties) {
+        pageSetupProperties = worksheetXml.createElementNS(spreadsheetNamespace, 'pageSetUpPr');
+        sheetPr.appendChild(pageSetupProperties);
+      }
+      pageSetupProperties.setAttribute('fitToPage', '1');
+      ['printOptions', 'pageMargins', 'pageSetup'].forEach(tag => {
+        const existing = worksheetXml.getElementsByTagNameNS(spreadsheetNamespace, tag)[0];
+        if (existing) existing.parentNode.removeChild(existing);
+      });
+      const ignoredErrors = worksheetXml.getElementsByTagNameNS(spreadsheetNamespace, 'ignoredErrors')[0];
+      const printOptions = worksheetXml.createElementNS(spreadsheetNamespace, 'printOptions');
+      printOptions.setAttribute('horizontalCentered', '1');
+      const pageMargins = worksheetXml.createElementNS(spreadsheetNamespace, 'pageMargins');
+      pageMargins.setAttribute('left', '0.25');
+      pageMargins.setAttribute('right', '0.25');
+      pageMargins.setAttribute('top', '0.45');
+      pageMargins.setAttribute('bottom', '0.45');
+      pageMargins.setAttribute('header', '0.2');
+      pageMargins.setAttribute('footer', '0.2');
+      const pageSetup = worksheetXml.createElementNS(spreadsheetNamespace, 'pageSetup');
+      pageSetup.setAttribute('paperSize', '9');
+      pageSetup.setAttribute('orientation', index === 1 ? 'landscape' : 'portrait');
+      pageSetup.setAttribute('fitToWidth', '1');
+      pageSetup.setAttribute('fitToHeight', '0');
+      [printOptions, pageMargins, pageSetup].forEach(element => {
+        worksheetXml.documentElement.insertBefore(element, ignoredErrors || null);
+      });
+      zip.file(worksheetPath, new XMLSerializer().serializeToString(worksheetXml));
+    })).then(async () => {
+      const workbookFile = zip.file(workbookPath);
+      const workbookXml = new DOMParser().parseFromString(await workbookFile.async('text'), 'application/xml');
+      if (workbookXml.querySelector('parsererror')) throw new Error('인쇄 영역을 설정하지 못했습니다.');
+      const existingDefinedNames = workbookXml.getElementsByTagNameNS(spreadsheetNamespace, 'definedNames')[0];
+      if (existingDefinedNames) existingDefinedNames.parentNode.removeChild(existingDefinedNames);
+      const definedNames = workbookXml.createElementNS(spreadsheetNamespace, 'definedNames');
+      workbookSheetNames.forEach((sheetName, index) => {
+        const name = workbookXml.createElementNS(spreadsheetNamespace, 'definedName');
+        name.setAttribute('name', '_xlnm.Print_Area');
+        name.setAttribute('localSheetId', String(index));
+        name.textContent = `'${sheetName.replace(/'/g, "''")}'!$A$1:$${sheetRanges[index].lastColumn}$${sheetRanges[index].lastRow}`;
+        definedNames.appendChild(name);
+      });
+      const calcPr = workbookXml.getElementsByTagNameNS(spreadsheetNamespace, 'calcPr')[0];
+      workbookXml.documentElement.insertBefore(definedNames, calcPr || null);
+      if (calcPr) {
+        calcPr.setAttribute('calcMode', 'auto');
+        calcPr.setAttribute('fullCalcOnLoad', '1');
+      }
+      zip.file(workbookPath, new XMLSerializer().serializeToString(workbookXml));
+      await addWorkbookStyles(zip);
+    });
+  }
+
+  async function addWorkbookStyles(zip) {
+    const path = 'xl/styles.xml';
+    const file = zip.file(path);
+    if (!file) throw new Error('엑셀 서식 정보를 찾을 수 없습니다.');
+    const namespace = 'http://schemas.openxmlformats.org/spreadsheetml/2006/main';
+    const xml = new DOMParser().parseFromString(await file.async('text'), 'application/xml');
+    if (xml.querySelector('parsererror')) throw new Error('엑셀 서식 정보를 읽지 못했습니다.');
+    const fonts = xml.getElementsByTagNameNS(namespace, 'fonts')[0];
+    const fills = xml.getElementsByTagNameNS(namespace, 'fills')[0];
+    const borders = xml.getElementsByTagNameNS(namespace, 'borders')[0];
+    const cellXfs = xml.getElementsByTagNameNS(namespace, 'cellXfs')[0];
+    if (!fonts || !fills || !borders || !cellXfs) throw new Error('엑셀 서식 구조가 올바르지 않습니다.');
+
+    function addFont({ color, bold = false, size = 10 }) {
+      const font = xml.createElementNS(namespace, 'font');
+      if (bold) font.appendChild(xml.createElementNS(namespace, 'b'));
+      const fontSize = xml.createElementNS(namespace, 'sz');
+      fontSize.setAttribute('val', String(size));
+      font.appendChild(fontSize);
+      const fontColor = xml.createElementNS(namespace, 'color');
+      fontColor.setAttribute('rgb', `FF${color}`);
+      font.appendChild(fontColor);
+      const fontName = xml.createElementNS(namespace, 'name');
+      fontName.setAttribute('val', '맑은 고딕');
+      font.appendChild(fontName);
+      fonts.appendChild(font);
+    }
+    addFont({ color: 'FFFFFF', bold: true, size: 16 });
+    addFont({ color: 'FFFFFF', bold: true });
+    addFont({ color: '1F5B46', bold: true });
+    addFont({ color: '1F5B46', bold: true });
+
+    function addFill(color) {
+      const fill = xml.createElementNS(namespace, 'fill');
+      const pattern = xml.createElementNS(namespace, 'patternFill');
+      pattern.setAttribute('patternType', 'solid');
+      const foreground = xml.createElementNS(namespace, 'fgColor');
+      foreground.setAttribute('rgb', `FF${color}`);
+      pattern.appendChild(foreground);
+      const background = xml.createElementNS(namespace, 'bgColor');
+      background.setAttribute('indexed', '64');
+      pattern.appendChild(background);
+      fill.appendChild(pattern);
+      fills.appendChild(fill);
+    }
+    ['1F5B46', '367B59', 'E4F1E8', 'FFF2CC'].forEach(addFill);
+
+    const border = xml.createElementNS(namespace, 'border');
+    ['left', 'right', 'top', 'bottom'].forEach(side => {
+      const edge = xml.createElementNS(namespace, side);
+      edge.setAttribute('style', 'thin');
+      const color = xml.createElementNS(namespace, 'color');
+      color.setAttribute('rgb', 'FFD4DED7');
+      edge.appendChild(color);
+      border.appendChild(edge);
+    });
+    border.appendChild(xml.createElementNS(namespace, 'diagonal'));
+    borders.appendChild(border);
+
+    const xfTemplates = [
+      { fontId: 1, fillId: 2, borderId: 1, bold: true },
+      { fontId: 2, fillId: 3, borderId: 1, bold: true },
+      { fontId: 3, fillId: 4, borderId: 1, bold: true },
+      { fontId: 4, fillId: 5, borderId: 1, bold: true },
+      { fontId: 0, fillId: 0, borderId: 1 },
+      { fontId: 0, fillId: 0, borderId: 1, date: true },
+      { fontId: 0, fillId: 0, borderId: 1, money: true },
+      { fontId: 4, fillId: 5, borderId: 1, bold: true, money: true }
+    ];
+    xfTemplates.forEach(template => {
+      const xf = xml.createElementNS(namespace, 'xf');
+      xf.setAttribute('numFmtId', template.money ? '3' : '0');
+      xf.setAttribute('fontId', String(template.fontId));
+      xf.setAttribute('fillId', String(template.fillId));
+      xf.setAttribute('borderId', String(template.borderId));
+      xf.setAttribute('xfId', '0');
+      xf.setAttribute('applyFont', '1');
+      xf.setAttribute('applyFill', '1');
+      xf.setAttribute('applyBorder', '1');
+      if (template.money) xf.setAttribute('applyNumberFormat', '1');
+      if (template.bold) xf.setAttribute('applyAlignment', '1');
+      const alignment = xml.createElementNS(namespace, 'alignment');
+      alignment.setAttribute('horizontal', 'center');
+      alignment.setAttribute('vertical', 'center');
+      alignment.setAttribute('wrapText', '1');
+      xf.appendChild(alignment);
+      cellXfs.appendChild(xf);
+    });
+    fonts.setAttribute('count', String(fonts.children.length));
+    fills.setAttribute('count', String(fills.children.length));
+    borders.setAttribute('count', String(borders.children.length));
+    cellXfs.setAttribute('count', String(cellXfs.children.length));
+    zip.file(path, new XMLSerializer().serializeToString(xml));
   }
 
   async function exportWorkbook() {
-    if (!window.XLSX) {
+    if (!window.XLSX || !window.JSZip) {
       setError('엑셀 기능을 불러오지 못했습니다. 페이지를 새로고침해 주세요.');
       return;
     }
@@ -617,37 +891,62 @@ document.addEventListener('DOMContentLoaded', async () => {
     setError();
     try {
       const monthParts = getMonthRange(monthInput.value);
-      const visibleMembers = (isAdmin && !userFilter.value
+      const selectedMembers = (isAdmin && !userFilter.value
         ? teamMembers
-        : teamMembers.filter(user => !isAdmin || user.id === userFilter.value))
-        .filter(user => entries.some(entry => entry.user_id === user.id));
+        : teamMembers.filter(user => !isAdmin || user.id === userFilter.value));
+      const golfMembers = selectedMembers.filter(user => entries.some(entry =>
+        entry.user_id === user.id && entry.type_code === 'ball_pickup'));
+      const shuttleMembers = selectedMembers.filter(user => entries.some(entry =>
+        entry.user_id === user.id && entry.type_code === 'caddie_shuttle'));
+      const monthMembers = selectedMembers.filter(user => entries.some(entry => entry.user_id === user.id));
       const [golfTemplate, shuttleTemplate, monthTemplate] = await Promise.all([
         fetchTemplate('/templates/golf_allow.xlsx'),
         fetchTemplate('/templates/shuttle_allow.xlsx'),
         fetchTemplate('/templates/month_allow.xlsx')
       ]);
-      const golfSheet = buildTemplateSheet(
-        golfTemplate,
-        makeGolfRows(visibleMembers, monthParts),
-        `${monthParts.year}년${monthParts.month}월 골프`
-      );
-      const shuttleSheet = buildTemplateSheet(
-        shuttleTemplate,
-        makeShuttleRows(visibleMembers, monthParts),
-        `${monthParts.year}년${monthParts.month}월 셔틀`
-      );
-      const monthSheet = buildTemplateSheet(
-        monthTemplate,
-        makeMonthRows(visibleMembers, monthParts),
-        `${monthParts.year}년${monthParts.month}월 수당`
-      );
+      if (!golfTemplate.SheetNames.length || !shuttleTemplate.SheetNames.length || !monthTemplate.SheetNames.length) {
+        throw new Error('사용할 엑셀 템플릿 시트를 확인할 수 없습니다.');
+      }
+
+      const names = {
+        golf: `${monthParts.year}년${monthParts.month}월 골프`,
+        shuttle: `${monthParts.year}년${monthParts.month}월 셔틀`,
+        month: `${monthParts.year}년${monthParts.month}월 수당`
+      };
+      const golfRows = makeGolfRows(golfMembers, monthParts);
+      const shuttleRows = makeShuttleRows(shuttleMembers, monthParts);
+      const monthRows = makeMonthRows(monthMembers, monthParts);
+      const golfColumnCount = Math.max(2, golfMembers.length + 2);
+      const shuttleColumnCount = Math.max(1, shuttleMembers.length * 2 + 1);
+      const monthColumnCount = Math.max(1, monthMembers.length + 1);
+      const createHeights = rowCount => Array.from({ length: rowCount }, (_, index) =>
+        ({ hpt: index === 0 ? 30 : index === 1 ? 8 : 22 }));
+      const golfSheet = createStyledSheet(golfRows, golfColumnCount,
+        [14, 3, ...golfMembers.map(() => 16)], createHeights(golfRows.length));
+      const shuttleSheet = createStyledSheet(shuttleRows, shuttleColumnCount,
+        [14, ...shuttleMembers.flatMap(() => [16, 16])], createHeights(shuttleRows.length));
+      const monthSheet = createStyledSheet(monthRows, monthColumnCount,
+        [20, ...monthMembers.map(() => 16)], createHeights(monthRows.length));
       const workbook = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(workbook, golfSheet, `${monthParts.year}년${monthParts.month}월 골프`);
-      XLSX.utils.book_append_sheet(workbook, shuttleSheet, `${monthParts.year}년${monthParts.month}월 셔틀`);
-      XLSX.utils.book_append_sheet(workbook, monthSheet, `${monthParts.year}년${monthParts.month}월 수당`);
+      XLSX.utils.book_append_sheet(workbook, golfSheet, names.golf);
+      XLSX.utils.book_append_sheet(workbook, shuttleSheet, names.shuttle);
+      XLSX.utils.book_append_sheet(workbook, monthSheet, names.month);
+      configureFormulas({ golf: golfSheet, shuttle: shuttleSheet, month: monthSheet }, monthParts, names, {
+        golf: golfMembers,
+        shuttle: shuttleMembers,
+        month: monthMembers
+      });
+      const sheetRanges = [
+        { lastColumn: columnName(golfColumnCount), lastRow: golfRows.length, totalRow: monthParts.days + 4 },
+        { lastColumn: columnName(shuttleColumnCount), lastRow: shuttleRows.length, totalRow: monthParts.days + 5 },
+        { lastColumn: columnName(monthColumnCount), lastRow: monthRows.length, totalRow: 5 }
+      ];
 
       const fileName = `수당_${monthInput.value}.xlsx`;
-      const fileData = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+      const generatedData = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+      const zip = await JSZip.loadAsync(generatedData);
+      await applyPrintSettings(zip, [names.golf, names.shuttle, names.month], sheetRanges);
+      const fileData = await zip.generateAsync({ type: 'arraybuffer', compression: 'DEFLATE' });
       if (window.AndroidExcelExporter) {
         const bytes = new Uint8Array(fileData);
         let binary = '';
