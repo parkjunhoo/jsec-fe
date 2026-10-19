@@ -223,8 +223,7 @@
       text-overflow: ellipsis;
       white-space: nowrap;
     }
-    .contact-phone { display: block; margin-top: 5px; color: #c3d1e2; font-size: 12px; font-variant-numeric: tabular-nums; letter-spacing: 0.02em; text-decoration: none; }
-    .contact-phone:hover { color: var(--blue); }
+    .contact-phone { display: block; margin-top: 5px; color: #c3d1e2; font-size: 12px; font-variant-numeric: tabular-nums; letter-spacing: 0.02em; }
     .contact-actions { display: flex; flex: 0 0 auto; align-items: center; gap: 6px; }
     .contact-edit, .contact-delete {
       display: grid;
@@ -241,23 +240,6 @@
     .contact-edit:hover { border-color: rgba(114, 199, 255, 0.38); color: var(--blue); }
     .contact-delete { color: #f09b9b; }
     .contact-delete:hover { border-color: rgba(240, 120, 120, 0.38); color: #ffb0b0; }
-    .call-button {
-      display: grid;
-      width: 42px;
-      height: 42px;
-      flex: 0 0 42px;
-      place-items: center;
-      border: 1px solid rgba(111, 217, 170, 0.2);
-      border-radius: 13px;
-      background: rgba(54, 160, 112, 0.13);
-      color: var(--green);
-      font-size: 17px;
-      text-decoration: none;
-      transition: background 150ms ease, transform 150ms ease;
-    }
-    .call-button:hover { background: rgba(54, 160, 112, 0.25); }
-    .call-button:active { transform: scale(0.94); }
-
     .directory-state {
       grid-column: 1 / -1;
       padding: 44px 20px;
@@ -409,7 +391,6 @@
       .person-avatar { width: 42px; height: 42px; flex-basis: 42px; border-radius: 13px; }
       .contact-actions { gap: 4px; }
       .contact-edit, .contact-delete { width: 32px; height: 34px; }
-      .call-button { width: 40px; height: 40px; flex-basis: 40px; }
       .contact-modal { padding: 18px; }
     }
     @media (min-width: 681px) and (max-width: 850px) {
@@ -425,7 +406,7 @@
     <header class="hero">
       <div class="eyebrow">JISAN RESORT · CONTACTS</div>
       <h1>직원 전화번호부</h1>
-      <p>이름이나 부서로 검색하고, 전화 버튼을 눌러 바로 연결하세요.</p>
+      <p>이름이나 부서로 직원 연락처를 검색하세요.</p>
     </header>
 
     <section class="search-panel" aria-label="전화번호부 검색 및 필터">
@@ -609,17 +590,11 @@
           ? `${contact.department} · ${contact.sub_department}`
           : contact.department;
 
-        const phone = document.createElement('a');
+        const phone = document.createElement('span');
         phone.className = 'contact-phone';
-        phone.href = `tel:${contact.phone_number.replace(/[^\d+]/g, '')}`;
         phone.textContent = contact.phone_number;
 
         info.append(nameRow, team, phone);
-        const callButton = document.createElement('a');
-        callButton.className = 'call-button';
-        callButton.href = phone.href;
-        callButton.setAttribute('aria-label', `${contact.name}에게 전화 ${contact.phone_number}`);
-        callButton.textContent = '☎';
         const actions = document.createElement('div');
         actions.className = 'contact-actions';
         const editButton = document.createElement('button');
@@ -637,7 +612,7 @@
         deleteButton.setAttribute('aria-label', `${contact.name} 연락처 삭제`);
         deleteButton.textContent = '⌫';
         actions.append(editButton, deleteButton);
-        card.append(avatar, info, actions, callButton);
+        card.append(avatar, info, actions);
         return card;
       }
 
