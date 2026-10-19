@@ -5,6 +5,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     return;
   }
 
+  const preferences = window.userPreferences;
+  if (preferences) await preferences.load();
+
   const userId = session.user.id;
   let userRole = 'user';
   let userName = '팀원';
@@ -123,8 +126,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     .map(checkbox => checkbox.value)
     .filter(value => value !== otherLocationFilter);
   const selectAllLocBtn = document.getElementById('selectAllLocBtn');
-  const userFilterChipsContainer = document.getElementById('userFilterChipsContainer');
-  const selectAllUserBtn = document.getElementById('selectAllUserBtn');
+  const savedLocationFilters = preferences?.getSettings().calendar_location_filters;
+  if (Array.isArray(savedLocationFilters)) {
+    locationCheckboxes.forEach(checkbox => {
+      checkbox.checked = savedLocationFilters.includes(checkbox.value);
+    });
+  }
 
   let currentDate = new Date();
   let allVacations = [];
@@ -205,8 +212,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   function getLeaveIndicator(leaveType = '', userColor = '#38bdf8') {
     if (leaveType === '연차') return '🌴';
     if (leaveType === '시간차') return '⏳';
-    // 일반 휴무인 경우 userColor로 채워진 작은 동그라미(Dot) 반환
-    return `<span style="display: inline-block; width: 8px; height: 8px; background-color: ${userColor}; border-radius: 50%; margin-right: 2px; vertical-align: middle;"></span>`;
+    return '';
   }
 
   function updateTimeDetailOptions(leaveType, selectedValue = '') {
@@ -251,27 +257,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           if (u.id) userMap[u.id] = userInfo;
         });
 
-        // 1. 캘린더 팀원 필터 칩 생성
-        if (userFilterChipsContainer) {
-          userFilterChipsContainer.innerHTML = data.map(u => {
-            const memberName = u.name || u.username;
-            return `
-              <label class="filter-chip">
-                <input type="checkbox" name="userFilter" value="${memberName}" checked>
-                <span class="chip-label" style="border-color: ${u.color || 'var(--border-color)'};">${memberName}</span>
-              </label>
-            `;
-          }).join('');
-
-          document.querySelectorAll('input[name="userFilter"]').forEach(cb => {
-            cb.addEventListener('change', () => {
-              renderCalendarGrid();
-              renderStatistics();
-            });
-          });
-        }
-
-        // 2. 관리자용 모달 팀원 선택 드롭다운 생성
+        // 관리자용 모달 팀원 선택 드롭다운 생성
         if (vTargetUserId) {
           vTargetUserId.innerHTML = data.map(u => {
             const memberName = u.name || u.username;
@@ -728,12 +714,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   function renderStatistics() {
     if (!statsGridContainer) return;
 
-    const userCheckboxes = document.querySelectorAll('input[name="userFilter"]');
-    const checkedUsers = Array.from(userCheckboxes)
+    const checkedLocations = Array.from(locationCheckboxes)
       .filter(cb => cb.checked)
       .map(cb => cb.value);
 
-    const targetMembers = allTeamMembers.filter(m => checkedUsers.includes(m.name || m.username));
+    const targetMembers = allTeamMembers.filter(member =>
+      matchesLocationFilter(member.work_location, checkedLocations)
+    );
 
     if (targetMembers.length === 0) {
       statsGridContainer.innerHTML = `<div style="color: var(--text-sub); font-size: 13px; text-align: center; padding: 15px; grid-column: span 2;">선택된 팀원이 없습니다.</div>`;
@@ -773,10 +760,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       return `
         <div class="stat-card" style="border-left: 3px solid ${mColor};">
           <div class="stat-card-top">
-            <div class="stat-name">
-              <span style="width: 8px; height: 8px; border-radius: 50%; background: ${mColor}; display: inline-block;"></span>
-              ${mName}
-            </div>
+            <div class="stat-name">${mName}</div>
             <div style="display: flex; align-items: center; gap: 6px;">
               <div style="background: rgba(56,189,248,0.15); border: 1px solid rgba(56,189,248,0.3); padding: 2px 8px; border-radius: 8px; font-size: 13px; font-weight: 800; color: var(--primary);">
                 총 <span style="font-size: 15px;">${usageCount}</span>일
@@ -821,11 +805,6 @@ document.addEventListener('DOMContentLoaded', async () => {
       .filter(cb => cb.checked)
       .map(cb => cb.value);
 
-    const userCheckboxes = document.querySelectorAll('input[name="userFilter"]');
-    const checkedUsers = Array.from(userCheckboxes)
-      .filter(cb => cb.checked)
-      .map(cb => cb.value);
-
     let gridHTML = `
       <div class="day-name">일</div>
       <div class="day-name">월</div>
@@ -855,10 +834,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         return matchesLocationFilter(userLoc, checkedLocations);
       });
 
-      dayEvents = dayEvents.filter(ev => {
-        return checkedUsers.includes(ev.username);
-      });
-
       dayEvents.sort((a, b) => (a.username || '').localeCompare(b.username || ''));
       const calendarNote = allCalendarNotes.find(item => item.date === dateString);
       const noteSummary = calendarNote
@@ -880,7 +855,7 @@ document.addEventListener('DOMContentLoaded', async () => {
               const leaveIndicator = getLeaveIndicator(ev.leave_type, userColor);
               
               return `
-                <div class="event-pill ${ev.leave_type}" data-id="${ev.id}" title="${ev.username} (${ev.leave_type} -${ev.time_detail})" style="background:${userColor}20; color: #fff;">
+                <div class="event-pill ${ev.leave_type}" data-id="${ev.id}" title="${ev.username} (${ev.leave_type} -${ev.time_detail})" style="--event-color: ${userColor};">
                   ${leaveIndicator}${ev.username}
                 </div>
               `;
@@ -921,6 +896,15 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   locationCheckboxes.forEach(cb => {
     cb.addEventListener('change', () => {
+      const checkedLocations = Array.from(locationCheckboxes)
+        .filter(checkbox => checkbox.checked)
+        .map(checkbox => checkbox.value);
+      if (preferences) preferences.saveCalendarFilters(checkedLocations);
+      if (selectAllLocBtn) {
+        selectAllLocBtn.textContent = Array.from(locationCheckboxes).every(checkbox => checkbox.checked)
+          ? '전체 해제'
+          : '전체 선택';
+      }
       renderCalendarGrid();
       renderStatistics();
     });
@@ -931,17 +915,11 @@ document.addEventListener('DOMContentLoaded', async () => {
       const allChecked = Array.from(locationCheckboxes).every(cb => cb.checked);
       locationCheckboxes.forEach(cb => { cb.checked = !allChecked; });
       selectAllLocBtn.textContent = allChecked ? '전체 선택' : '전체 해제';
-      renderCalendarGrid();
-      renderStatistics();
-    });
-  }
-
-  if (selectAllUserBtn) {
-    selectAllUserBtn.addEventListener('click', () => {
-      const userCheckboxes = document.querySelectorAll('input[name="userFilter"]');
-      const allChecked = Array.from(userCheckboxes).every(cb => cb.checked);
-      userCheckboxes.forEach(cb => { cb.checked = !allChecked; });
-      selectAllUserBtn.textContent = allChecked ? '전체 선택' : '전체 해제';
+      if (preferences) {
+        preferences.saveCalendarFilters(Array.from(locationCheckboxes)
+          .filter(checkbox => checkbox.checked)
+          .map(checkbox => checkbox.value));
+      }
       renderCalendarGrid();
       renderStatistics();
     });
@@ -1105,6 +1083,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
+  if (selectAllLocBtn) {
+    selectAllLocBtn.textContent = Array.from(locationCheckboxes).every(checkbox => checkbox.checked)
+      ? '전체 해제'
+      : '전체 선택';
+  }
   await fetchUsersInfo();
   fetchMonthData();
 });

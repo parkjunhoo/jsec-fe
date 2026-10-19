@@ -318,29 +318,29 @@
       <!-- 1. 근무지/주야간 필터 섹션 -->
       <div class="filter-section">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-          <span class="filter-title">근무지 및 주·야간 필터</span>
+          <span class="filter-title">근무지 및 근무시간</span>
           <button type="button" id="selectAllLocBtn" style="background: none; border: none; color: var(--primary); font-size: 11px; font-weight: 700; cursor: pointer; padding: 2px 4px;">전체 해제</button>
         </div>
         <div class="filter-chips">
           <label class="filter-chip">
             <input type="checkbox" name="locFilter" value="주간" checked>
-            <span class="chip-label">☀️ 주간 전체</span>
+            <span class="chip-label">주간 전체</span>
           </label>
           <label class="filter-chip">
             <input type="checkbox" name="locFilter" value="야간" checked>
-            <span class="chip-label">🌙 야간 전체</span>
+            <span class="chip-label">야간 전체</span>
           </label>
           <label class="filter-chip">
             <input type="checkbox" name="locFilter" value="스키장" checked>
-            <span class="chip-label">⛷️ 스키장</span>
+            <span class="chip-label">스키장</span>
           </label>
           <label class="filter-chip">
             <input type="checkbox" name="locFilter" value="골프장" checked>
-            <span class="chip-label">⛳ 골프장</span>
+            <span class="chip-label">골프장</span>
           </label>
           <label class="filter-chip">
             <input type="checkbox" name="locFilter" value="현관" checked>
-            <span class="chip-label">🚪 현관</span>
+            <span class="chip-label">현관</span>
           </label>
           <label class="filter-chip">
             <input type="checkbox" name="locFilter" value="other" checked>
@@ -349,16 +349,6 @@
         </div>
       </div>
 
-      <!-- 2. 팀원 개별 필터 섹션 -->
-      <div class="filter-section" style="border-top: 1px solid var(--border-color); padding-top: 10px;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-          <span class="filter-title">팀원별 필터 (선택 보기)</span>
-          <button type="button" id="selectAllUserBtn" style="background: none; border: none; color: var(--primary); font-size: 11px; font-weight: 700; cursor: pointer; padding: 2px 4px;">전체 해제</button>
-        </div>
-        <div class="filter-chips" id="userFilterChipsContainer">
-          <!-- JS로 동적 생성됨 -->
-        </div>
-      </div>
     </div>
 
     <div class="calendar-nav">
@@ -460,7 +450,9 @@
   <script>window.Swal = window.Sweetalert2;</script>
   <script src="/lib/sheetjs/xlsx.full.min.js"></script>
   <script src="/lib/jszip/jszip.min.js"></script>
+  <script src="/js/app-loading.js"></script>
   <script src="/js/supabase.js"></script>
+  <script src="/js/user-preferences.js"></script>
   <script src="/js/navbar.js"></script>
   <script src="/js/calendar.js"></script>
 </body>

@@ -1,4 +1,7 @@
 document.addEventListener('DOMContentLoaded', async () => {
+  const preferences = window.userPreferences;
+  if (preferences) await preferences.load();
+
   const navContainer = document.getElementById('navbar');
   if (!navContainer) return;
 
@@ -320,6 +323,11 @@ document.addEventListener('DOMContentLoaded', async () => {
           </div>
         </div>
 
+        <button class="theme-switch" id="themeSwitch" type="button">
+          <span id="themeSwitchLabel">라이트 모드로 전환</span>
+          <span class="theme-switch-icon" id="themeSwitchIcon" aria-hidden="true">☀</span>
+        </button>
+
         <nav class="drawer-links">
           <a href="/pages/main.html" class="drawer-item ${currentPath.includes('main.html') ? 'active' : ''}">
             <span>🏠</span> 메인 메뉴
@@ -351,6 +359,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   const overlay = document.getElementById('navDrawerOverlay');
   const drawer = document.getElementById('navDrawerMenu');
   const logoutBtn = document.getElementById('navLogoutBtn');
+  const themeSwitch = document.getElementById('themeSwitch');
+  const themeSwitchLabel = document.getElementById('themeSwitchLabel');
+  const themeSwitchIcon = document.getElementById('themeSwitchIcon');
   const openNotificationsBtn = document.getElementById('openNotifications');
   const notificationOverlay = document.getElementById('notificationOverlay');
   const notificationList = document.getElementById('notificationList');
@@ -360,6 +371,24 @@ document.addEventListener('DOMContentLoaded', async () => {
   let notificationSession = null;
   let notifications = [];
   let unreadNotificationCount = 0;
+
+  function updateThemeSwitch() {
+    const isLight = document.documentElement.dataset.theme === 'light';
+    themeSwitchLabel.textContent = isLight ? '다크 모드로 전환' : '라이트 모드로 전환';
+    themeSwitchIcon.textContent = isLight ? '☾' : '☀';
+    themeSwitch.setAttribute('aria-label', themeSwitchLabel.textContent);
+  }
+
+  if (themeSwitch && preferences) {
+    updateThemeSwitch();
+    themeSwitch.addEventListener('click', async () => {
+      const nextTheme = document.documentElement.dataset.theme === 'light' ? 'dark' : 'light';
+      const savePromise = preferences.setTheme(nextTheme);
+      updateThemeSwitch();
+      await savePromise;
+      updateThemeSwitch();
+    });
+  }
 
   function toggleDrawer() {
     overlay.classList.toggle('active');
