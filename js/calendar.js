@@ -66,6 +66,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   const currentMonthDisplay = document.getElementById('currentMonthDisplay');
   const totalMonthVacationCount = document.getElementById('totalMonthVacationCount');
   const statsGridContainer = document.getElementById('statsGridContainer');
+  const statsTitle = document.getElementById('statsTitle');
+  const statsViewButtons = document.querySelectorAll('[data-stats-view]');
   const schedulePreview = document.getElementById('schedulePreview');
 
   const editVacationId = document.getElementById('editVacationId');
@@ -146,8 +148,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   let scheduleTemplateBuffer;
   let userMap = {}; 
   let allTeamMembers = []; 
+  let currentStatsView = 'cards';
   let activeModalTab = 'schedule';
   let selectedNoteEmoji = '';
+
+  if (statsGridContainer) statsGridContainer.dataset.view = currentStatsView;
 
   function escapeHtml(value) {
     return String(value).replace(/[&<>"']/g, character => ({
@@ -1340,6 +1345,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   function renderStatistics() {
     if (!statsGridContainer) return;
 
+    if (statsTitle) {
+      statsTitle.textContent = `${currentDate.getFullYear()}년 ${currentDate.getMonth() + 1}월 팀원별 휴무/연차 통계`;
+    }
+
     const checkedLocations = Array.from(locationCheckboxes)
       .filter(cb => cb.checked)
       .map(cb => cb.value);
@@ -1349,19 +1358,18 @@ document.addEventListener('DOMContentLoaded', async () => {
     );
 
     if (targetMembers.length === 0) {
-      statsGridContainer.innerHTML = `<div style="color: var(--text-sub); font-size: 13px; text-align: center; padding: 15px; grid-column: span 2;">선택된 팀원이 없습니다.</div>`;
+      statsGridContainer.innerHTML = '<div class="stats-empty">선택된 팀원이 없습니다. 근무지 필터를 확인해 주세요.</div>';
       if (totalMonthVacationCount) totalMonthVacationCount.textContent = '총 0건 사용';
       return;
     }
 
-    let totalMonthCount = 0;
-
-    statsGridContainer.innerHTML = targetMembers.map(member => {
+    const memberStats = targetMembers.map(member => {
       const mName = member.name || member.username || '이름 없음';
       const mColor = safeMemberColor(member.color);
 
-      const memberVacations = allVacations.filter(v => v.username === mName);
-      totalMonthCount += memberVacations.length;
+      const memberVacations = allVacations.filter(v =>
+        member.id ? v.user_id === member.id : v.username === mName
+      );
 
       let offCount = 0;
       let annualCount = 0;
@@ -1382,40 +1390,97 @@ document.addEventListener('DOMContentLoaded', async () => {
       dayList.sort((a, b) => a - b);
       const datesString = dayList.length > 0 ? dayList.join(', ') : '사용일 없음';
 
-      const usageCount = memberVacations.length;
-      const gaugePercent = Math.min(Math.round((usageCount / 5) * 100), 100);
+      return {
+        name: mName,
+        color: mColor,
+        usageCount: memberVacations.length,
+        offCount,
+        annualCount,
+        timeCount,
+        officialCount,
+        datesString
+      };
+    });
+    const totalMonthCount = memberStats.reduce((total, member) => total + member.usageCount, 0);
+    const maxUsage = Math.max(...memberStats.map(member => member.usageCount), 1);
 
-      return `
-        <div class="stat-card" style="border-left: 3px solid ${mColor};">
+    if (currentStatsView === 'table') {
+      statsGridContainer.innerHTML = `
+        <div class="stats-table-wrap">
+          <table class="stats-table">
+            <thead>
+              <tr>
+                <th scope="col">팀원</th>
+                <th scope="col">전체</th>
+                <th scope="col">휴무</th>
+                <th scope="col">연차</th>
+                <th scope="col">시간차</th>
+                <th scope="col">공가</th>
+                <th scope="col">사용일</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${memberStats.map(member => `
+                <tr>
+                  <td class="stats-table-name" style="border-left: 3px solid ${member.color};">${escapeHtml(member.name)}</td>
+                  <td class="stats-table-total">${member.usageCount}건</td>
+                  <td>${member.offCount}</td>
+                  <td>${member.annualCount}</td>
+                  <td>${member.timeCount}</td>
+                  <td>${member.officialCount}</td>
+                  <td class="stats-table-dates">${escapeHtml(member.datesString)}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      `;
+    } else {
+      statsGridContainer.innerHTML = memberStats.map(member => {
+        const gaugePercent = Math.round((member.usageCount / maxUsage) * 100);
+        return `
+        <article class="stat-card" style="--member-color: ${member.color}; --usage-width: ${gaugePercent}%;">
           <div class="stat-card-top">
-            <div class="stat-name">${escapeHtml(mName)}</div>
-            <div style="display: flex; align-items: center; gap: 6px;">
-              <div style="background: rgba(56,189,248,0.15); border: 1px solid rgba(56,189,248,0.3); padding: 2px 8px; border-radius: 8px; font-size: 13px; font-weight: 800; color: var(--primary);">
-                총 <span style="font-size: 15px;">${usageCount}</span>일
-              </div>
-            </div>
+            <div class="stat-name">${escapeHtml(member.name)}</div>
+            <span class="stats-total">${member.usageCount}건</span>
           </div>
 
-          <div class="stat-badges" style="font-size: 11px; color: var(--text-sub);">
-            <span>휴무 ${offCount}</span> • <span>연차 ${annualCount}</span>${officialCount > 0 ? ` • <span>공가 ${officialCount}</span>` : ''}${timeCount > 0 ? ` • <span>시간차 ${timeCount}</span>` : ''}
+          <div class="stat-badges" aria-label="휴무 유형별 사용 건수">
+            <span class="stat-badge-item" data-type="휴무">휴무 <strong>${member.offCount}</strong></span>
+            <span class="stat-badge-item" data-type="연차">연차 <strong>${member.annualCount}</strong></span>
+            <span class="stat-badge-item" data-type="시간차">시간차 <strong>${member.timeCount}</strong></span>
+            <span class="stat-badge-item" data-type="공가">공가 <strong>${member.officialCount}</strong></span>
           </div>
-          
-          <div style="width: 100%; background: rgba(255,255,255,0.08); height: 7px; border-radius: 4px; overflow: hidden;">
-            <div style="width: ${gaugePercent}%; background: ${usageCount > 5 ? '#f87171' : mColor}; height: 100%; border-radius: 4px; transition: width 0.4s ease;"></div>
+
+          <div>
+            <div class="stat-usage"><span>선택된 팀원 중 사용량</span><strong>${member.usageCount}건</strong></div>
+            <div class="stat-usage-track" aria-hidden="true"><div class="stat-usage-bar"></div></div>
           </div>
 
           <div class="stat-dates">
-            <span class="stat-dates-title">📅 사용일:</span>
-            <span class="stat-dates-list">${escapeHtml(datesString)}</span>
+            <span class="stat-dates-title">사용 날짜</span>
+            <span class="stat-dates-list">${escapeHtml(member.datesString)}</span>
           </div>
-        </div>
+        </article>
       `;
-    }).join('');
+      }).join('');
+    }
 
     if (totalMonthVacationCount) {
       totalMonthVacationCount.textContent = `총 ${totalMonthCount}건 사용`;
     }
   }
+
+  statsViewButtons.forEach(button => {
+    button.addEventListener('click', () => {
+      currentStatsView = button.dataset.statsView === 'table' ? 'table' : 'cards';
+      if (statsGridContainer) statsGridContainer.dataset.view = currentStatsView;
+      statsViewButtons.forEach(viewButton => {
+        viewButton.setAttribute('aria-pressed', String(viewButton.dataset.statsView === currentStatsView));
+      });
+      renderStatistics();
+    });
+  });
 
   function renderCalendarGrid() {
     if (!calendarGrid) return;

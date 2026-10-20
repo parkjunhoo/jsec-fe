@@ -53,7 +53,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   
   let allUsers = [];
   let isAdmin = false;
-  let currentView = 'cards';
+  let currentView = 'table';
 
   function escapeHtml(value) {
     return String(value ?? '').replace(/[&<>"']/g, character => ({
@@ -107,6 +107,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       button.setAttribute('aria-pressed', String(button.dataset.userView === currentView));
     });
   }
+
+  setView(currentView);
 
   // 컬러 피커 조작 시 HEX 텍스트 실시간 동기화
   if (newColor && colorHexText) {

@@ -216,101 +216,185 @@
 
     /* --- 월간 통계 대시보드 스타일 --- */
     .stats-container {
-      background: var(--card-bg);
-      backdrop-filter: blur(12px);
-      border: 1px solid var(--border-color);
-      border-radius: 16px;
-      padding: 16px;
+      background: linear-gradient(145deg, rgba(30, 41, 59, 0.92), rgba(15, 23, 42, 0.92));
+      border: 1px solid rgba(148, 163, 184, 0.18);
+      border-radius: 18px;
+      padding: 18px;
       display: flex;
       flex-direction: column;
-      gap: 12px;
+      gap: 16px;
+      box-shadow: 0 16px 36px rgba(2, 6, 23, 0.2);
     }
 
     .stats-header {
-      font-size: 14px;
-      font-weight: 750;
-      color: var(--text-main);
       display: flex;
       justify-content: space-between;
       align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+      padding-bottom: 14px;
       border-bottom: 1px solid var(--border-color);
-      padding-bottom: 10px;
     }
 
-    .stats-grid {
+    .stats-heading { display: grid; gap: 4px; }
+    .stats-heading h3 { color: var(--text-main); font-size: 16px; font-weight: 760; }
+    .stats-heading p { color: var(--text-sub); font-size: 12px; }
+    .stats-header-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; }
+    .stats-total {
+      padding: 7px 11px;
+      border: 1px solid rgba(56, 189, 248, 0.25);
+      border-radius: 10px;
+      background: rgba(56, 189, 248, 0.1);
+      color: #7dd3fc;
+      font-size: 12px;
+      font-weight: 750;
+      white-space: nowrap;
+    }
+    .stats-view-toggle {
+      display: inline-flex;
+      gap: 3px;
+      padding: 3px;
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      background: rgba(15, 23, 42, 0.68);
+    }
+    .stats-view-button {
+      min-height: 32px;
+      padding: 0 10px;
+      border: 0;
+      border-radius: 7px;
+      background: transparent;
+      color: var(--text-sub);
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .stats-view-button[aria-pressed="true"] {
+      background: rgba(56, 189, 248, 0.17);
+      color: #7dd3fc;
+    }
+    .stats-view-button:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+
+    .stats-grid[data-view="cards"] {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-      gap: 10px;
+      grid-template-columns: repeat(auto-fill, minmax(min(100%, 245px), 1fr));
+      gap: 12px;
+    }
+
+    .stats-grid[data-view="table"] { display: block; }
+    .stats-table-wrap { width: 100%; overflow-x: auto; border: 1px solid var(--border-color); border-radius: 12px; }
+    .stats-table { width: 100%; min-width: 680px; border-collapse: collapse; text-align: left; }
+    .stats-table th, .stats-table td { padding: 11px 12px; border-bottom: 1px solid var(--border-color); color: var(--text-main); font-size: 12px; }
+    .stats-table th { background: rgba(15, 23, 42, 0.8); color: var(--text-sub); font-weight: 700; white-space: nowrap; }
+    .stats-table tr:last-child td { border-bottom: 0; }
+    .stats-table .stats-table-name { font-weight: 750; white-space: nowrap; }
+    .stats-table .stats-table-total { color: #7dd3fc; font-weight: 800; }
+    .stats-table .stats-table-dates { color: var(--text-sub); }
+    .stats-empty {
+      padding: 34px 16px;
+      border: 1px dashed rgba(148, 163, 184, 0.25);
+      border-radius: 12px;
+      color: var(--text-sub);
+      font-size: 13px;
+      text-align: center;
     }
 
     .stat-card {
-      background: rgba(15, 23, 42, 0.5);
+      min-width: 0;
+      background: linear-gradient(145deg, rgba(15, 23, 42, 0.76), rgba(30, 41, 59, 0.5));
       border: 1px solid var(--border-color);
-      border-radius: 12px;
-      padding: 12px;
+      border-top: 2px solid var(--member-color, var(--primary));
+      border-radius: 14px;
+      padding: 14px;
       display: flex;
       flex-direction: column;
-      gap: 8px;
+      gap: 12px;
     }
 
     .stat-card-top {
       display: flex;
       justify-content: space-between;
       align-items: center;
+      gap: 10px;
     }
 
     .stat-name {
+      min-width: 0;
+      color: var(--text-main);
       font-size: 14px;
-      font-weight: 700;
-      color: #fff;
-      display: flex;
-      align-items: center;
-      gap: 6px;
+      font-weight: 750;
+      overflow-wrap: anywhere;
     }
 
     .stat-badges {
       display: flex;
+      flex-wrap: wrap;
       gap: 6px;
-      font-size: 11px;
-      font-weight: 600;
     }
 
     .stat-badge-item {
-      padding: 2px 6px;
-      border-radius: 6px;
-      background: rgba(255, 255, 255, 0.05);
+      --badge-color: var(--primary);
+      padding: 4px 7px;
       border: 1px solid var(--border-color);
+      border-radius: 7px;
+      background: rgba(148, 163, 184, 0.07);
       color: var(--text-sub);
+      font-size: 11px;
+      font-weight: 650;
+      white-space: nowrap;
     }
 
-    .stat-badge-item span {
-      color: var(--primary);
-      font-weight: 700;
+    .stat-badge-item[data-type="휴무"] { --badge-color: #a5b4fc; }
+    .stat-badge-item[data-type="연차"] { --badge-color: #86efac; }
+    .stat-badge-item[data-type="시간차"] { --badge-color: #fcd34d; }
+    .stat-badge-item[data-type="공가"] { --badge-color: #f9a8d4; }
+    .stat-badge-item strong { color: var(--badge-color); }
+    .stat-usage {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      color: var(--text-sub);
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .stat-usage strong { color: var(--text-main); font-weight: 700; }
+    .stat-usage-track { height: 5px; overflow: hidden; border-radius: 99px; background: rgba(148, 163, 184, 0.13); }
+    .stat-usage-bar {
+      width: var(--usage-width, 0%);
+      height: 100%;
+      border-radius: inherit;
+      background: var(--member-color, var(--primary));
+      transition: width 200ms ease;
     }
 
     .stat-dates {
-      font-size: 12px;
+      min-width: 0;
+      font-size: 11px;
       color: var(--text-sub);
       display: flex;
-      align-items: center;
-      gap: 6px;
-      background: rgba(0, 0, 0, 0.2);
-      padding: 6px 10px;
-      border-radius: 8px;
+      flex-direction: column;
+      gap: 5px;
+      padding-top: 10px;
+      border-top: 1px solid var(--border-color);
     }
 
     .stat-dates-title {
       font-weight: 600;
-      color: var(--text-main);
-      white-space: nowrap;
+      color: var(--text-sub);
     }
 
     .stat-dates-list {
-      color: var(--primary);
-      font-family: monospace;
+      color: var(--text-main);
       font-weight: 650;
-      overflow-x: auto;
-      white-space: nowrap;
+      overflow-wrap: anywhere;
+    }
+
+    @media (max-width: 480px) {
+      .stats-container { padding: 14px; }
+      .stats-header { align-items: flex-start; }
+      .stats-header-actions { width: 100%; justify-content: space-between; }
+      .stats-heading h3 { font-size: 15px; }
+      .stats-grid[data-view="cards"] { grid-template-columns: 1fr; }
     }
 
     /* 모달 및 폼 스타일 */
@@ -459,11 +543,20 @@
     <!-- 월간 휴무 사용 통계 대시보드 -->
     <div class="stats-container">
       <div class="stats-header">
-        <span>📊 이번 달 팀원별 휴무/연차 통계</span>
-        <span id="totalMonthVacationCount" style="font-size: 12px; color: var(--primary);">총 0건 사용</span>
+        <div class="stats-heading">
+          <h3 id="statsTitle">이번 달 팀원별 휴무/연차 통계</h3>
+          <p>선택한 근무지 기준으로 휴무 사용 현황을 확인합니다.</p>
+        </div>
+        <div class="stats-header-actions">
+          <span class="stats-total" id="totalMonthVacationCount">총 0건 사용</span>
+          <div class="stats-view-toggle" role="group" aria-label="통계 보기 방식">
+            <button class="stats-view-button" type="button" data-stats-view="cards" aria-pressed="true">카드</button>
+            <button class="stats-view-button" type="button" data-stats-view="table" aria-pressed="false">표</button>
+          </div>
+        </div>
       </div>
       <div class="stats-grid" id="statsGridContainer">
-        <div style="color: var(--text-sub); font-size: 13px; text-align: center; padding: 20px;">데이터를 불러오는 중...</div>
+        <div class="stats-empty">통계를 불러오는 중입니다.</div>
       </div>
     </div>
   </main>

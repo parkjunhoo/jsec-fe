@@ -36,7 +36,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   let allVehicles = [];
   let currentPrefix = 'ALL';
-  let currentView = 'cards';
+  let currentView = 'table';
 
   function escapeHtml(value) {
     return String(value ?? '').replace(/[&<>"']/g, character => ({
