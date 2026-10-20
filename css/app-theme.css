@@ -563,11 +563,23 @@ html[data-large-text="true"] #navbar .drawer-menu {
   overflow-y: auto;
   justify-content: flex-start;
   gap: 20px;
+  right: 0;
+  transform: translateX(100%);
+  visibility: hidden;
+  pointer-events: none;
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), visibility 0s linear 0.3s;
+}
+html[data-large-text="true"] #navbar .drawer-menu.active {
+  transform: translateX(0);
+  visibility: visible;
+  pointer-events: auto;
+  transition-delay: 0s;
 }
 html[data-large-text="true"] #navbar .nav-title { font-size: 18px; }
 html[data-large-text="true"] #navbar .notification-btn { width: 48px; height: 48px; }
 html[data-large-text="true"] #navbar .hamburger-btn { min-width: 48px; align-items: center; justify-content: center; }
 html[data-large-text="true"] #navbar .btn-settings-gear { width: 48px; height: 48px; }
+html[data-large-text="true"] #navbar .drawer-close-btn { width: 48px; height: 48px; }
 html[data-large-text="true"] #navbar .drawer-header { margin-bottom: 18px; }
 html[data-large-text="true"] #navbar .drawer-links { gap: 6px; }
 html[data-large-text="true"] #navbar .drawer-item { min-height: 50px; }
@@ -584,8 +596,32 @@ html[data-large-text="true"] .allowance-slot-list {
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
 }
 html[data-large-text="true"] .personal-vacation-list {
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 270px), 1fr));
+  grid-template-columns: minmax(0, 1fr);
 }
+html[data-large-text="true"] .personal-panel { min-width: 0; padding: clamp(14px, 3vw, 22px); }
+html[data-large-text="true"] .personal-heading { align-items: flex-start; }
+html[data-large-text="true"] .personal-month { white-space: normal; }
+html[data-large-text="true"] .personal-tabs { flex-wrap: wrap; }
+html[data-large-text="true"] .personal-tab { flex: 1 1 100px; padding: 8px 12px; }
+html[data-large-text="true"] .personal-stats { flex-wrap: wrap; align-items: baseline; }
+html[data-large-text="true"] .personal-stats strong { font-size: 30px; }
+html[data-large-text="true"] .personal-stats span { font-size: 16px; line-height: 1.5; }
+html[data-large-text="true"] .personal-row { align-items: flex-start; gap: 8px; padding: 12px; }
+html[data-large-text="true"] .personal-row-main { flex: 1 1 auto; }
+html[data-large-text="true"] .personal-row-title { font-size: 17px; overflow-wrap: anywhere; }
+html[data-large-text="true"] .personal-row-detail { font-size: 16px; overflow-wrap: anywhere; }
+html[data-large-text="true"] .personal-row-value { max-width: 38%; font-size: 15px; white-space: normal; overflow-wrap: anywhere; }
+html[data-large-text="true"] .personal-vacation-row .personal-row-title,
+html[data-large-text="true"] .personal-vacation-row .personal-row-detail,
+html[data-large-text="true"] .personal-vacation-row .personal-row-value { font-size: inherit; }
+html[data-large-text="true"] .personal-subheading { font-size: 18px; }
+html[data-large-text="true"] .duty-list { grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); }
+html[data-large-text="true"] .duty-toggle { min-width: 0; justify-items: stretch; padding: 12px; }
+html[data-large-text="true"] .duty-name { font-size: 17px; overflow-wrap: anywhere; }
+html[data-large-text="true"] .duty-state { font-size: 15px; overflow-wrap: anywhere; }
+html[data-large-text="true"] .duty-note,
+html[data-large-text="true"] .personal-empty,
+html[data-large-text="true"] .personal-error { font-size: 16px; line-height: 1.5; overflow-wrap: anywhere; }
 html[data-large-text="true"] .welcome-panel,
 html[data-large-text="true"] .today-off-heading,
 html[data-large-text="true"] .header-area,
@@ -623,7 +659,8 @@ html[data-large-text="true"] .view-mode-toggle { min-width: 48px; min-height: 48
     padding: 0;
   }
   html[data-large-text="true"] .manual-choice { width: 100%; min-width: 0; }
-  html[data-large-text="true"] .personal-vacation-list { grid-template-columns: minmax(0, 1fr); }
+  html[data-large-text="true"] .personal-vacation-list,
+  html[data-large-text="true"] .duty-list { grid-template-columns: minmax(0, 1fr); }
   html[data-large-text="true"] .today-off-names,
   html[data-large-text="true"] .today-off-shifts { grid-template-columns: minmax(0, 1fr); }
   html[data-large-text="true"] .allowance-slot { align-items: flex-start; flex-direction: column; }

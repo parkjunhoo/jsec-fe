@@ -150,6 +150,20 @@ document.addEventListener('DOMContentLoaded', async () => {
     .btn-settings-gear:hover {
       background: rgba(56, 189, 248, 0.2);
     }
+    .drawer-close-btn {
+      display: grid;
+      width: 40px;
+      height: 40px;
+      flex: 0 0 auto;
+      place-items: center;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.06);
+      color: #f8fafc;
+      font-size: 24px;
+      line-height: 1;
+      cursor: pointer;
+    }
     .drawer-user-role { font-size: 12px; color: #38bdf8; font-weight: 600; }
     
     .drawer-links { display: flex; flex-direction: column; gap: 8px; }
@@ -335,6 +349,7 @@ document.addEventListener('DOMContentLoaded', async () => {
               <div class="drawer-user-role" id="navUserRole">Jisan Security Team</div>
             </div>
             <a href="/pages/settings.html" class="btn-settings-gear" title="내 정보 수정">⚙️</a>
+            <button class="drawer-close-btn" id="closeNavDrawer" type="button" aria-label="메뉴 닫기">&times;</button>
           </div>
         </div>
 
@@ -381,6 +396,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // 이벤트 연결 및 유저 정보 로드
   const openBtn = document.getElementById('openNavDrawer');
+  const closeBtn = document.getElementById('closeNavDrawer');
   const overlay = document.getElementById('navDrawerOverlay');
   const drawer = document.getElementById('navDrawerMenu');
   const logoutBtn = document.getElementById('navLogoutBtn');
@@ -435,13 +451,18 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
-  function toggleDrawer() {
-    overlay.classList.toggle('active');
-    drawer.classList.toggle('active');
+  function setDrawerOpen(isOpen) {
+    overlay.classList.toggle('active', isOpen);
+    drawer.classList.toggle('active', isOpen);
+    openBtn?.setAttribute('aria-expanded', String(isOpen));
   }
 
-  if (openBtn) openBtn.addEventListener('click', toggleDrawer);
-  if (overlay) overlay.addEventListener('click', toggleDrawer);
+  if (openBtn) openBtn.addEventListener('click', () => setDrawerOpen(!drawer.classList.contains('active')));
+  if (closeBtn) closeBtn.addEventListener('click', () => setDrawerOpen(false));
+  if (overlay) overlay.addEventListener('click', () => setDrawerOpen(false));
+  document.addEventListener('keydown', event => {
+    if (event.key === 'Escape' && drawer.classList.contains('active')) setDrawerOpen(false);
+  });
   if (openNotificationsBtn) {
     openNotificationsBtn.addEventListener('click', async () => {
       notificationOverlay.classList.add('active');
