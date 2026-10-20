@@ -11,6 +11,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   const dutyStatus = document.getElementById('personalDutyStatus');
   const dutyList = document.getElementById('personalDutyList');
   const monthLabel = document.getElementById('personalMonth');
+  const previousMonthButton = document.getElementById('personalPreviousMonth');
+  const nextMonthButton = document.getElementById('personalNextMonth');
+  const welcomeMessage = document.getElementById('personalWelcome');
 
   function getKstParts(date = new Date()) {
     const parts = new Intl.DateTimeFormat('en-US', {
@@ -24,11 +27,22 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   const todayParts = getKstParts();
   const today = `${todayParts.year}-${todayParts.month}-${todayParts.day}`;
-  const monthStart = `${todayParts.year}-${todayParts.month}-01`;
-  const monthEnd = `${todayParts.year}-${todayParts.month}-${String(
-    new Date(Number(todayParts.year), Number(todayParts.month), 0).getDate()
-  ).padStart(2, '0')}`;
-  monthLabel.textContent = `${todayParts.year}년 ${Number(todayParts.month)}월`;
+  let selectedMonth = new Date(Number(todayParts.year), Number(todayParts.month) - 1, 1);
+  let monthRequestId = 0;
+
+  function getSelectedMonthRange() {
+    const year = selectedMonth.getFullYear();
+    const month = selectedMonth.getMonth() + 1;
+    const monthString = String(month).padStart(2, '0');
+    const lastDay = new Date(year, month, 0).getDate();
+    return {
+      start: `${year}-${monthString}-01`,
+      end: `${year}-${monthString}-${String(lastDay).padStart(2, '0')}`,
+      label: `${year}년 ${month}월`
+    };
+  }
+
+  monthLabel.textContent = getSelectedMonthRange().label;
 
   function escapeHtml(value) {
     return String(value ?? '').replace(/[&<>"']/g, character => ({
@@ -42,6 +56,29 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   function formatMoney(value) {
     return `${new Intl.NumberFormat('ko-KR').format(Number(value) || 0)}원`;
+  }
+
+  function animateMonthChange(direction) {
+    const activePanel = vacationPanel.hidden ? allowancePanel : vacationPanel;
+    activePanel.classList.remove('month-slide-next', 'month-slide-previous');
+    void activePanel.offsetWidth;
+    activePanel.classList.add(direction > 0 ? 'month-slide-next' : 'month-slide-previous');
+    activePanel.addEventListener('animationend', () => {
+      activePanel.classList.remove('month-slide-next', 'month-slide-previous');
+    }, { once: true });
+  }
+
+  async function changeMonth(offset) {
+    selectedMonth = new Date(selectedMonth.getFullYear(), selectedMonth.getMonth() + offset, 1);
+    const { start, end, label } = getSelectedMonthRange();
+    const requestId = ++monthRequestId;
+    monthLabel.textContent = label;
+    welcomeMessage.textContent = `${label} 내 일정과 수당을 확인하세요.`;
+    animateMonthChange(offset);
+    await Promise.all([
+      loadVacations(start, end, requestId),
+      loadAllowanceData(start, end, requestId)
+    ]);
   }
 
   function formatVacationDate(value) {
@@ -65,6 +102,27 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   vacationTab.addEventListener('click', () => showTab(vacationTab));
   allowanceTab.addEventListener('click', () => showTab(allowanceTab));
+  previousMonthButton.addEventListener('click', () => changeMonth(-1));
+  nextMonthButton.addEventListener('click', () => changeMonth(1));
+  let swipeStart = null;
+  [vacationPanel, allowancePanel].forEach(panel => {
+    panel.addEventListener('touchstart', event => {
+      if (event.touches.length !== 1 || event.target.closest('button, a, input, select, textarea')) {
+        swipeStart = null;
+        return;
+      }
+      swipeStart = { x: event.touches[0].clientX, y: event.touches[0].clientY };
+    }, { passive: true });
+    panel.addEventListener('touchend', event => {
+      if (!swipeStart || event.changedTouches.length !== 1) return;
+      const deltaX = event.changedTouches[0].clientX - swipeStart.x;
+      const deltaY = event.changedTouches[0].clientY - swipeStart.y;
+      swipeStart = null;
+      if (Math.abs(deltaX) < 55 || Math.abs(deltaX) < Math.abs(deltaY) * 1.25) return;
+      changeMonth(deltaX < 0 ? 1 : -1);
+    }, { passive: true });
+    panel.addEventListener('touchcancel', () => { swipeStart = null; }, { passive: true });
+  });
   [vacationTab, allowanceTab].forEach(tab => {
     tab.addEventListener('keydown', event => {
       if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
@@ -109,10 +167,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     return result;
   }
 
-  async function loadVacations() {
+  async function loadVacations(start, end, requestId) {
     try {
-      const params = new URLSearchParams({ start: monthStart, end: monthEnd });
+      const params = new URLSearchParams({ start, end });
       const vacations = await request(`/vacations?${params.toString()}`);
+      if (requestId !== monthRequestId) return;
       const mine = vacations.filter(vacation => vacation.user_id === session.user.id);
       const typeCounts = mine.reduce((counts, vacation) => {
         counts[vacation.leave_type] = (counts[vacation.leave_type] || 0) + 1;
@@ -144,13 +203,14 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       vacationSummary.innerHTML = `<div class="personal-stats">
         <strong>${mine.length}건</strong>
-        <span>이번 달 휴무${typeSummary ? ` · ${typeSummary}` : ''}</span>
+        <span>${getSelectedMonthRange().label} 휴무${typeSummary ? ` · ${typeSummary}` : ''}</span>
       </div>
       ${rows
         ? `<div class="personal-list personal-vacation-list">${rows}</div>${mine.length > 6 ? `<p class="personal-row-detail">외 ${mine.length - 6}건의 일정</p>` : ''}`
-        : '<div class="personal-empty">이번 달 등록된 휴무 일정이 없습니다.</div>'}
-      <p class="personal-row-detail">${upcoming.length ? `이번 달 남은 일정 ${upcoming.length}건` : '이번 달 남은 휴무 일정이 없습니다.'}</p>`;
+        : `<div class="personal-empty">${getSelectedMonthRange().label} 등록된 휴무 일정이 없습니다.</div>`}
+      <p class="personal-row-detail">${upcoming.length ? `${getSelectedMonthRange().label} 남은 일정 ${upcoming.length}건` : `${getSelectedMonthRange().label} 남은 휴무 일정이 없습니다.`}</p>`;
     } catch (error) {
+      if (requestId !== monthRequestId) return;
       console.error('내 휴무 요약 조회 오류:', error);
       vacationError.textContent = '휴무 일정을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.';
     }
@@ -232,29 +292,36 @@ document.addEventListener('DOMContentLoaded', async () => {
       </div>`).join('');
     allowanceSummary.innerHTML = `<div class="personal-stats">
       <strong>${formatMoney(totalAmount)}</strong>
-      <span>이번 달 내 수당 · ${mine.length}건</span>
+      <span>${getSelectedMonthRange().label} 내 수당 · ${mine.length}건</span>
     </div>
-    ${rows ? `<div class="personal-list">${rows}</div>` : '<div class="personal-empty">이번 달 등록된 수당 내역이 없습니다.</div>'}`;
+    ${rows ? `<div class="personal-list">${rows}</div>` : `<div class="personal-empty">${getSelectedMonthRange().label} 등록된 수당 내역이 없습니다.</div>`}`;
   }
 
-  async function loadAllowanceData() {
-    allowanceDataReady = false;
-    renderDuties();
+  async function loadAllowanceData(start, end, requestId) {
     try {
-      const monthParams = new URLSearchParams({ start: monthStart, end: monthEnd });
-      const todayParams = new URLSearchParams({ start: today, end: today });
-      const [entries, availability] = await Promise.all([
-        request(`/allowances?${monthParams.toString()}`),
-        request(`/allowances/availability?${todayParams.toString()}`)
-      ]);
+      const monthParams = new URLSearchParams({ start, end });
+      const entries = await request(`/allowances?${monthParams.toString()}`);
+      if (requestId !== monthRequestId) return;
       allowanceEntries = entries;
-      todayAvailability = availability;
-      allowanceDataReady = true;
       allowanceError.textContent = '';
       renderAllowanceSummary();
     } catch (error) {
+      if (requestId !== monthRequestId) return;
       console.error('내 수당 요약 조회 오류:', error);
       allowanceError.textContent = '수당 정보를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.';
+    }
+  }
+
+  async function loadTodayAvailability() {
+    allowanceDataReady = false;
+    renderDuties();
+    try {
+      const todayParams = new URLSearchParams({ start: today, end: today });
+      todayAvailability = await request(`/allowances/availability?${todayParams.toString()}`);
+      allowanceDataReady = true;
+    } catch (error) {
+      console.error('오늘 수당 등록 현황 조회 오류:', error);
+      dutyStatus.textContent = '오늘 할 일 현황을 불러오지 못했습니다. 새로고침해 주세요.';
     }
     renderDuties();
   }
@@ -287,11 +354,21 @@ document.addEventListener('DOMContentLoaded', async () => {
         dutyStatus.textContent = `${duty.label} 등록을 완료했습니다.`;
       }
       dutyStatus.classList.add('success');
-      await loadAllowanceData();
+      const monthRange = getSelectedMonthRange();
+      const requestId = ++monthRequestId;
+      await Promise.all([
+        loadAllowanceData(monthRange.start, monthRange.end, requestId),
+        loadTodayAvailability()
+      ]);
     } catch (error) {
       console.error('오늘 수당 등록 변경 오류:', error);
       dutyStatus.textContent = error.message || '등록을 변경하지 못했습니다.';
-      await loadAllowanceData();
+      const monthRange = getSelectedMonthRange();
+      const requestId = ++monthRequestId;
+      await Promise.all([
+        loadAllowanceData(monthRange.start, monthRange.end, requestId),
+        loadTodayAvailability()
+      ]);
     } finally {
       busyDuties.delete(duty.key);
       renderDuties();
@@ -307,8 +384,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     console.error('개인 메뉴 사용자 정보 조회 오류:', profileError);
   } else if (profile) {
     const name = profile.name || profile.username;
-    if (name) document.getElementById('personalWelcome').textContent = `${name}님, 이번 달 내 일정과 수당을 확인하세요.`;
+    if (name) welcomeMessage.textContent = `${name}님, ${getSelectedMonthRange().label} 내 일정과 수당을 확인하세요.`;
   }
 
-  await Promise.all([loadVacations(), loadAllowanceData()]);
+  const initialMonth = getSelectedMonthRange();
+  const initialRequestId = ++monthRequestId;
+  await Promise.all([
+    loadVacations(initialMonth.start, initialMonth.end, initialRequestId),
+    loadAllowanceData(initialMonth.start, initialMonth.end, initialRequestId),
+    loadTodayAvailability()
+  ]);
 });
