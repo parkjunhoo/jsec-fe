@@ -579,8 +579,16 @@ html[data-large-text="true"] #navbar .nav-title { font-size: 18px; }
 html[data-large-text="true"] #navbar .notification-btn { width: 48px; height: 48px; }
 html[data-large-text="true"] #navbar .hamburger-btn { min-width: 48px; align-items: center; justify-content: center; }
 html[data-large-text="true"] #navbar .btn-settings-gear { width: 48px; height: 48px; }
-html[data-large-text="true"] #navbar .drawer-close-btn { width: 48px; height: 48px; }
-html[data-large-text="true"] #navbar .drawer-header { margin-bottom: 18px; }
+html[data-large-text="true"] #navbar .drawer-close-btn { min-width: 80px; height: 48px; }
+html[data-large-text="true"] #navbar .drawer-close-label { font-size: 16px; }
+html[data-large-text="true"] #navbar .drawer-header {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding-block: 8px;
+  background: var(--app-surface);
+  margin-bottom: 18px;
+}
 html[data-large-text="true"] #navbar .drawer-links { gap: 6px; }
 html[data-large-text="true"] #navbar .drawer-item { min-height: 50px; }
 html[data-large-text="true"] .calendar-cell { min-height: 148px; }

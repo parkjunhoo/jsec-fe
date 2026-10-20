@@ -151,19 +151,22 @@ document.addEventListener('DOMContentLoaded', async () => {
       background: rgba(56, 189, 248, 0.2);
     }
     .drawer-close-btn {
-      display: grid;
-      width: 40px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+      min-width: 40px;
       height: 40px;
       flex: 0 0 auto;
-      place-items: center;
+      padding: 0 10px;
       border: 1px solid rgba(255, 255, 255, 0.12);
       border-radius: 10px;
       background: rgba(255, 255, 255, 0.06);
       color: #f8fafc;
-      font-size: 24px;
-      line-height: 1;
       cursor: pointer;
     }
+    .drawer-close-icon { font-size: 24px; line-height: 1; }
+    .drawer-close-label { font-size: 14px; font-weight: 650; }
     .drawer-user-role { font-size: 12px; color: #38bdf8; font-weight: 600; }
     
     .drawer-links { display: flex; flex-direction: column; gap: 8px; }
@@ -349,7 +352,9 @@ document.addEventListener('DOMContentLoaded', async () => {
               <div class="drawer-user-role" id="navUserRole">Jisan Security Team</div>
             </div>
             <a href="/pages/settings.html" class="btn-settings-gear" title="내 정보 수정">⚙️</a>
-            <button class="drawer-close-btn" id="closeNavDrawer" type="button" aria-label="메뉴 닫기">&times;</button>
+            <button class="drawer-close-btn" id="closeNavDrawer" type="button" aria-label="메뉴 닫기">
+              <span class="drawer-close-icon" aria-hidden="true">&times;</span><span class="drawer-close-label">닫기</span>
+            </button>
           </div>
         </div>
 
