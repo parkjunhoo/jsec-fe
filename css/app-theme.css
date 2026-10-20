@@ -455,6 +455,36 @@ html[data-theme="light"] .contact-phone { color: var(--text-sub); }
 html[data-theme="light"] .contact-edit { color: var(--text-main); }
 html[data-theme="light"] .contact-card { border-bottom-color: var(--app-border); }
 html[data-theme="light"] .person-avatar { border-color: var(--app-border); color: var(--primary); }
+html[data-theme="light"] .directory .add-contact {
+  border-color: #176346;
+  background: #197254;
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(25, 114, 84, 0.2);
+}
+html[data-theme="light"] .directory .add-contact:hover { border-color: #115b42; background: #115b42; }
+html[data-theme="light"] .contact-modal .form-field label { color: #34483b; }
+html[data-theme="light"] .contact-modal .form-field input {
+  border-color: #aebbb1;
+  background: #fff;
+  color: #17251d;
+  caret-color: #17251d;
+}
+html[data-theme="light"] .contact-modal .form-field input::placeholder { color: #68776e; opacity: 1; }
+html[data-theme="light"] .contact-modal .form-field input:focus {
+  border-color: #197254;
+  box-shadow: 0 0 0 3px rgba(25, 114, 84, 0.14);
+}
+html[data-theme="light"] .contact-modal .form-cancel {
+  border-color: #aebbb1;
+  background: #f4f7f3;
+  color: #34483b;
+}
+html[data-theme="light"] .contact-modal .form-submit {
+  border-color: #176346;
+  background: #197254;
+  color: #fff;
+}
+html[data-theme="light"] .contact-modal .form-submit:hover:not(:disabled) { border-color: #115b42; background: #115b42; }
 
 @media (max-width: 600px) {
   #navbar .nav-header { min-height: 58px; padding-block: 9px; }

@@ -124,18 +124,21 @@ document.addEventListener('DOMContentLoaded', async () => {
       const upcoming = mine
         .filter(vacation => vacation.date >= today)
         .sort((a, b) => a.date.localeCompare(b.date));
-      const rows = mine.slice(0, 6).map(vacation => {
+      const sortedMine = [...mine].sort((a, b) => a.date.localeCompare(b.date));
+      const rows = sortedMine.slice(0, 6).map(vacation => {
+        const isPast = vacation.date < today;
+        const isToday = vacation.date === today;
         const detail = vacation.leave_type === '시간차'
           ? (vacation.time_detail === '시간지정'
             ? `${vacation.hours_used || ''}시간`
             : vacation.time_detail || '종일')
           : vacation.time_detail || '종일';
-        return `<div class="personal-row">
+        return `<div class="personal-row personal-vacation-row${isPast ? ' past' : ''}${isToday ? ' today' : ''}">
           <div class="personal-row-main">
             <div class="personal-row-title">${escapeHtml(formatVacationDate(vacation.date))}</div>
             <div class="personal-row-detail">${escapeHtml(vacation.leave_type || '휴무')} · ${escapeHtml(detail)}</div>
           </div>
-          <span class="personal-row-value">${vacation.date === today ? '오늘' : vacation.date < today ? '지난 일정' : '예정'}</span>
+          <span class="personal-row-value">${isToday ? '오늘' : isPast ? '지난 일정' : '예정'}</span>
         </div>`;
       }).join('');
 
@@ -144,7 +147,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         <span>이번 달 휴무${typeSummary ? ` · ${typeSummary}` : ''}</span>
       </div>
       ${rows
-        ? `<div class="personal-list">${rows}</div>${mine.length > 6 ? `<p class="personal-row-detail">외 ${mine.length - 6}건의 일정</p>` : ''}`
+        ? `<div class="personal-list personal-vacation-list">${rows}</div>${mine.length > 6 ? `<p class="personal-row-detail">외 ${mine.length - 6}건의 일정</p>` : ''}`
         : '<div class="personal-empty">이번 달 등록된 휴무 일정이 없습니다.</div>'}
       <p class="personal-row-detail">${upcoming.length ? `이번 달 남은 일정 ${upcoming.length}건` : '이번 달 남은 휴무 일정이 없습니다.'}</p>`;
     } catch (error) {
