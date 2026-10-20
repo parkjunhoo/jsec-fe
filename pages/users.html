@@ -36,7 +36,7 @@
 
     .container {
       padding: 20px 16px;
-      max-width: 600px;
+      max-width: 1180px;
       margin: 0 auto;
     }
 
@@ -190,6 +190,33 @@
       gap: 12px;
     }
 
+    .user-view-controls {
+      display: flex;
+      justify-content: flex-end;
+      gap: 4px;
+      margin: 0 0 10px;
+      padding: 4px;
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      background: var(--card-bg);
+    }
+    .user-view-button {
+      min-height: 36px;
+      padding: 0 14px;
+      border: 1px solid transparent;
+      border-radius: 7px;
+      background: transparent;
+      color: var(--text-sub);
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .user-view-button[aria-pressed="true"] {
+      border-color: var(--primary);
+      background: var(--app-surface-raised, #24332b);
+      color: var(--text-main);
+    }
+
     .user-card {
       background: var(--card-bg);
       backdrop-filter: blur(12px);
@@ -209,6 +236,7 @@
 
     .user-name-box {
       display: flex;
+      flex-wrap: wrap;
       align-items: center;
       gap: 8px;
     }
@@ -263,6 +291,38 @@
       color: var(--text-main);
       font-weight: 500;
     }
+
+    .user-list[data-view="table"] {
+      display: block;
+      overflow-x: auto;
+      border: 1px solid var(--app-border, var(--border-color));
+      border-radius: 12px;
+      background: var(--app-surface, #1b2621);
+    }
+    .user-table {
+      width: 100%;
+      min-width: 900px;
+      border-collapse: collapse;
+      text-align: left;
+    }
+    .user-table th, .user-table td {
+      padding: 11px 12px;
+      border-bottom: 1px solid var(--app-border, var(--border-color));
+      color: var(--text-main);
+      font-size: 13px;
+      vertical-align: middle;
+    }
+    .user-table th {
+      background: var(--app-surface-raised, #24332b);
+      color: var(--text-sub);
+      font-size: 12px;
+      font-weight: 750;
+      white-space: nowrap;
+    }
+    .user-table-name { font-weight: 750; white-space: nowrap; }
+    .user-table-title { color: var(--primary) !important; font-weight: 750; white-space: nowrap; }
+    .user-table tr:last-child td { border-bottom: 0; }
+    .user-list[data-view="table"] .empty-state { padding: 32px 16px; }
 
     .empty-state {
       text-align: center;
@@ -469,6 +529,11 @@
       </div>
     </div>
 
+    <div class="user-view-controls" role="group" aria-label="회원 표시 방식">
+      <button class="user-view-button" type="button" data-user-view="cards" aria-pressed="true">카드 보기</button>
+      <button class="user-view-button" type="button" data-user-view="table" aria-pressed="false">표 보기</button>
+    </div>
+
     <div class="user-list" id="userList">
       <div class="empty-state">회원 정보를 불러오는 중...</div>
     </div>
@@ -512,6 +577,15 @@
               <option value="아르바이트">아르바이트</option>
             </select>
           </div>
+        </div>
+
+        <div class="form-group">
+          <label for="newJobTitle">직책</label>
+          <select id="newJobTitle">
+            <option value="사원">사원</option>
+            <option value="부소장">부소장</option>
+            <option value="소장">소장</option>
+          </select>
         </div>
 
         <div class="form-group" id="employmentStatusGroup" style="display: none;">

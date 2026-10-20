@@ -11,6 +11,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const addUserBtn = document.getElementById('addUserBtn');
   const totalUserCountEl = document.getElementById('totalUserCount');
   const sortSelect = document.getElementById('sortSelect');
+  const viewButtons = document.querySelectorAll('[data-user-view]');
   const locationCheckboxes = document.querySelectorAll('input[name="locFilter"]');
   const shiftFilterValues = ['주간', '야간'];
   const otherLocationFilter = 'other';
@@ -33,6 +34,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const newUsername = document.getElementById('newUsername');
   const newPassword = document.getElementById('newPassword');
   const newRole = document.getElementById('newRole');
+  const newJobTitle = document.getElementById('newJobTitle');
   const newContractType = document.getElementById('newContractType');
   const employmentStatusGroup = document.getElementById('employmentStatusGroup');
   const newStatus = document.getElementById('newStatus');
@@ -51,6 +53,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   
   let allUsers = [];
   let isAdmin = false;
+  let currentView = 'cards';
 
   function escapeHtml(value) {
     return String(value ?? '').replace(/[&<>"']/g, character => ({
@@ -64,6 +67,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   function safeUserColor(value) {
     return typeof value === 'string' && /^#[\da-f]{6}$/i.test(value) ? value : '#38bdf8';
+  }
+
+  function jobTitleForName(name) {
+    if (name === '지은석') return '소장';
+    if (name === '김동석') return '부소장';
+    return '사원';
   }
 
   async function workerHeaders(json = false) {
@@ -89,6 +98,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         && !locationFilterValues.some(value => normalizedLocation.includes(value.toLowerCase())));
 
     return matchesShift && matchesLocation;
+  }
+
+  function setView(view) {
+    currentView = view === 'table' ? 'table' : 'cards';
+    userListContainer.dataset.view = currentView;
+    viewButtons.forEach(button => {
+      button.setAttribute('aria-pressed', String(button.dataset.userView === currentView));
+    });
   }
 
   // 컬러 피커 조작 시 HEX 텍스트 실시간 동기화
@@ -128,6 +145,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (employmentStatusGroup) employmentStatusGroup.style.display = 'none';
     if (newColor) newColor.value = '#38bdf8';
     if (colorHexText) colorHexText.textContent = '#38bdf8';
+    if (newJobTitle) {
+      newJobTitle.value = jobTitleForName(newUsername.value.trim());
+      newJobTitle.disabled = true;
+    }
     userModal.classList.add('active');
   }
 
@@ -149,6 +170,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     editUserId.value = user.id;
     newUsername.value = user.name || user.username || '';
     newRole.value = user.role || 'user';
+    if (newJobTitle) {
+      newJobTitle.value = user.job_title || '사원';
+      newJobTitle.disabled = false;
+    }
     newContractType.value = user.contract_type || '정규직';
     if (employmentStatusGroup) employmentStatusGroup.style.display = '';
     if (newStatus) newStatus.value = user.status || '재직';
@@ -171,6 +196,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   if (addUserBtn) addUserBtn.addEventListener('click', openAddModal);
+  newUsername.addEventListener('input', () => {
+    if (!editUserId.value && newJobTitle) newJobTitle.value = jobTitleForName(newUsername.value.trim());
+  });
   if (closeModalBtn) closeModalBtn.addEventListener('click', closeModal);
   if (userModal) {
     userModal.addEventListener('click', (e) => {
@@ -211,8 +239,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     let result = allUsers.filter(u => {
       const name = (u.name || u.username || '').toLowerCase();
       const location = (u.work_location || '').toLowerCase();
+      const jobTitle = (u.job_title || '').toLowerCase();
 
-      const matchesKeyword = !keyword || name.includes(keyword) || location.includes(keyword);
+      const matchesKeyword = !keyword || name.includes(keyword) || location.includes(keyword) || jobTitle.includes(keyword);
 
       if (checkedLocations.length === 0) return false;
       const matchesCheckbox = matchesLocationFilter(location, checkedLocations);
@@ -248,6 +277,32 @@ document.addEventListener('DOMContentLoaded', async () => {
       return;
     }
 
+    if (currentView === 'table') {
+      userListContainer.innerHTML = `
+        <table class="user-table">
+          <thead><tr>
+            <th scope="col">이름</th><th scope="col">직책</th><th scope="col">권한</th>
+            <th scope="col">근무지</th><th scope="col">계약 형태</th><th scope="col">상태</th>
+            <th scope="col">연락처</th><th scope="col">입사일</th>${isAdmin ? '<th scope="col">관리</th>' : ''}
+          </tr></thead>
+          <tbody>${users.map(user => `
+            <tr>
+              <td class="user-table-name">${escapeHtml(user.name || user.username || '이름 없음')}</td>
+              <td class="user-table-title">${escapeHtml(user.job_title || '사원')}</td>
+              <td>${user.role === 'admin' ? '관리자' : '회원'}</td>
+              <td>${escapeHtml(user.work_location || '-')}</td>
+              <td>${escapeHtml(user.contract_type || '-')}</td>
+              <td>${escapeHtml(user.status || '재직')}</td>
+              <td>${escapeHtml(user.phone || '-')}</td>
+              <td>${escapeHtml(user.hire_date ? user.hire_date.split('T')[0] : '-')}</td>
+              ${isAdmin ? `<td><button type="button" class="btn-card-edit" data-id="${escapeHtml(user.id)}">수정</button></td>` : ''}
+            </tr>
+          `).join('')}</tbody>
+        </table>
+      `;
+      return;
+    }
+
     userListContainer.innerHTML = users.map(user => {
       const userColor = safeUserColor(user.color);
       return `
@@ -258,6 +313,7 @@ document.addEventListener('DOMContentLoaded', async () => {
               <span class="role-badge ${user.role === 'admin' ? 'admin' : 'user'}">
                 ${user.role === 'admin' ? '관리자' : '회원'}
               </span>
+              <span class="role-badge user">${escapeHtml(user.job_title || '사원')}</span>
             </div>
             <div style="display: flex; align-items: center; gap: 8px;">
               <span class="status-badge">${escapeHtml(user.status || '재직')}</span>
@@ -275,16 +331,21 @@ document.addEventListener('DOMContentLoaded', async () => {
       `;
     }).join('');
 
-    if (isAdmin) {
-      userListContainer.querySelectorAll('.btn-card-edit').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-          const userId = e.target.getAttribute('data-id');
-          const targetUser = allUsers.find(u => u.id == userId);
-          if (targetUser) openEditModal(targetUser);
-        });
-      });
-    }
   }
+
+  viewButtons.forEach(button => {
+    button.addEventListener('click', () => {
+      setView(button.dataset.userView);
+      filterAndRenderUsers();
+    });
+  });
+
+  userListContainer.addEventListener('click', event => {
+    const button = event.target.closest('.btn-card-edit');
+    if (!button || !isAdmin) return;
+    const targetUser = allUsers.find(user => String(user.id) === button.dataset.id);
+    if (targetUser) openEditModal(targetUser);
+  });
 
   // 이벤트 리스너 연결
   if (searchInput) searchInput.addEventListener('input', filterAndRenderUsers);
@@ -329,6 +390,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       const username = newUsername.value.trim();
       const password = newPassword.value.trim();
       const role = newRole.value;
+      const jobTitle = newJobTitle ? newJobTitle.value : '사원';
       const contractType = newContractType.value;
       const status = newStatus ? newStatus.value : '재직';
       const workLocation = newWorkLocation.value.trim();
@@ -345,6 +407,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           const updateData = {
             name: username,
             role: role,
+            job_title: jobTitle,
             contract_type: contractType,
             status: status,
             work_location: workLocation,
@@ -375,6 +438,7 @@ document.addEventListener('DOMContentLoaded', async () => {
               name: username,
               password: password,
               role: role,
+              job_title: jobTitle,
               contract_type: contractType,
               work_location: workLocation,
               hire_date: hireDate || null,
