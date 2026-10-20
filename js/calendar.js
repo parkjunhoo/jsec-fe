@@ -238,6 +238,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   function getLeaveIndicator(leaveType = '', userColor = '#38bdf8') {
     if (leaveType === '연차') return '🌴';
     if (leaveType === '시간차') return '⏳';
+    if (leaveType === '공가') return '🏛️';
     return '';
   }
 
@@ -908,7 +909,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         for (let day = 1; day <= 31; day += 1) rows[rowIndex][day + 1] = '';
       }
 
-      const priority = { '시간차': 1, '연차': 2, '휴무': 3 };
+      const priority = { '시간차': 1, '연차': 2, '공가': 3, '휴무': 4 };
       const dateCells = new Map();
       allVacations.forEach(vacation => {
         const name = (vacation.username || '').trim();
@@ -920,6 +921,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         let value;
         if (vacation.leave_type === '휴무') value = '휴';
         else if (vacation.leave_type === '연차') value = '연';
+        else if (vacation.leave_type === '공가') value = '공';
         else if (vacation.leave_type === '시간차') {
           value = Number(vacation.hours_used);
           if (!Number.isFinite(value) || value <= 0) {
@@ -1192,7 +1194,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     const dateCells = new Map();
-    const priority = { '시간차': 1, '연차': 2, '휴무': 3 };
+    const priority = { '시간차': 1, '연차': 2, '공가': 3, '휴무': 4 };
     const unmatchedNames = new Set();
     (vacations || []).forEach(vacation => {
       const name = (vacation.username || '').trim();
@@ -1209,6 +1211,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         cellValue = '휴';
       } else if (vacation.leave_type === '연차') {
         cellValue = '연';
+      } else if (vacation.leave_type === '공가') {
+        cellValue = '공';
       } else if (vacation.leave_type === '시간차') {
         const hours = Number(vacation.hours_used);
         if (!Number.isFinite(hours) || hours <= 0) {
@@ -1362,11 +1366,13 @@ document.addEventListener('DOMContentLoaded', async () => {
       let offCount = 0;
       let annualCount = 0;
       let timeCount = 0;
+      let officialCount = 0;
       const dayList = [];
 
       memberVacations.forEach(v => {
         if (v.leave_type === '연차') annualCount++;
         else if (v.leave_type === '시간차') timeCount++;
+        else if (v.leave_type === '공가') officialCount++;
         else offCount++;
 
         const dayNum = parseInt(v.date.split('-')[2], 10);
@@ -1391,7 +1397,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           </div>
 
           <div class="stat-badges" style="font-size: 11px; color: var(--text-sub);">
-            <span>휴무 ${offCount}</span> • <span>연차 ${annualCount}</span> ${timeCount > 0 ? `• <span>시간차 ${timeCount}</span>` : ''}
+            <span>휴무 ${offCount}</span> • <span>연차 ${annualCount}</span>${officialCount > 0 ? ` • <span>공가 ${officialCount}</span>` : ''}${timeCount > 0 ? ` • <span>시간차 ${timeCount}</span>` : ''}
           </div>
           
           <div style="width: 100%; background: rgba(255,255,255,0.08); height: 7px; border-radius: 4px; overflow: hidden;">
@@ -1472,7 +1478,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             ${dayEvents.map(ev => {
               const userInfo = userMap[ev.user_id] || userMap[ev.username] || { color: '#38bdf8' };
               const userColor = safeMemberColor(userInfo.color);
-              const leaveTypeClass = ['휴무', '연차', '시간차'].includes(ev.leave_type) ? ev.leave_type : '';
+              const leaveTypeClass = ['휴무', '연차', '시간차', '공가'].includes(ev.leave_type) ? ev.leave_type : '';
               
               // ★ 수정: getLeaveIndicator 호출 시 userColor 전달
               const leaveIndicator = getLeaveIndicator(ev.leave_type, userColor);
