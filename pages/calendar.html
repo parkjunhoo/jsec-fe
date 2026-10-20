@@ -282,6 +282,45 @@
     }
 
     .stats-grid[data-view="table"] { display: block; }
+    .stats-location-group {
+      grid-column: 1 / -1;
+      min-width: 0;
+      display: grid;
+      gap: 10px;
+    }
+    .stats-group-heading {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 0 2px 8px;
+      border-bottom: 1px solid var(--border-color);
+    }
+    .stats-group-heading h4 {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--text-main);
+      font-size: 14px;
+      font-weight: 750;
+    }
+    .stats-group-heading h4::before {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--group-color, var(--primary));
+      content: "";
+    }
+    .stats-group-meta {
+      color: var(--text-sub);
+      font-size: 11px;
+      white-space: nowrap;
+    }
+    .stats-location-cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(min(100%, 245px), 1fr));
+      gap: 12px;
+    }
     .stats-table-wrap { width: 100%; overflow-x: auto; border: 1px solid var(--border-color); border-radius: 12px; }
     .stats-table { width: 100%; min-width: 680px; border-collapse: collapse; text-align: left; }
     .stats-table th, .stats-table td { padding: 11px 12px; border-bottom: 1px solid var(--border-color); color: var(--text-main); font-size: 12px; }
@@ -395,6 +434,7 @@
       .stats-header-actions { width: 100%; justify-content: space-between; }
       .stats-heading h3 { font-size: 15px; }
       .stats-grid[data-view="cards"] { grid-template-columns: 1fr; }
+      .stats-location-cards { grid-template-columns: 1fr; }
     }
 
     /* 모달 및 폼 스타일 */

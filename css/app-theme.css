@@ -510,6 +510,64 @@ html[data-theme="light"] .contact-modal .form-submit {
 }
 html[data-theme="light"] .contact-modal .form-submit:hover:not(:disabled) { border-color: #115b42; background: #115b42; }
 
+html[data-theme="light"] .stats-container {
+  border-color: var(--app-border);
+  background: linear-gradient(145deg, #fff, #f3f7f3);
+  box-shadow: var(--app-shadow);
+}
+html[data-theme="light"] .stats-header { border-bottom-color: var(--app-border); }
+html[data-theme="light"] .stats-heading h3 { color: var(--text-main); }
+html[data-theme="light"] .stats-heading p { color: var(--text-sub); }
+html[data-theme="light"] .stats-total {
+  border-color: rgba(25, 114, 84, 0.2);
+  background: rgba(25, 114, 84, 0.08);
+  color: #155c43;
+}
+html[data-theme="light"] .stats-view-toggle {
+  border-color: var(--app-border);
+  background: #f1f5f1;
+}
+html[data-theme="light"] .stats-view-button { color: #53645a; }
+html[data-theme="light"] .stats-view-button[aria-pressed="true"] {
+  background: #dcefe3;
+  color: #155c43;
+}
+html[data-theme="light"] .stats-table-wrap { border-color: var(--app-border); }
+html[data-theme="light"] .stats-table th {
+  background: #edf3ee;
+  color: #53645a;
+}
+html[data-theme="light"] .stats-table th,
+html[data-theme="light"] .stats-table td { border-bottom-color: var(--app-border); }
+html[data-theme="light"] .stats-table td { color: var(--text-main); }
+html[data-theme="light"] .stats-table .stats-table-total { color: #155c43; }
+html[data-theme="light"] .stats-table .stats-table-dates { color: var(--text-sub); }
+html[data-theme="light"] .stats-empty {
+  border-color: var(--app-border);
+  color: var(--text-sub);
+}
+html[data-theme="light"] .stats-container .stat-card {
+  border-color: var(--app-border);
+  border-top-color: var(--member-color, var(--primary));
+  background: linear-gradient(145deg, #fff, #f7faf7);
+}
+html[data-theme="light"] .stats-container .stat-name { color: var(--text-main); }
+html[data-theme="light"] .stats-container .stat-badge-item {
+  border-color: rgba(44, 73, 57, 0.12);
+  background: #f0f4f0;
+  color: #53645a;
+}
+html[data-theme="light"] .stats-container .stat-badge-item[data-type="휴무"] { --badge-color: #5147a5; }
+html[data-theme="light"] .stats-container .stat-badge-item[data-type="연차"] { --badge-color: #187347; }
+html[data-theme="light"] .stats-container .stat-badge-item[data-type="시간차"] { --badge-color: #8a5a00; }
+html[data-theme="light"] .stats-container .stat-badge-item[data-type="공가"] { --badge-color: #a83269; }
+html[data-theme="light"] .stats-container .stat-usage,
+html[data-theme="light"] .stats-container .stat-dates-title { color: var(--text-sub); }
+html[data-theme="light"] .stats-container .stat-usage strong,
+html[data-theme="light"] .stats-container .stat-dates-list { color: var(--text-main); }
+html[data-theme="light"] .stats-container .stat-usage-track { background: #e3eae4; }
+html[data-theme="light"] .stats-container .stat-dates { border-top-color: var(--app-border); }
+
 html[data-large-text="true"] {
   font-size: 120%;
 }

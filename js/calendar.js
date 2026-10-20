@@ -1366,6 +1366,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     const memberStats = targetMembers.map(member => {
       const mName = member.name || member.username || '이름 없음';
       const mColor = safeMemberColor(member.color);
+      const normalizedLocation = (member.work_location || '').toLowerCase();
+      const workplace = locationFilterValues.find(location =>
+        normalizedLocation.includes(location.toLowerCase())
+      ) || '기타';
 
       const memberVacations = allVacations.filter(v =>
         member.id ? v.user_id === member.id : v.username === mName
@@ -1393,6 +1397,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       return {
         name: mName,
         color: mColor,
+        workplace,
         usageCount: memberVacations.length,
         offCount,
         annualCount,
@@ -1402,67 +1407,100 @@ document.addEventListener('DOMContentLoaded', async () => {
       };
     });
     const totalMonthCount = memberStats.reduce((total, member) => total + member.usageCount, 0);
-    const maxUsage = Math.max(...memberStats.map(member => member.usageCount), 1);
+    const workplaceOrder = [...locationFilterValues, '기타'];
+    const workplaceGroups = workplaceOrder
+      .map(workplace => ({
+        workplace,
+        members: memberStats.filter(member => member.workplace === workplace)
+      }))
+      .filter(group => group.members.length > 0);
+    const workplaceColors = {
+      스키장: '#38bdf8',
+      골프장: '#86efac',
+      현관: '#fbbf24',
+      기타: '#c4b5fd'
+    };
 
     if (currentStatsView === 'table') {
       statsGridContainer.innerHTML = `
-        <div class="stats-table-wrap">
-          <table class="stats-table">
-            <thead>
-              <tr>
-                <th scope="col">팀원</th>
-                <th scope="col">전체</th>
-                <th scope="col">휴무</th>
-                <th scope="col">연차</th>
-                <th scope="col">시간차</th>
-                <th scope="col">공가</th>
-                <th scope="col">사용일</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${memberStats.map(member => `
-                <tr>
-                  <td class="stats-table-name" style="border-left: 3px solid ${member.color};">${escapeHtml(member.name)}</td>
-                  <td class="stats-table-total">${member.usageCount}건</td>
-                  <td>${member.offCount}</td>
-                  <td>${member.annualCount}</td>
-                  <td>${member.timeCount}</td>
-                  <td>${member.officialCount}</td>
-                  <td class="stats-table-dates">${escapeHtml(member.datesString)}</td>
-                </tr>
-              `).join('')}
-            </tbody>
-          </table>
-        </div>
+        ${workplaceGroups.map(group => `
+          <section class="stats-location-group" style="--group-color: ${workplaceColors[group.workplace] || '#c4b5fd'};">
+            <header class="stats-group-heading">
+              <h4>${escapeHtml(group.workplace)} 근무처</h4>
+              <span class="stats-group-meta">${group.members.length}명 · ${group.members.reduce((sum, member) => sum + member.usageCount, 0)}건</span>
+            </header>
+            <div class="stats-table-wrap">
+              <table class="stats-table">
+                <thead>
+                  <tr>
+                    <th scope="col">팀원</th>
+                    <th scope="col">전체</th>
+                    <th scope="col">휴무</th>
+                    <th scope="col">연차</th>
+                    <th scope="col">시간차</th>
+                    <th scope="col">공가</th>
+                    <th scope="col">사용일</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${group.members.map(member => `
+                    <tr>
+                      <td class="stats-table-name" style="border-left: 3px solid ${member.color};">${escapeHtml(member.name)}</td>
+                      <td class="stats-table-total">${member.usageCount}건</td>
+                      <td>${member.offCount}</td>
+                      <td>${member.annualCount}</td>
+                      <td>${member.timeCount}</td>
+                      <td>${member.officialCount}</td>
+                      <td class="stats-table-dates">${escapeHtml(member.datesString)}</td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        `).join('')}
       `;
     } else {
-      statsGridContainer.innerHTML = memberStats.map(member => {
-        const gaugePercent = Math.round((member.usageCount / maxUsage) * 100);
+      statsGridContainer.innerHTML = workplaceGroups.map(group => {
+        const maxUsage = Math.max(...group.members.map(member => member.usageCount), 1);
         return `
-        <article class="stat-card" style="--member-color: ${member.color}; --usage-width: ${gaugePercent}%;">
-          <div class="stat-card-top">
-            <div class="stat-name">${escapeHtml(member.name)}</div>
-            <span class="stats-total">${member.usageCount}건</span>
-          </div>
+          <section class="stats-location-group" style="--group-color: ${workplaceColors[group.workplace] || '#c4b5fd'};">
+            <header class="stats-group-heading">
+              <h4>${escapeHtml(group.workplace)} 근무처</h4>
+              <span class="stats-group-meta">${group.members.length}명 · ${group.members.reduce((sum, member) => sum + member.usageCount, 0)}건</span>
+            </header>
+            <div class="stats-location-cards">
+              ${group.members.map(member => {
+                const gaugePercent = Math.round((member.usageCount / maxUsage) * 100);
+                return `
+                  <article class="stat-card" style="--member-color: ${member.color}; --usage-width: ${gaugePercent}%;">
+                    <div class="stat-card-top">
+                      <div class="stat-name">${escapeHtml(member.name)}</div>
+                      <span class="stats-total">${member.usageCount}건</span>
+                    </div>
 
-          <div class="stat-badges" aria-label="휴무 유형별 사용 건수">
-            <span class="stat-badge-item" data-type="휴무">휴무 <strong>${member.offCount}</strong></span>
-            <span class="stat-badge-item" data-type="연차">연차 <strong>${member.annualCount}</strong></span>
-            <span class="stat-badge-item" data-type="시간차">시간차 <strong>${member.timeCount}</strong></span>
-            <span class="stat-badge-item" data-type="공가">공가 <strong>${member.officialCount}</strong></span>
-          </div>
+                    <div class="stat-badges" aria-label="휴무 유형별 사용 건수">
+                      <span class="stat-badge-item" data-type="휴무">휴무 <strong>${member.offCount}</strong></span>
+                      <span class="stat-badge-item" data-type="연차">연차 <strong>${member.annualCount}</strong></span>
+                      <span class="stat-badge-item" data-type="시간차">시간차 <strong>${member.timeCount}</strong></span>
+                      <span class="stat-badge-item" data-type="공가">공가 <strong>${member.officialCount}</strong></span>
+                    </div>
 
-          <div>
-            <div class="stat-usage"><span>선택된 팀원 중 사용량</span><strong>${member.usageCount}건</strong></div>
-            <div class="stat-usage-track" aria-hidden="true"><div class="stat-usage-bar"></div></div>
-          </div>
+                    <div>
+                      <div class="stat-usage"><span>근무처 내 사용량</span><strong>${member.usageCount}건</strong></div>
+                      <div class="stat-usage-track" aria-hidden="true"><div class="stat-usage-bar"></div></div>
+                    </div>
 
-          <div class="stat-dates">
-            <span class="stat-dates-title">사용 날짜</span>
-            <span class="stat-dates-list">${escapeHtml(member.datesString)}</span>
-          </div>
-        </article>
-      `;
+                    <div class="stat-dates">
+                      <span class="stat-dates-title">사용 날짜</span>
+                      <span class="stat-dates-list">${escapeHtml(member.datesString)}</span>
+                    </div>
+                  </article>
+                `;
+              }).join('')}
+            </div>
+          </section>
+        `;
       }).join('');
     }
 
