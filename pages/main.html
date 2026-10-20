@@ -284,6 +284,85 @@
     }
     .admin-push:hover { border-color: rgba(114, 199, 255, 0.32); color: var(--blue); }
     .admin-push svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.8; }
+    .personal-panel {
+      margin-top: 20px;
+      padding: 21px;
+      border: 1px solid var(--line);
+      border-radius: 17px;
+      background: linear-gradient(145deg, rgba(19, 31, 48, 0.96), rgba(15, 25, 40, 0.98));
+      box-shadow: 0 6px 19px rgba(0, 0, 0, 0.07);
+    }
+    .personal-heading { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; margin-bottom: 16px; }
+    .personal-heading h2 { margin: 0; font-size: 18px; font-weight: 760; letter-spacing: -0.035em; }
+    .personal-heading p { margin: 5px 0 0; color: var(--muted); font-size: 12px; }
+    .personal-month { color: #b7c7d8; font-size: 12px; font-weight: 700; white-space: nowrap; }
+    .personal-tabs { display: flex; gap: 7px; padding-bottom: 12px; border-bottom: 1px solid var(--line); }
+    .personal-tab {
+      min-height: 37px;
+      padding: 0 14px;
+      border: 1px solid transparent;
+      border-radius: 10px;
+      background: transparent;
+      color: #9bacc0;
+      font-size: 12px;
+      font-weight: 720;
+      cursor: pointer;
+    }
+    .personal-tab[aria-selected="true"] { border-color: rgba(114, 199, 255, 0.2); background: rgba(76, 151, 195, 0.12); color: var(--blue); }
+    .personal-tab:focus-visible, .duty-toggle:focus-visible { outline: 3px solid rgba(39, 120, 168, 0.42); outline-offset: 2px; }
+    .personal-content { padding-top: 17px; }
+    .personal-content[hidden] { display: none; }
+    .personal-error { margin: 0 0 12px; color: #fca5a5; font-size: 12px; }
+    .personal-error:empty { display: none; }
+    .personal-error.success { color: #a8e5c6; }
+    .personal-stats { display: flex; align-items: baseline; gap: 10px; margin-bottom: 14px; }
+    .personal-stats strong { color: #f3f7fc; font-size: 25px; letter-spacing: -0.04em; }
+    .personal-stats span { color: var(--muted); font-size: 12px; }
+    .personal-list { display: grid; gap: 8px; }
+    .personal-row {
+      display: flex;
+      min-width: 0;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 11px 13px;
+      border: 1px solid rgba(190, 211, 239, 0.09);
+      border-radius: 11px;
+      background: rgba(255, 255, 255, 0.025);
+    }
+    .personal-row-main { min-width: 0; }
+    .personal-row-title { color: #e8f0f7; font-size: 12px; font-weight: 700; }
+    .personal-row-detail { margin-top: 4px; color: var(--muted); font-size: 11px; }
+    .personal-row-value { flex: 0 0 auto; color: #b6ddf2; font-size: 12px; font-weight: 750; text-align: right; }
+    .personal-empty { padding: 16px 12px; border: 1px dashed rgba(190, 211, 239, 0.13); border-radius: 11px; color: var(--muted); font-size: 12px; text-align: center; }
+    .personal-subheading { margin: 20px 0 9px; color: #dce7f2; font-size: 12px; font-weight: 750; }
+    .duty-list { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 9px; }
+    .duty-toggle {
+      display: grid;
+      min-height: 68px;
+      justify-items: start;
+      align-content: center;
+      gap: 7px;
+      padding: 10px 12px;
+      border: 1px solid rgba(190, 211, 239, 0.12);
+      border-radius: 11px;
+      background: rgba(255, 255, 255, 0.03);
+      color: #dce7f2;
+      text-align: left;
+      cursor: pointer;
+      transition: border-color 160ms ease, background 160ms ease;
+    }
+    .duty-toggle:hover:not(:disabled) { border-color: rgba(114, 199, 255, 0.3); }
+    .duty-toggle[aria-pressed="true"] { border-color: rgba(118, 212, 179, 0.33); background: rgba(70, 154, 119, 0.11); }
+    .duty-toggle:disabled { cursor: not-allowed; opacity: 0.58; }
+    .duty-name { font-size: 12px; font-weight: 750; }
+    .duty-state { color: var(--muted); font-size: 10px; }
+    .duty-toggle[aria-pressed="true"] .duty-state { color: #a8e5c6; }
+    .duty-note { margin: 9px 0 0; color: var(--muted); font-size: 10px; line-height: 1.5; }
+    @media (max-width: 760px) {
+      .personal-panel { padding: 18px; }
+      .duty-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
     @media (max-width: 760px) {
       .home-shell { padding: 22px 16px 38px; }
       .welcome-panel { min-height: 138px; padding: 21px 22px; border-radius: 17px; }
@@ -327,6 +406,16 @@
       .menu-desc { max-width: 100%; margin-top: 5px; font-size: 10px; }
       .menu-arrow { top: 14px; right: 12px; font-size: 15px; }
       .admin-push { width: 100%; justify-content: center; }
+      .personal-panel { margin-top: 15px; padding: 15px; border-radius: 14px; }
+      .personal-heading h2 { font-size: 16px; }
+      .personal-heading p, .personal-month { font-size: 10px; }
+      .personal-tab { flex: 1; padding: 0 9px; font-size: 11px; }
+      .personal-stats strong { font-size: 22px; }
+      .personal-row { padding: 10px; }
+      .personal-row-title, .personal-row-value { font-size: 11px; }
+      .personal-row-detail { font-size: 10px; }
+      .duty-toggle { min-height: 62px; padding: 9px; }
+      .duty-name { font-size: 11px; }
     }
     @media (max-width: 360px) {
       .menu-grid { grid-template-columns: 1fr; }
@@ -381,6 +470,37 @@
           </div>
         </section>
       </div>
+    </section>
+
+    <section class="personal-panel" aria-labelledby="personalTitle">
+      <div class="personal-heading">
+        <div>
+          <h2 id="personalTitle">내 메뉴</h2>
+          <p id="personalWelcome">이번 달 내 일정과 수당을 확인하세요.</p>
+        </div>
+        <span class="personal-month" id="personalMonth"></span>
+      </div>
+      <div class="personal-tabs" role="tablist" aria-label="내 메뉴">
+        <button class="personal-tab" id="personalVacationTab" type="button" role="tab" aria-selected="true" aria-controls="personalVacationPanel">내 휴무</button>
+        <button class="personal-tab" id="personalAllowanceTab" type="button" role="tab" aria-selected="false" aria-controls="personalAllowancePanel" tabindex="-1">수당 관리</button>
+      </div>
+      <section class="personal-content" id="personalVacationPanel" role="tabpanel" aria-labelledby="personalVacationTab">
+        <p class="personal-error" id="personalVacationError" role="alert"></p>
+        <div id="personalVacationSummary" aria-live="polite"><div class="personal-empty">이번 달 휴무 일정을 불러오는 중입니다.</div></div>
+      </section>
+      <section class="personal-content" id="personalAllowancePanel" role="tabpanel" aria-labelledby="personalAllowanceTab" hidden>
+        <p class="personal-error" id="personalAllowanceError" role="alert"></p>
+        <div id="personalAllowanceSummary" aria-live="polite"><div class="personal-empty">이번 달 수당 정보를 불러오는 중입니다.</div></div>
+        <h3 class="personal-subheading">오늘 할 일 등록</h3>
+        <div class="duty-list" id="personalDutyList">
+          <button class="duty-toggle" type="button" data-duty="shuttle-morning" aria-pressed="false" disabled><span class="duty-name">오전셔틀</span><span class="duty-state">확인 중</span></button>
+          <button class="duty-toggle" type="button" data-duty="shuttle-afternoon" aria-pressed="false" disabled><span class="duty-name">오후셔틀</span><span class="duty-state">확인 중</span></button>
+          <button class="duty-toggle" type="button" data-duty="ball-1" aria-pressed="false" disabled><span class="duty-name">볼줍기</span><span class="duty-state">확인 중</span></button>
+          <button class="duty-toggle" type="button" data-duty="ball-2" aria-pressed="false" disabled><span class="duty-name">볼줍기2</span><span class="duty-state">확인 중</span></button>
+        </div>
+        <p class="duty-note">등록된 항목을 다시 누르면 취소됩니다. 이미 다른 직원이 등록한 항목은 선택할 수 없습니다.</p>
+        <p class="personal-error" id="personalDutyStatus" role="status" aria-live="polite"></p>
+      </section>
     </section>
 
     <section aria-labelledby="servicesTitle">
@@ -451,6 +571,7 @@
   <script src="/js/supabase.js"></script>
   <script src="/js/user-preferences.js"></script>
   <script src="/js/navbar.js"></script>
+  <script src="/js/main-personal.js"></script>
   <script>
     // 메인 페이지 전용 추가 세션 체크 (필요시)
     document.addEventListener('DOMContentLoaded', async () => {
