@@ -342,6 +342,17 @@ document.addEventListener('DOMContentLoaded', async () => {
         await request(`/allowances/${encodeURIComponent(entry.id)}`, { method: 'DELETE' });
         dutyStatus.textContent = `${duty.label} 등록을 취소했습니다.`;
       } else {
+        const confirmation = await Swal.fire({
+          icon: 'warning',
+          title: '등록 확인',
+          text: `오늘 ${duty.label} 등록을 진행할까요?`,
+          showCancelButton: true,
+          confirmButtonText: '등록',
+          cancelButtonText: '취소',
+          reverseButtons: true
+        });
+        if (!confirmation.isConfirmed) return;
+
         await request('/allowances', {
           method: 'POST',
           body: JSON.stringify({
