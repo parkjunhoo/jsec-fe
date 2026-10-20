@@ -646,7 +646,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       const date = `${monthInput.value}-${String(day).padStart(2, '0')}`;
       const entriesForDate = entries.filter(entry => entry.work_date === date && entry.type_code === 'caddie_shuttle');
       rows.push([
-        day === 1 ? `${monthParts.month}월1일` : day,
+        `${monthParts.month}월 ${day}일`,
         ...columns.map(user => {
           const record = entriesForDate.find(entry => entry.user_id === user.id && entry.shift === user.shift);
           return record ? Number(record.unit_amount) || 0 : 'ㅡ';
@@ -720,7 +720,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     return sheet;
   }
 
-  function configureFormulas(workbookSheets, monthParts, names, membersByType) {
+  function configureFormulas(workbookSheets, monthParts, membersByType) {
     const golfSheet = workbookSheets.golf;
     const golfTotalRow = monthParts.days + 4;
     membersByType.golf.forEach((member, index) => {
@@ -742,25 +742,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     const monthSheet = workbookSheets.month;
-    const golfName = names.golf.replace(/'/g, "''");
-    const shuttleName = names.shuttle.replace(/'/g, "''");
     membersByType.month.forEach((member, index) => {
       const column = columnName(index + 2);
       const golfTotal = entries.filter(entry => entry.type_code === 'ball_pickup' && entry.user_id === member?.id)
         .reduce((sum, entry) => sum + (Number(entry.unit_amount) || 0), 0);
       const shuttleTotal = entries.filter(entry => entry.type_code === 'caddie_shuttle' && entry.user_id === member?.id)
         .reduce((sum, entry) => sum + (Number(entry.unit_amount) || 0), 0);
-      const golfIndex = membersByType.golf.findIndex(candidate => candidate.id === member.id);
-      const shuttleColumns = membersByType.shuttleColumns
-        .map((column, columnIndex) => ({ ...column, columnIndex }))
-        .filter(column => column.id === member.id);
-      const golfFormula = golfIndex < 0 ? '0' : `'${golfName}'!${columnName(golfIndex + 2)}${golfTotalRow}`;
-      const shuttleFormula = shuttleColumns.length
-        ? `SUM(${shuttleColumns.map(column => `'${shuttleName}'!${columnName(column.columnIndex + 2)}${shuttleTotalRow}`).join(',')})`
-        : '0';
-      setFormula(monthSheet, `${column}3`, golfFormula, golfTotal);
-      setFormula(monthSheet, `${column}4`, shuttleFormula, shuttleTotal);
-      setFormula(monthSheet, `${column}5`, `SUM(${column}3:${column}4)`, golfTotal + shuttleTotal);
+      monthSheet[`${column}3`] = { t: 'n', v: golfTotal };
+      monthSheet[`${column}4`] = { t: 'n', v: shuttleTotal };
+      monthSheet[`${column}5`] = { t: 'n', v: golfTotal + shuttleTotal };
     });
   }
 
@@ -1030,7 +1020,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       XLSX.utils.book_append_sheet(workbook, golfSheet, names.golf);
       XLSX.utils.book_append_sheet(workbook, shuttleSheet, names.shuttle);
       XLSX.utils.book_append_sheet(workbook, monthSheet, names.month);
-      configureFormulas({ golf: golfSheet, shuttle: shuttleSheet, month: monthSheet }, monthParts, names, {
+      configureFormulas({ golf: golfSheet, shuttle: shuttleSheet, month: monthSheet }, monthParts, {
         golf: golfMembers,
         shuttle: shuttleMembers,
         shuttleColumns,
