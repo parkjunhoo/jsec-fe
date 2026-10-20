@@ -13,6 +13,44 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_
 
 const PUSH_TOKEN_API = 'https://jsec-serverless.adobephotoshop.workers.dev/api/push/register';
 let nativePushToken = '';
+const notificationDestinationKey = 'jsec-pending-notification-destination';
+const notificationDestinations = {
+  calendar: '/pages/calendar.html',
+  'item-requests': '/pages/item-requests.html',
+  main: '/pages/main.html'
+};
+let hasAuthenticatedSession = false;
+let intentionalSignOutPending = false;
+
+window.onNativePushDestination = async destination => {
+  const path = notificationDestinations[destination];
+  if (!path) return;
+
+  try {
+    const { data, error } = await supabaseClient.auth.getSession();
+    if (error) throw error;
+    if (data.session) {
+      window.location.replace(path);
+      return;
+    }
+    sessionStorage.setItem(notificationDestinationKey, path);
+    if (window.location.pathname !== '/index.html' && window.location.pathname !== '/') {
+      window.location.replace('/index.html');
+    }
+  } catch (error) {
+    console.error('푸시 알림 이동 전 세션 확인 오류:', error);
+  }
+};
+
+window.consumeNativePushDestination = () => {
+  const path = sessionStorage.getItem(notificationDestinationKey);
+  sessionStorage.removeItem(notificationDestinationKey);
+  return Object.values(notificationDestinations).includes(path) ? path : null;
+};
+
+window.markIntentionalSignOut = (pending = true) => {
+  intentionalSignOutPending = pending;
+};
 
 async function syncNativePushToken(session) {
   if (!nativePushToken || !session) return;
@@ -50,8 +88,20 @@ window.onNativePushToken = async token => {
 
 window.getNativePushToken = () => nativePushToken;
 
-supabaseClient.auth.onAuthStateChange((_event, session) => {
+supabaseClient.auth.onAuthStateChange((event, session) => {
   if (session) {
+    hasAuthenticatedSession = true;
+    localStorage.setItem('jsec-had-authenticated-session', 'true');
     syncNativePushToken(session);
+  } else if (event === 'SIGNED_OUT') {
+    const hadAuthenticatedSession = hasAuthenticatedSession ||
+      localStorage.getItem('jsec-had-authenticated-session') === 'true';
+    hasAuthenticatedSession = false;
+    const intentionalSignOut = intentionalSignOutPending;
+    intentionalSignOutPending = false;
+    localStorage.removeItem('jsec-had-authenticated-session');
+    if (hadAuthenticatedSession && !intentionalSignOut) {
+      window.location.replace('/index.html?session=expired');
+    }
   }
 });

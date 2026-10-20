@@ -366,6 +366,10 @@ document.addEventListener('DOMContentLoaded', async () => {
           <span>큰글씨 모드</span>
           <span id="largeTextSwitchState" aria-hidden="true">끔</span>
         </button>
+        <button class="large-text-switch" id="nativeBiometricSwitch" type="button" aria-pressed="false" style="display: none;">
+          <span>생체 인증 앱 잠금</span>
+          <span id="nativeBiometricSwitchState" aria-hidden="true">끔</span>
+        </button>
 
         <nav class="drawer-links">
           <a href="/pages/main.html" class="drawer-item ${currentPath.includes('main.html') ? 'active' : ''}">
@@ -410,6 +414,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   const themeSwitchIcon = document.getElementById('themeSwitchIcon');
   const largeTextSwitch = document.getElementById('largeTextSwitch');
   const largeTextSwitchState = document.getElementById('largeTextSwitchState');
+  const nativeBiometricSwitch = document.getElementById('nativeBiometricSwitch');
+  const nativeBiometricSwitchState = document.getElementById('nativeBiometricSwitchState');
   const openNotificationsBtn = document.getElementById('openNotifications');
   const notificationOverlay = document.getElementById('notificationOverlay');
   const notificationList = document.getElementById('notificationList');
@@ -453,6 +459,20 @@ document.addEventListener('DOMContentLoaded', async () => {
       const saved = await preferences.setLargeTextMode(enabled);
       updateLargeTextSwitch();
       if (!saved) console.error('큰글씨 모드 설정을 계정에 저장하지 못했습니다. 이 기기에는 적용되어 있습니다.');
+    });
+  }
+
+  if (nativeBiometricSwitch && window.AndroidSecurity) {
+    nativeBiometricSwitch.style.display = 'flex';
+    const updateBiometricSwitch = enabled => {
+      nativeBiometricSwitch.setAttribute('aria-pressed', String(enabled));
+      nativeBiometricSwitchState.textContent = enabled ? '켬' : '끔';
+      nativeBiometricSwitch.setAttribute('aria-label', `생체 인증 앱 잠금 ${enabled ? '끄기' : '켜기'}`);
+    };
+    updateBiometricSwitch(window.AndroidSecurity.isEnabled());
+    window.onNativeBiometricLockChanged = updateBiometricSwitch;
+    nativeBiometricSwitch.addEventListener('click', () => {
+      window.AndroidSecurity.setEnabled(!window.AndroidSecurity.isEnabled());
     });
   }
 
@@ -666,7 +686,12 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (logoutBtn) {
     logoutBtn.addEventListener('click', async () => {
       if (typeof supabaseClient !== 'undefined') {
-        await supabaseClient.auth.signOut();
+        window.markIntentionalSignOut?.();
+        const { error } = await supabaseClient.auth.signOut();
+        if (error) {
+          window.markIntentionalSignOut?.(false);
+          console.error('로그아웃 오류:', error);
+        }
       }
       window.location.href = '/index.html';
     });

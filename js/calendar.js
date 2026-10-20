@@ -410,6 +410,11 @@ document.addEventListener('DOMContentLoaded', async () => {
           <button class="date-detail-action delete" type="button" data-detail-action="delete-vacation" data-id="${escapeHtml(vacation.id)}">삭제</button>
         </div>
       ` : '';
+      const calendarAction = window.AndroidCalendar ? `
+        <div class="date-detail-actions">
+          <button class="date-detail-action" type="button" data-detail-action="add-calendar" data-id="${escapeHtml(vacation.id)}">기기 캘린더에 추가</button>
+        </div>
+      ` : '';
 
       return `
         <article class="date-detail-item">
@@ -421,6 +426,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             ${actions}
           </div>
           ${memo}
+          ${calendarAction}
         </article>
       `;
     });
@@ -515,6 +521,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         openEditModal(vacation);
       } else if (action === 'delete-vacation' && vacation) {
         deleteVacationFromDetails(vacation);
+      } else if (action === 'add-calendar' && vacation && window.AndroidCalendar) {
+        const title = `${vacation.username || '휴무 일정'} - ${vacation.leave_type || '휴무'}`;
+        const description = [
+          `종류: ${vacation.leave_type || '휴무'}`,
+          vacation.time_detail ? `세부 시간: ${vacation.time_detail}` : '',
+          vacation.hours_used ? `사용 시간: ${vacation.hours_used}시간` : '',
+          vacation.memo ? `메모: ${vacation.memo}` : ''
+        ].filter(Boolean).join('\n');
+        window.AndroidCalendar.addAllDayEvent(vacation.date, title, description);
       } else if (action === 'edit-note' && userRole === 'admin') {
         closeDateDetails();
         openCalendarNoteModal(dateDetailsModal.dataset.date);
