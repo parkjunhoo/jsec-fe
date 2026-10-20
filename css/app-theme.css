@@ -618,6 +618,7 @@ html[data-large-text="true"] .allowance-entry-calendar-wrap {
 }
 html[data-large-text="true"] .allowance-entry-calendar {
   min-width: 840px;
+  grid-auto-rows: 120px;
 }
 html[data-large-text="true"] .allowance-entry-calendar .allowance-weekday {
   min-height: 48px;
@@ -625,8 +626,8 @@ html[data-large-text="true"] .allowance-entry-calendar .allowance-weekday {
   font-size: 16px;
 }
 html[data-large-text="true"] .allowance-entry-calendar .allowance-day-cell {
-  height: auto;
-  min-height: 100px;
+  height: 100%;
+  min-height: 0;
   padding: 8px;
   font-size: 16px;
   overflow-wrap: anywhere;
@@ -644,11 +645,9 @@ html[data-large-text="true"] .allowance-entry-calendar .allowance-person-tag {
 html[data-large-text="true"] .allowance-entry-calendar .allowance-person-tag {
   display: inline-block;
   max-width: 100%;
-  white-space: normal;
-  overflow-wrap: anywhere;
 }
 html[data-large-text="true"] .allowance-entry-calendar .allowance-person-tag strong {
-  white-space: normal;
+  white-space: nowrap;
 }
 html[data-large-text="true"] .personal-vacation-list {
   grid-template-columns: minmax(0, 1fr);

@@ -85,22 +85,34 @@
     .allowance-entry-month-title { margin: 0; color: var(--text-sub); font-size: 12px; font-weight: 700; }
     .allowance-calendar-nav { display: flex; gap: 6px; }
     .allowance-calendar-nav button { width: 34px; height: 34px; border: 1px solid var(--app-border); border-radius: 7px; background: var(--app-surface-raised); color: var(--text-main); font-size: 16px; cursor: pointer; }
-    .allowance-entry-calendar { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); }
+    .allowance-entry-calendar { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); grid-template-rows: 40px; grid-auto-rows: 104px; }
     .allowance-weekday { padding: 9px 2px; border-bottom: 1px solid var(--app-border); color: var(--text-sub); font-size: 11px; font-weight: 700; text-align: center; }
-    .allowance-day-cell { min-width: 0; min-height: 84px; padding: 5px; border: 0; border-right: 1px solid var(--app-border); border-bottom: 1px solid var(--app-border); background: transparent; color: var(--text-main); text-align: left; cursor: pointer; }
+    .allowance-weekday:first-child { color: #f87171; }
+    .allowance-weekday:nth-child(7) { color: #60a5fa; }
+    .allowance-day-cell, .allowance-calendar-empty { min-width: 0; border: 0; border-right: 1px solid var(--app-border); border-bottom: 1px solid var(--app-border); }
+    .allowance-calendar-empty { background: color-mix(in srgb, var(--app-surface-raised) 35%, transparent); }
+    .allowance-day-cell { display: flex; flex-direction: column; gap: 3px; width: 100%; height: 100%; min-height: 0; padding: 5px; background: transparent; color: var(--text-main); text-align: left; cursor: pointer; }
     .allowance-day-cell:nth-child(7n) { border-right: 0; }
+    .allowance-day-cell.weekend-sunday .allowance-day-number { color: #f87171; }
+    .allowance-day-cell.weekend-saturday .allowance-day-number { color: #60a5fa; }
     .allowance-day-cell.selected { background: color-mix(in srgb, var(--primary) 12%, var(--app-surface)); box-shadow: inset 0 0 0 1px var(--primary); }
+    .allowance-day-cell:focus-visible { position: relative; z-index: 1; outline: 2px solid var(--primary); outline-offset: -2px; }
     .allowance-day-cell.today .allowance-day-number { color: var(--primary); font-weight: 800; }
     .allowance-day-cell.outside-month { color: var(--text-sub); opacity: 0.38; }
-    .allowance-day-number { display: block; margin-bottom: 5px; font-size: 12px; font-weight: 650; }
-    .allowance-day-summary { display: grid; gap: 3px; color: var(--text-sub); font-size: 13px; line-height: 1.3; overflow-wrap: anywhere; }
+    .allowance-day-number { display: block; flex: 0 0 auto; font-size: 12px; font-weight: 650; font-variant-numeric: tabular-nums; }
+    .allowance-day-summary { display: grid; flex: 1 1 auto; min-height: 0; align-content: start; gap: 3px; overflow-y: auto; scrollbar-width: thin; color: var(--text-sub); font-size: 12px; line-height: 1.25; overflow-wrap: anywhere; }
     .allowance-day-summary strong { font-weight: 800; white-space: nowrap; }
     .allowance-person-tag {
       display: inline-block;
+      max-width: 100%;
       padding: 1px 4px;
       border-radius: 4px;
       background: color-mix(in srgb, var(--member-color) 16%, transparent);
       color: var(--text-main);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      vertical-align: top;
     }
     .allowance-target-control { display: flex; align-items: center; gap: 9px; margin-bottom: 12px; color: var(--text-sub); font-size: 12px; }
     .allowance-target-control select { min-height: 36px; min-width: 150px; padding: 0 9px; border: 1px solid var(--app-border); border-radius: 7px; background: var(--input-bg); color: var(--text-main); }
@@ -123,7 +135,8 @@
       .allowance-heading h1 { font-size: 22px; }
       .allowance-table { min-width: 700px; }
       .allowance-table.summary-table { min-width: 540px; }
-      .allowance-day-cell { min-height: 72px; padding: 4px 3px; }
+      .allowance-entry-calendar { grid-auto-rows: 92px; }
+      .allowance-day-cell { padding: 4px 3px; }
       .allowance-day-panel-head { align-items: flex-start; }
     }
     @media (max-width: 380px) {

@@ -444,9 +444,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     const ordinalBySlot = getAllowanceOrdinals();
     const weekdays = ['일', '월', '화', '수', '목', '금', '토']
       .map(day => `<div class="allowance-weekday">${day}</div>`).join('');
-    const cells = Array.from({ length: firstDay }, () => '<div aria-hidden="true"></div>');
+    const cells = Array.from(
+      { length: firstDay },
+      () => '<div class="allowance-calendar-empty" aria-hidden="true"></div>'
+    );
     for (let day = 1; day <= days; day += 1) {
       const date = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+      const weekday = new Date(year, month - 1, day).getDay();
       const dayEntries = getEntriesForCalendarTab(date);
       const renderEntries = (typeCode, getIcon) => dayEntries
         .filter(entry => entry.type_code === typeCode)
@@ -455,7 +459,8 @@ document.addEventListener('DOMContentLoaded', async () => {
           const name = member?.name || entry.username || '직원';
           const ordinal = ordinalBySlot.get(getAllowanceSlotKey(entry));
           const color = getMemberColor(entry.user_id);
-          return `<span class="allowance-person-tag" style="--member-color:${color}">${getIcon(entry)} ${escapeHtml(name)} <strong>${ordinal || '-'}회</strong></span>`;
+          const label = `${getIcon(entry)} ${name} ${ordinal || '-'}회`;
+          return `<span class="allowance-person-tag" title="${escapeHtml(label)}" style="--member-color:${color}">${escapeHtml(getIcon(entry))} ${escapeHtml(name)} <strong>${ordinal || '-'}회</strong></span>`;
         });
       const shuttleEntries = renderEntries('caddie_shuttle', entry => entry.shift === 'afternoon' ? '🚘' : '🚗');
       const ballEntries = renderEntries('ball_pickup', () => '⛳');
@@ -465,14 +470,23 @@ document.addEventListener('DOMContentLoaded', async () => {
       ].filter(Boolean).join('');
       const classes = [
         'allowance-day-cell',
+        weekday === 0 ? 'weekend-sunday' : '',
+        weekday === 6 ? 'weekend-saturday' : '',
         selectedDate === date ? 'selected' : '',
         getTodayKst() === date ? 'today' : ''
       ].filter(Boolean).join(' ');
-      cells.push(`<button class="${classes}" type="button" data-date="${date}" aria-pressed="${selectedDate === date}">
+      const accessibleDate = `${year}년 ${month}월 ${day}일`;
+      const accessibleEntries = dayEntries.filter(entry =>
+        entry.type_code === 'caddie_shuttle' || entry.type_code === 'ball_pickup'
+      ).map(entry =>
+        `${entry.username || '직원'} ${entry.type_code === 'caddie_shuttle' ? '캐디 셔틀' : '볼수거'}`
+      ).join(', ');
+      cells.push(`<button class="${classes}" type="button" data-date="${date}" aria-label="${escapeHtml(accessibleDate)}${accessibleEntries ? `, ${escapeHtml(accessibleEntries)}` : ''}" aria-current="${getTodayKst() === date ? 'date' : 'false'}" aria-pressed="${selectedDate === date}">
         <span class="allowance-day-number">${day}</span>
         <span class="allowance-day-summary">${status}</span>
       </button>`);
     }
+    while (cells.length % 7 !== 0) cells.push('<div class="allowance-calendar-empty" aria-hidden="true"></div>');
     calendar.innerHTML = weekdays + cells.join('');
     if (activeTab === 'entry') renderDaySlots();
   }
