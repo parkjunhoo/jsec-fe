@@ -343,6 +343,22 @@
     .date-details-title { min-width: 0; flex: 1; font-size: 18px; font-weight: 750; color: var(--text-main); }
     .calendar-bulk-actions { display: flex; justify-content: center; margin: 12px 0 20px; }
     #addAllMonthEventsBtn { width: 100%; max-width: 420px; min-height: 44px; padding: 0 16px; border: 1px solid var(--app-border); border-radius: 10px; background: var(--app-surface); color: var(--text-main); font-size: 14px; font-weight: 700; cursor: pointer; }
+    .calendar-export-dialog { width: min(94vw, 540px) !important; }
+    .calendar-export-picker { display: grid; gap: 14px; text-align: left; }
+    .calendar-export-group { padding: 12px; border: 1px solid var(--app-border); border-radius: 12px; background: var(--app-surface-raised); }
+    .calendar-export-group-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 10px; color: var(--text-main); font-size: 14px; }
+    .calendar-export-group-heading strong span { margin-left: 5px; color: var(--text-sub); font-size: 12px; font-weight: 600; }
+    .calendar-export-group-heading button { border: 0; background: transparent; color: var(--primary); font-size: 12px; font-weight: 700; cursor: pointer; }
+    .calendar-export-options { display: flex; flex-wrap: wrap; gap: 8px; }
+    .calendar-export-chip { display: inline-flex; align-items: center; gap: 7px; min-height: 38px; padding: 6px 10px; border: 1px solid var(--app-border); border-radius: 9px; color: var(--text-main); font-size: 13px; cursor: pointer; }
+    .calendar-export-chip input, .calendar-export-member input { width: 18px; height: 18px; accent-color: var(--primary); }
+    .calendar-export-member-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; max-height: 230px; overflow-y: auto; }
+    .calendar-export-member { display: flex; align-items: center; gap: 7px; min-width: 0; padding: 8px; border: 1px solid var(--app-border); border-radius: 8px; color: var(--text-main); cursor: pointer; }
+    .calendar-export-member-color { width: 12px; height: 12px; flex: 0 0 auto; border-radius: 50%; background: var(--member-color); }
+    .calendar-export-member-name { flex: 1; overflow: hidden; font-size: 13px; text-overflow: ellipsis; white-space: nowrap; }
+    .calendar-export-member-count { color: var(--text-sub); font-size: 11px; white-space: nowrap; }
+    .calendar-export-empty, .calendar-export-help { color: var(--text-sub); font-size: 12px; line-height: 1.5; }
+    @media (max-width: 420px) { .calendar-export-member-list { grid-template-columns: minmax(0, 1fr); } }
     .date-details-list { display: grid; gap: 10px; }
     .date-detail-item { padding: 13px; border: 1px solid var(--app-border); border-radius: 10px; background: var(--app-surface-raised); }
     .date-detail-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }

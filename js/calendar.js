@@ -508,29 +508,236 @@ document.addEventListener('DOMContentLoaded', async () => {
     addAllMonthEventsBtn.style.display = 'block';
   }
   if (addAllMonthEventsBtn) {
-    addAllMonthEventsBtn.addEventListener('click', () => {
+    addAllMonthEventsBtn.addEventListener('click', async () => {
       if (!window.AndroidCalendar) return;
       const year = currentDate.getFullYear();
       const month = currentDate.getMonth();
       const monthStart = `${year}-${String(month + 1).padStart(2, '0')}-01`;
       const monthEnd = `${year}-${String(month + 1).padStart(2, '0')}-${String(new Date(year, month + 1, 0).getDate()).padStart(2, '0')}`;
-      const monthEvents = allVacations
-        .filter(vacation => vacation.date >= monthStart && vacation.date <= monthEnd)
-        .map(vacation => ({
-          date: vacation.date,
-          title: `${vacation.username || '휴무 일정'} - ${vacation.leave_type || '휴무'}`,
-          description: [
-            `종류: ${vacation.leave_type || '휴무'}`,
-            vacation.time_detail ? `세부 시간: ${vacation.time_detail}` : '',
-            vacation.hours_used ? `사용 시간: ${vacation.hours_used}시간` : '',
-            vacation.memo ? `메모: ${vacation.memo}` : ''
-          ].filter(Boolean).join('\n')
-        }));
-      if (monthEvents.length === 0) {
+      const monthVacations = allVacations.filter(
+        vacation => vacation.date >= monthStart && vacation.date <= monthEnd
+      );
+      if (monthVacations.length === 0) {
         Swal.fire({ icon: 'info', text: '현재 선택한 달에 등록된 휴무 일정이 없습니다.' });
         return;
       }
-      window.AndroidCalendar.addAllMonthEvents(JSON.stringify(monthEvents));
+
+      const locationOptions = Array.from(locationCheckboxes)
+        .filter(checkbox => !shiftFilterValues.includes(checkbox.value))
+        .map(checkbox => ({
+          value: checkbox.value,
+          label: checkbox.closest('label')?.querySelector('.chip-label')?.textContent.trim()
+            || checkbox.value
+        }));
+      const shiftOptions = Array.from(locationCheckboxes)
+        .filter(checkbox => shiftFilterValues.includes(checkbox.value))
+        .map(checkbox => ({
+          value: checkbox.value,
+          label: checkbox.closest('label')?.querySelector('.chip-label')?.textContent.trim()
+            || checkbox.value
+        }));
+      const memberEvents = new Map();
+      monthVacations.forEach(vacation => {
+        const key = String(vacation.user_id || vacation.username || '');
+        if (!key) return;
+        const event = memberEvents.get(key) || { count: 0, name: vacation.username || '이름 없음' };
+        event.count += 1;
+        memberEvents.set(key, event);
+      });
+      const members = Array.from(memberEvents, ([id, event]) => {
+        const profile = userMap[id] || userMap[event.name] || {};
+        return {
+          id,
+          name: profile.name || event.name,
+          workLocation: profile.work_location || '',
+          color: safeMemberColor(profile.color),
+          count: event.count
+        };
+      }).sort((left, right) => left.name.localeCompare(right.name, 'ko'));
+      const memberById = new Map(members.map(member => [member.id, member]));
+      const selectedMemberIds = new Set();
+      const selectedLocations = new Set(locationOptions.map(option => option.value));
+      const selectedShifts = new Set(shiftOptions.map(option => option.value));
+      let visibleMemberIds = [];
+      const monthLabel = `${year}년 ${month + 1}월`;
+      const selectionResult = await Swal.fire({
+        title: `${monthLabel} 일정 추가`,
+        html: `
+          <div class="calendar-export-picker">
+            <section class="calendar-export-group" aria-label="근무지 선택">
+              <div class="calendar-export-group-heading">
+                <strong>근무지</strong>
+                <button type="button" data-bulk-select="locations">전체 선택</button>
+              </div>
+              <div class="calendar-export-options">
+                ${locationOptions.map(option => `
+                  <label class="calendar-export-chip">
+                    <input type="checkbox" data-location-filter value="${escapeHtml(option.value)}" checked>
+                    <span>${escapeHtml(option.label)}</span>
+                  </label>
+                `).join('')}
+              </div>
+            </section>
+            <section class="calendar-export-group" aria-label="근무 시간 선택">
+              <div class="calendar-export-group-heading">
+                <strong>근무 시간</strong>
+                <button type="button" data-bulk-select="shifts">전체 선택</button>
+              </div>
+              <div class="calendar-export-options">
+                ${shiftOptions.map(option => `
+                  <label class="calendar-export-chip">
+                    <input type="checkbox" data-shift-filter value="${escapeHtml(option.value)}" checked>
+                    <span>${escapeHtml(option.label)}</span>
+                  </label>
+                `).join('')}
+              </div>
+            </section>
+            <section class="calendar-export-group" aria-label="직원 선택">
+              <div class="calendar-export-group-heading">
+                <strong>직원 <span data-member-selection-count>0명 선택</span></strong>
+                <button type="button" data-bulk-select="visible-members">표시 직원 모두 선택</button>
+              </div>
+              <div class="calendar-export-member-list" data-member-list></div>
+            </section>
+            <p class="calendar-export-help">선택한 직원의 ${monthLabel} 일정만 기기 캘린더에 추가합니다.</p>
+          </div>
+        `,
+        showCancelButton: true,
+        confirmButtonText: '선택 일정 추가',
+        cancelButtonText: '취소',
+        focusConfirm: false,
+        customClass: { popup: 'calendar-export-dialog' },
+        didOpen: () => {
+          const popup = Swal.getPopup();
+          const list = popup.querySelector('[data-member-list]');
+          const selectionCount = popup.querySelector('[data-member-selection-count]');
+          const updateMemberList = () => {
+            const visibleMembers = members.filter(member => {
+              const location = member.workLocation.toLowerCase();
+              const locationMatches = locationOptions.some(option =>
+                selectedLocations.has(option.value) &&
+                (option.value === otherLocationFilter
+                  ? !locationFilterValues.some(value => location.includes(value.toLowerCase()))
+                  : location.includes(option.value.toLowerCase()))
+              );
+              const isNightShift = location.includes('야간');
+              const shiftMatches = shiftOptions.some(option =>
+                selectedShifts.has(option.value) &&
+                (option.value === '야간' ? isNightShift : !isNightShift)
+              );
+              return locationMatches && shiftMatches;
+            });
+            visibleMemberIds = visibleMembers.map(member => member.id);
+            list.innerHTML = visibleMembers.length
+              ? visibleMembers.map(member => `
+                <label class="calendar-export-member">
+                  <input type="checkbox" data-member-id="${escapeHtml(member.id)}"
+                    ${selectedMemberIds.has(member.id) ? 'checked' : ''}>
+                  <span class="calendar-export-member-color" style="--member-color: ${member.color}"></span>
+                  <span class="calendar-export-member-name">${escapeHtml(member.name)}</span>
+                  <span class="calendar-export-member-count">${member.count}건</span>
+                </label>
+              `).join('')
+              : '<p class="calendar-export-empty">선택한 조건에 해당하는 직원이 없습니다.</p>';
+            const visibleSelectedCount = visibleMembers.filter(member => selectedMemberIds.has(member.id)).length;
+            selectionCount.textContent = `${visibleSelectedCount}명 선택`;
+            const toggleButton = popup.querySelector('[data-bulk-select="visible-members"]');
+            toggleButton.textContent = visibleMembers.length > 0 &&
+              visibleSelectedCount === visibleMembers.length
+              ? '표시 직원 선택 해제'
+              : '표시 직원 모두 선택';
+            list.querySelectorAll('[data-member-id]').forEach(checkbox => {
+              checkbox.addEventListener('change', () => {
+                if (checkbox.checked) selectedMemberIds.add(checkbox.dataset.memberId);
+                else selectedMemberIds.delete(checkbox.dataset.memberId);
+                updateMemberList();
+              });
+            });
+          };
+
+          popup.querySelectorAll('[data-location-filter]').forEach(checkbox => {
+            checkbox.addEventListener('change', () => {
+              if (checkbox.checked) selectedLocations.add(checkbox.value);
+              else selectedLocations.delete(checkbox.value);
+              updateMemberList();
+            });
+          });
+          popup.querySelectorAll('[data-shift-filter]').forEach(checkbox => {
+            checkbox.addEventListener('change', () => {
+              if (checkbox.checked) selectedShifts.add(checkbox.value);
+              else selectedShifts.delete(checkbox.value);
+              updateMemberList();
+            });
+          });
+          popup.querySelectorAll('[data-bulk-select="locations"], [data-bulk-select="shifts"]').forEach(button => {
+            button.addEventListener('click', () => {
+              const options = button.dataset.bulkSelect === 'locations' ? locationOptions : shiftOptions;
+              const selected = button.dataset.bulkSelect === 'locations' ? selectedLocations : selectedShifts;
+              if (selected.size === options.length) selected.clear();
+              else options.forEach(option => selected.add(option.value));
+              button.textContent = selected.size === options.length ? '전체 해제' : '전체 선택';
+              popup.querySelectorAll(
+                button.dataset.bulkSelect === 'locations' ? '[data-location-filter]' : '[data-shift-filter]'
+              ).forEach(checkbox => { checkbox.checked = selected.has(checkbox.value); });
+              updateMemberList();
+            });
+          });
+          const updateFilterToggleLabels = () => {
+            popup.querySelector('[data-bulk-select="locations"]').textContent =
+              selectedLocations.size === locationOptions.length ? '전체 해제' : '전체 선택';
+            popup.querySelector('[data-bulk-select="shifts"]').textContent =
+              selectedShifts.size === shiftOptions.length ? '전체 해제' : '전체 선택';
+          };
+          popup.querySelectorAll('[data-location-filter], [data-shift-filter]').forEach(checkbox => {
+            checkbox.addEventListener('change', updateFilterToggleLabels);
+          });
+          popup.querySelector('[data-bulk-select="visible-members"]').addEventListener('click', () => {
+            const visibleIds = Array.from(list.querySelectorAll('[data-member-id]'))
+              .map(checkbox => checkbox.dataset.memberId);
+            const allVisibleSelected = visibleIds.every(id => selectedMemberIds.has(id));
+            visibleIds.forEach(id => {
+              if (allVisibleSelected) selectedMemberIds.delete(id);
+              else selectedMemberIds.add(id);
+            });
+            updateFilterToggleLabels();
+            updateMemberList();
+          });
+          updateMemberList();
+        },
+        preConfirm: () => {
+          const selectedVisibleIds = visibleMemberIds.filter(id => selectedMemberIds.has(id));
+          if (selectedVisibleIds.length === 0) {
+            Swal.showValidationMessage('캘린더에 추가할 직원을 한 명 이상 선택해 주세요.');
+            return false;
+          }
+          return selectedVisibleIds;
+        }
+      });
+      if (!selectionResult.isConfirmed) return;
+
+      const selectedIds = new Set(selectionResult.value);
+      const selectedEvents = monthVacations
+        .filter(vacation => selectedIds.has(String(vacation.user_id || vacation.username || '')))
+        .map(vacation => {
+          const key = String(vacation.user_id || vacation.username || '');
+          const member = memberById.get(key);
+          return {
+            date: vacation.date,
+            title: `${vacation.username || '휴무 일정'} - ${vacation.leave_type || '휴무'}`,
+            description: [
+              `종류: ${vacation.leave_type || '휴무'}`,
+              vacation.time_detail ? `세부 시간: ${vacation.time_detail}` : '',
+              vacation.hours_used ? `사용 시간: ${vacation.hours_used}시간` : '',
+              vacation.memo ? `메모: ${vacation.memo}` : ''
+            ].filter(Boolean).join('\n'),
+            color: member?.color || '#38bdf8'
+          };
+        });
+      if (selectedEvents.length === 0) {
+        Swal.fire({ icon: 'info', text: '선택한 직원의 해당 월 일정이 없습니다.' });
+        return;
+      }
+      window.AndroidCalendar.addAllMonthEvents(JSON.stringify(selectedEvents));
     });
   }
   if (dateDetailsModal) {
@@ -559,7 +766,13 @@ document.addEventListener('DOMContentLoaded', async () => {
           vacation.hours_used ? `사용 시간: ${vacation.hours_used}시간` : '',
           vacation.memo ? `메모: ${vacation.memo}` : ''
         ].filter(Boolean).join('\n');
-        window.AndroidCalendar.addAllDayEvent(vacation.date, title, description);
+        const member = userMap[vacation.user_id] || userMap[vacation.username] || {};
+        window.AndroidCalendar.addAllDayEvent(
+          vacation.date,
+          title,
+          description,
+          safeMemberColor(member.color)
+        );
       } else if (action === 'edit-note' && userRole === 'admin') {
         closeDateDetails();
         openCalendarNoteModal(dateDetailsModal.dataset.date);
