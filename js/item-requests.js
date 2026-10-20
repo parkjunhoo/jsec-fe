@@ -150,6 +150,9 @@ document.addEventListener('DOMContentLoaded', async () => {
               <button class="request-action approve" type="button" data-review-status="approved">승인</button>
             </div>
           </div>` : ''}
+        ${isAdmin ? `<div class="request-review-actions${item.status === 'pending' ? '' : ' request-delete-actions'}">
+          <button class="request-action reject" type="button" data-delete-request>내역 삭제</button>
+        </div>` : ''}
       </article>`;
     }).join('');
   }
@@ -208,6 +211,39 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
   requestList.addEventListener('click', async event => {
+    const deleteButton = event.target.closest('[data-delete-request]');
+    if (deleteButton && isAdmin && !deleteButton.disabled) {
+      const card = deleteButton.closest('[data-request-id]');
+      if (!card) return;
+      const item = requests.find(requestItem => requestItem.id === card.dataset.requestId);
+      if (!item) return;
+
+      const confirmed = window.Swal
+        ? (await window.Swal.fire({
+          icon: 'warning',
+          title: '신청 내역 삭제',
+          text: `${item.item_name} 신청 내역을 삭제하시겠습니까? 삭제 후에는 복구할 수 없습니다.`,
+          showCancelButton: true,
+          confirmButtonText: '삭제',
+          cancelButtonText: '취소',
+          confirmButtonColor: '#c74444'
+        })).isConfirmed
+        : window.confirm(`${item.item_name} 신청 내역을 삭제하시겠습니까? 삭제 후에는 복구할 수 없습니다.`);
+      if (!confirmed) return;
+
+      deleteButton.disabled = true;
+      try {
+        await request(`/${encodeURIComponent(item.id)}`, { method: 'DELETE' });
+        requests = requests.filter(requestItem => requestItem.id !== item.id);
+        renderRequests();
+      } catch (error) {
+        console.error('물품 신청 내역 삭제 오류:', error);
+        showError(listError, error.message || '신청 내역을 삭제하지 못했습니다.');
+        deleteButton.disabled = false;
+      }
+      return;
+    }
+
     const button = event.target.closest('[data-review-status]');
     if (!button || !isAdmin || button.disabled) return;
     const card = button.closest('[data-request-id]');
