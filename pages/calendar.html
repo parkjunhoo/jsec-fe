@@ -341,8 +341,8 @@
     .date-details-card { background: var(--app-surface, #1e293b); border: 1px solid var(--border-color); border-radius: 18px; width: min(100%, 480px); padding: 20px; max-height: 82vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,0.35); }
     .date-details-card .modal-header { gap: 10px; }
     .date-details-title { min-width: 0; flex: 1; font-size: 18px; font-weight: 750; color: var(--text-main); }
-    .date-details-header-actions { display: flex; align-items: center; gap: 8px; flex: 0 0 auto; }
-    #addAllMonthEventsBtn { padding-inline: 6px; white-space: nowrap; }
+    .calendar-bulk-actions { display: flex; justify-content: center; margin: 12px 0 20px; }
+    #addAllMonthEventsBtn { width: 100%; max-width: 420px; min-height: 44px; padding: 0 16px; border: 1px solid var(--app-border); border-radius: 10px; background: var(--app-surface); color: var(--text-main); font-size: 14px; font-weight: 700; cursor: pointer; }
     .date-details-list { display: grid; gap: 10px; }
     .date-detail-item { padding: 13px; border: 1px solid var(--app-border); border-radius: 10px; background: var(--app-surface-raised); }
     .date-detail-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
@@ -432,6 +432,9 @@
 
     <!-- 캘린더 그리드 -->
     <div class="calendar-grid" id="calendarGrid"></div>
+    <div class="calendar-bulk-actions">
+      <button id="addAllMonthEventsBtn" type="button" style="display: none;">선택한 달 전체 일정 캘린더에 추가</button>
+    </div>
 
     <section class="schedule-preview" id="schedulePreview" aria-label="직원 근무표 엑셀 미리보기">
       <div class="schedule-preview-message">엑셀 미리보기를 불러오는 중...</div>
@@ -453,10 +456,7 @@
     <section class="date-details-card" role="dialog" aria-modal="true" aria-labelledby="dateDetailsTitle">
       <div class="modal-header">
         <h3 class="date-details-title" id="dateDetailsTitle">날짜 상세</h3>
-        <div class="date-details-header-actions">
-          <button class="date-detail-action" id="addAllMonthEventsBtn" type="button" style="display: none;">선택한 달 전체 추가</button>
-          <button class="btn-close-modal" id="closeDateDetailsBtn" type="button" aria-label="닫기">&times;</button>
-        </div>
+        <button class="btn-close-modal" id="closeDateDetailsBtn" type="button" aria-label="닫기">&times;</button>
       </div>
       <div class="date-details-list" id="dateDetailsList"></div>
     </section>

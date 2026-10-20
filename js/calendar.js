@@ -395,9 +395,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     const dayNote = allCalendarNotes.find(note => note.date === date);
     dateDetailsTitle.textContent = dateLabel;
     dateDetailsModal.dataset.date = date;
-    if (addAllMonthEventsBtn) {
-      addAllMonthEventsBtn.style.display = window.AndroidCalendar ? 'inline-flex' : 'none';
-    }
 
     const vacationItems = dayVacations.map(vacation => {
       const canManage = vacation.user_id === userId || userRole === 'admin';
@@ -507,6 +504,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   if (closeDateDetailsBtn) closeDateDetailsBtn.addEventListener('click', closeDateDetails);
+  if (addAllMonthEventsBtn && window.AndroidCalendar) {
+    addAllMonthEventsBtn.style.display = 'block';
+  }
   if (addAllMonthEventsBtn) {
     addAllMonthEventsBtn.addEventListener('click', () => {
       if (!window.AndroidCalendar) return;
