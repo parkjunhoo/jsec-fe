@@ -178,6 +178,10 @@ document.addEventListener('DOMContentLoaded', async () => {
       const takenByOther = todayAvailability.some(entry =>
         entry.user_id !== session.user.id && matchingDuty(entry, duty)
       );
+      const otherEntry = todayAvailability.find(entry =>
+        entry.user_id !== session.user.id && matchingDuty(entry, duty)
+      );
+      const otherName = otherEntry?.username || '다른 직원';
       const state = button.querySelector('.duty-state');
       button.setAttribute('aria-pressed', String(Boolean(mine)));
       button.setAttribute('aria-label', `${duty.label}: ${
@@ -186,7 +190,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           : mine
             ? '등록됨, 다시 누르면 취소'
             : takenByOther
-              ? '다른 직원 등록'
+              ? `${otherName} 등록`
               : '등록하기'
       }`);
       state.textContent = !allowanceDataReady
@@ -194,8 +198,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         : mine
           ? '등록됨 · 눌러서 취소'
           : takenByOther
-            ? '다른 직원 등록'
+            ? `${otherName} 등록`
             : '등록하기';
+      button.title = takenByOther ? `${otherName} 님이 등록했습니다.` : '';
       button.disabled = !allowanceDataReady || busyDuties.has(duty.key) || (!mine && takenByOther);
     });
   }

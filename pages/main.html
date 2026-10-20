@@ -277,7 +277,7 @@
       border-radius: 11px;
       background: #142236;
       color: #c6d3e2;
-      font-size: 12px;
+      font-size: 13px;
       font-weight: 700;
       cursor: pointer;
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
@@ -293,9 +293,9 @@
       box-shadow: 0 6px 19px rgba(0, 0, 0, 0.07);
     }
     .personal-heading { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; margin-bottom: 16px; }
-    .personal-heading h2 { margin: 0; font-size: 18px; font-weight: 760; letter-spacing: -0.035em; }
-    .personal-heading p { margin: 5px 0 0; color: var(--muted); font-size: 12px; }
-    .personal-month { color: #b7c7d8; font-size: 12px; font-weight: 700; white-space: nowrap; }
+    .personal-heading h2 { margin: 0; font-size: 19px; font-weight: 760; letter-spacing: -0.035em; }
+    .personal-heading p { margin: 5px 0 0; color: var(--muted); font-size: 13px; }
+    .personal-month { color: #b7c7d8; font-size: 13px; font-weight: 700; white-space: nowrap; }
     .personal-tabs { display: flex; gap: 7px; padding-bottom: 12px; border-bottom: 1px solid var(--line); }
     .personal-tab {
       min-height: 37px;
@@ -317,7 +317,7 @@
     .personal-error.success { color: #a8e5c6; }
     .personal-stats { display: flex; align-items: baseline; gap: 10px; margin-bottom: 14px; }
     .personal-stats strong { color: #f3f7fc; font-size: 25px; letter-spacing: -0.04em; }
-    .personal-stats span { color: var(--muted); font-size: 12px; }
+    .personal-stats span { color: var(--muted); font-size: 13px; }
     .personal-list { display: grid; gap: 8px; }
     .personal-row {
       display: flex;
@@ -331,11 +331,11 @@
       background: rgba(255, 255, 255, 0.025);
     }
     .personal-row-main { min-width: 0; }
-    .personal-row-title { color: #e8f0f7; font-size: 12px; font-weight: 700; }
-    .personal-row-detail { margin-top: 4px; color: var(--muted); font-size: 11px; }
-    .personal-row-value { flex: 0 0 auto; color: #b6ddf2; font-size: 12px; font-weight: 750; text-align: right; }
-    .personal-empty { padding: 16px 12px; border: 1px dashed rgba(190, 211, 239, 0.13); border-radius: 11px; color: var(--muted); font-size: 12px; text-align: center; }
-    .personal-subheading { margin: 20px 0 9px; color: #dce7f2; font-size: 12px; font-weight: 750; }
+    .personal-row-title { color: #e8f0f7; font-size: 13px; font-weight: 700; }
+    .personal-row-detail { margin-top: 4px; color: var(--muted); font-size: 12px; }
+    .personal-row-value { flex: 0 0 auto; color: #b6ddf2; font-size: 13px; font-weight: 750; text-align: right; }
+    .personal-empty { padding: 16px 12px; border: 1px dashed rgba(190, 211, 239, 0.13); border-radius: 11px; color: var(--muted); font-size: 13px; text-align: center; }
+    .personal-subheading { margin: 20px 0 9px; color: #dce7f2; font-size: 13px; font-weight: 750; }
     .duty-list { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 9px; }
     .duty-toggle {
       display: grid;
@@ -355,10 +355,45 @@
     .duty-toggle:hover:not(:disabled) { border-color: rgba(114, 199, 255, 0.3); }
     .duty-toggle[aria-pressed="true"] { border-color: rgba(118, 212, 179, 0.33); background: rgba(70, 154, 119, 0.11); }
     .duty-toggle:disabled { cursor: not-allowed; opacity: 0.58; }
-    .duty-name { font-size: 12px; font-weight: 750; }
-    .duty-state { color: var(--muted); font-size: 10px; }
+    .duty-name { font-size: 13px; font-weight: 750; }
+    .duty-state { color: var(--muted); font-size: 11px; }
     .duty-toggle[aria-pressed="true"] .duty-state { color: #a8e5c6; }
     .duty-note { margin: 9px 0 0; color: var(--muted); font-size: 10px; line-height: 1.5; }
+    .duty-state { line-height: 1.4; }
+    html[data-theme="light"] .personal-panel {
+      border-color: var(--app-border);
+      background: linear-gradient(145deg, #ffffff, #f3f7f3);
+      box-shadow: var(--app-shadow);
+    }
+    html[data-theme="light"] .personal-heading h2,
+    html[data-theme="light"] .personal-row-title,
+    html[data-theme="light"] .personal-stats strong,
+    html[data-theme="light"] .personal-subheading { color: var(--text-main); }
+    html[data-theme="light"] .personal-heading p,
+    html[data-theme="light"] .personal-month,
+    html[data-theme="light"] .personal-row-detail,
+    html[data-theme="light"] .personal-stats span,
+    html[data-theme="light"] .duty-note { color: var(--text-sub); }
+    html[data-theme="light"] .personal-tab { color: #53645a; }
+    html[data-theme="light"] .personal-tab[aria-selected="true"] {
+      border-color: rgba(25, 114, 84, 0.2);
+      background: rgba(25, 114, 84, 0.08);
+      color: #176346;
+    }
+    html[data-theme="light"] .personal-row,
+    html[data-theme="light"] .duty-toggle { border-color: var(--app-border); background: #f7faf7; }
+    html[data-theme="light"] .personal-row-value { color: #176346; }
+    html[data-theme="light"] .personal-empty { border-color: var(--app-border); color: var(--text-sub); }
+    html[data-theme="light"] .duty-toggle { color: var(--text-main); }
+    html[data-theme="light"] .duty-toggle:hover:not(:disabled) { border-color: rgba(25, 114, 84, 0.42); }
+    html[data-theme="light"] .duty-toggle[aria-pressed="true"] {
+      border-color: rgba(25, 114, 84, 0.34);
+      background: rgba(25, 114, 84, 0.09);
+    }
+    html[data-theme="light"] .duty-state { color: var(--text-sub); }
+    html[data-theme="light"] .duty-toggle[aria-pressed="true"] .duty-state,
+    html[data-theme="light"] .personal-error.success { color: #176346; }
+    html[data-theme="light"] .personal-error { color: #a33139; }
     @media (max-width: 760px) {
       .personal-panel { padding: 18px; }
       .duty-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -407,15 +442,17 @@
       .menu-arrow { top: 14px; right: 12px; font-size: 15px; }
       .admin-push { width: 100%; justify-content: center; }
       .personal-panel { margin-top: 15px; padding: 15px; border-radius: 14px; }
-      .personal-heading h2 { font-size: 16px; }
-      .personal-heading p, .personal-month { font-size: 10px; }
-      .personal-tab { flex: 1; padding: 0 9px; font-size: 11px; }
+      .personal-heading h2 { font-size: 17px; }
+      .personal-heading p, .personal-month { font-size: 11px; }
+      .personal-tab { flex: 1; padding: 0 9px; font-size: 12px; }
       .personal-stats strong { font-size: 22px; }
+      .personal-stats span { font-size: 12px; }
       .personal-row { padding: 10px; }
-      .personal-row-title, .personal-row-value { font-size: 11px; }
-      .personal-row-detail { font-size: 10px; }
+      .personal-row-title, .personal-row-value { font-size: 12px; }
+      .personal-row-detail { font-size: 11px; }
       .duty-toggle { min-height: 62px; padding: 9px; }
-      .duty-name { font-size: 11px; }
+      .duty-name { font-size: 12px; }
+      .duty-state { font-size: 11px; }
     }
     @media (max-width: 360px) {
       .menu-grid { grid-template-columns: 1fr; }
