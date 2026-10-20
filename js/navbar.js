@@ -342,6 +342,10 @@ document.addEventListener('DOMContentLoaded', async () => {
           <span id="themeSwitchLabel">라이트 모드로 전환</span>
           <span class="theme-switch-icon" id="themeSwitchIcon" aria-hidden="true">☀</span>
         </button>
+        <button class="large-text-switch" id="largeTextSwitch" type="button" aria-pressed="false">
+          <span>큰글씨 모드</span>
+          <span id="largeTextSwitchState" aria-hidden="true">끔</span>
+        </button>
 
         <nav class="drawer-links">
           <a href="/pages/main.html" class="drawer-item ${currentPath.includes('main.html') ? 'active' : ''}">
@@ -383,6 +387,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   const themeSwitch = document.getElementById('themeSwitch');
   const themeSwitchLabel = document.getElementById('themeSwitchLabel');
   const themeSwitchIcon = document.getElementById('themeSwitchIcon');
+  const largeTextSwitch = document.getElementById('largeTextSwitch');
+  const largeTextSwitchState = document.getElementById('largeTextSwitchState');
   const openNotificationsBtn = document.getElementById('openNotifications');
   const notificationOverlay = document.getElementById('notificationOverlay');
   const notificationList = document.getElementById('notificationList');
@@ -409,6 +415,23 @@ document.addEventListener('DOMContentLoaded', async () => {
       updateThemeSwitch();
       await savePromise;
       updateThemeSwitch();
+    });
+  }
+
+  function updateLargeTextSwitch() {
+    const enabled = document.documentElement.dataset.largeText === 'true';
+    largeTextSwitch.setAttribute('aria-pressed', String(enabled));
+    largeTextSwitchState.textContent = enabled ? '켬' : '끔';
+    largeTextSwitch.setAttribute('aria-label', `큰글씨 모드 ${enabled ? '끄기' : '켜기'}`);
+  }
+
+  if (largeTextSwitch && preferences) {
+    updateLargeTextSwitch();
+    largeTextSwitch.addEventListener('click', async () => {
+      const enabled = document.documentElement.dataset.largeText !== 'true';
+      const saved = await preferences.setLargeTextMode(enabled);
+      updateLargeTextSwitch();
+      if (!saved) console.error('큰글씨 모드 설정을 계정에 저장하지 못했습니다. 이 기기에는 적용되어 있습니다.');
     });
   }
 

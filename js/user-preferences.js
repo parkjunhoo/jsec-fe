@@ -1,8 +1,14 @@
 (() => {
   const storageKey = 'jsec-theme';
+  const largeTextStorageKey = 'jsec-large-text';
   const defaultCalendarFilters = ['주간', '야간', '스키장', '골프장', '현관', 'other'];
   const initialTheme = localStorage.getItem(storageKey) === 'light' ? 'light' : 'dark';
-  const settings = { theme: initialTheme, calendar_location_filters: defaultCalendarFilters };
+  const initialLargeTextMode = localStorage.getItem(largeTextStorageKey) === 'true';
+  const settings = {
+    theme: initialTheme,
+    large_text_mode: initialLargeTextMode,
+    calendar_location_filters: defaultCalendarFilters
+  };
   let userId = null;
   let loadPromise = null;
   let writeQueue = Promise.resolve();
@@ -14,7 +20,14 @@
     localStorage.setItem(storageKey, normalizedTheme);
   }
 
+  function applyLargeTextMode(enabled) {
+    settings.large_text_mode = Boolean(enabled);
+    document.documentElement.dataset.largeText = String(settings.large_text_mode);
+    localStorage.setItem(largeTextStorageKey, String(settings.large_text_mode));
+  }
+
   applyTheme(initialTheme);
+  applyLargeTextMode(initialLargeTextMode);
 
   async function load() {
     if (loadPromise) return loadPromise;
@@ -28,13 +41,14 @@
         userId = session.user.id;
         const { data, error } = await supabaseClient
           .from('user_settings')
-          .select('theme, calendar_location_filters')
+          .select('theme, large_text_mode, calendar_location_filters')
           .eq('user_id', userId)
           .maybeSingle();
 
         if (error) throw error;
         if (data) {
           if (data.theme === 'dark' || data.theme === 'light') applyTheme(data.theme);
+          if (typeof data.large_text_mode === 'boolean') applyLargeTextMode(data.large_text_mode);
           if (Array.isArray(data.calendar_location_filters)) {
             settings.calendar_location_filters = data.calendar_location_filters;
           }
@@ -60,6 +74,7 @@
         .upsert({
           user_id: userId,
           theme: settings.theme,
+          large_text_mode: settings.large_text_mode,
           calendar_location_filters: settings.calendar_location_filters,
           updated_at: new Date().toISOString()
         }, { onConflict: 'user_id' });
@@ -81,6 +96,10 @@
     setTheme: async theme => {
       applyTheme(theme);
       return save({ theme: settings.theme });
+    },
+    setLargeTextMode: async enabled => {
+      applyLargeTextMode(enabled);
+      return save({ large_text_mode: settings.large_text_mode });
     },
     saveCalendarFilters: filters => save({ calendar_location_filters: filters })
   };

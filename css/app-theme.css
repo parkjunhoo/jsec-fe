@@ -201,6 +201,24 @@ html:not([data-theme="light"]) .menu-arrow { color: #a5b2a8; }
 }
 .theme-switch:hover { border-color: var(--primary); }
 .theme-switch-icon { font-size: 16px; }
+.large-text-switch {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  min-height: 44px;
+  margin: 0 0 14px;
+  padding: 0 14px;
+  border: 1px solid var(--app-border);
+  border-radius: 9px;
+  background: var(--app-surface-raised);
+  color: var(--text-main);
+  font-size: 13px;
+  font-weight: 650;
+  cursor: pointer;
+}
+.large-text-switch:hover { border-color: var(--primary); }
+.large-text-switch[aria-pressed="true"] { border-color: var(--primary); background: color-mix(in srgb, var(--primary) 14%, var(--app-surface-raised)); }
 
 .app-loading {
   position: fixed;
@@ -485,6 +503,133 @@ html[data-theme="light"] .contact-modal .form-submit {
   color: #fff;
 }
 html[data-theme="light"] .contact-modal .form-submit:hover:not(:disabled) { border-color: #115b42; background: #115b42; }
+
+html[data-large-text="true"] {
+  font-size: 120%;
+}
+html[data-large-text="true"] :is(
+  main p, main li, main label, main td, main th, main small,
+  .nav-title, .drawer-user-name, .drawer-user-role, .drawer-item,
+  .notification-dialog-title, .notification-item-title, .notification-item-body,
+  .notification-item-date, .notification-empty,
+  .welcome-kicker, .welcome-meta time,
+  .today-off-heading, .today-off-label, .today-off-location-title,
+  .today-off-group-label, .today-off-group-members, .today-off-count,
+  .section-heading p,
+  .service-count, .menu-title, .menu-desc,
+  .personal-heading p, .personal-month, .personal-tab,
+  .personal-row-title, .personal-row-detail, .personal-row-value,
+  .filter-title, .chip-label, .calendar-nav button,
+  .calendar-nav span, .day-name, .cell-date, .event-pill,
+  .stats-header, .stat-name, .stat-dates, .date-details-list,
+  .allowance-heading p, .allowance-tab, .allowance-summary-heading h2, .allowance-summary-heading p,
+  .allowance-total, .allowance-total strong, .allowance-day-number,
+  .allowance-day-summary, .allowance-target-control, .allowance-day-hint,
+  .allowance-slot-title, .allowance-slot-status, .allowance-slot-button,
+  .user-name, .user-details, .user-view-button, .user-table,
+  .car-number, .car-type-badge, .vehicle-details, .vehicle-table,
+  .contact-name, .contact-phone, .contact-position, .contact-team,
+  .department-section-header, .request-item-title, .request-item-meta,
+  .request-status, .request-detail, .request-empty, .request-kicker,
+  .manual-choice, .manual-name, .manual-caption, .intro p, .viewer-title,
+  .viewer-note, .page-indicator, .viewer-status
+) {
+  font-size: max(1.1em, 16px);
+  line-height: 1.5;
+}
+html[data-large-text="true"] :is(h1, h2, h3, .welcome-panel h1, .allowance-heading h1) {
+  line-height: 1.3;
+}
+html[data-large-text="true"] .welcome-panel h1,
+html[data-large-text="true"] .intro h1,
+html[data-large-text="true"] .hero h1 { font-size: clamp(30px, 4vw, 40px); }
+html[data-large-text="true"] .allowance-heading h1,
+html[data-large-text="true"] .request-heading h1 { font-size: 30px; }
+html[data-large-text="true"] .section-heading h2,
+html[data-large-text="true"] .personal-heading h2,
+html[data-large-text="true"] .header-area h2 { font-size: 22px; }
+html[data-large-text="true"] .date-details-title,
+html[data-large-text="true"] .department-section-title h2 { font-size: 20px; }
+html[data-large-text="true"] :is(button, input, select, textarea, .filter-chip) {
+  min-height: 48px;
+  font-size: max(1.05em, 16px);
+}
+html[data-large-text="true"] button {
+  white-space: normal;
+}
+html[data-large-text="true"] #navbar .drawer-menu {
+  width: min(340px, 92vw);
+  height: 100dvh;
+  overflow-y: auto;
+  justify-content: flex-start;
+  gap: 20px;
+}
+html[data-large-text="true"] #navbar .nav-title { font-size: 18px; }
+html[data-large-text="true"] #navbar .notification-btn { width: 48px; height: 48px; }
+html[data-large-text="true"] #navbar .hamburger-btn { min-width: 48px; align-items: center; justify-content: center; }
+html[data-large-text="true"] #navbar .btn-settings-gear { width: 48px; height: 48px; }
+html[data-large-text="true"] #navbar .drawer-header { margin-bottom: 18px; }
+html[data-large-text="true"] #navbar .drawer-links { gap: 6px; }
+html[data-large-text="true"] #navbar .drawer-item { min-height: 50px; }
+html[data-large-text="true"] .calendar-cell { min-height: 148px; }
+html[data-large-text="true"] .schedule-preview-scroll,
+html[data-large-text="true"] .allowance-table-wrap,
+html[data-large-text="true"] .user-list[data-view="table"],
+html[data-large-text="true"] .vehicle-list[data-view="table"] {
+  max-width: 100%;
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
+}
+html[data-large-text="true"] .allowance-slot-list {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
+}
+html[data-large-text="true"] .personal-vacation-list {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 270px), 1fr));
+}
+html[data-large-text="true"] .welcome-panel,
+html[data-large-text="true"] .today-off-heading,
+html[data-large-text="true"] .header-area,
+html[data-large-text="true"] .allowance-heading,
+html[data-large-text="true"] .allowance-summary-heading,
+html[data-large-text="true"] .personal-heading,
+html[data-large-text="true"] .request-list-heading,
+html[data-large-text="true"] .allowance-target-control,
+html[data-large-text="true"] .vehicle-card-header {
+  flex-wrap: wrap;
+}
+html[data-large-text="true"] .welcome-info { flex-wrap: wrap; justify-content: flex-start; }
+html[data-large-text="true"] .welcome-meta { min-width: 0; }
+html[data-large-text="true"] .manual-grid { grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr)); }
+html[data-large-text="true"] .request-details { grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr)); }
+html[data-large-text="true"] .contact-name { overflow: visible; text-overflow: clip; white-space: normal; }
+html[data-large-text="true"] .request-item-link,
+html[data-large-text="true"] .link-preview-url { overflow-wrap: anywhere; }
+html[data-large-text="true"] .pdf-toolbar,
+html[data-large-text="true"] .viewer-head,
+html[data-large-text="true"] .viewer-actions,
+html[data-large-text="true"] .page-controls,
+html[data-large-text="true"] .zoom-controls { flex-wrap: wrap; }
+html[data-large-text="true"] .pdf-control,
+html[data-large-text="true"] .viewer-action,
+html[data-large-text="true"] .view-mode-toggle { min-width: 48px; min-height: 48px; }
+@media (max-width: 720px) {
+  html[data-large-text="true"] .home-shell { padding: 18px 14px 40px; }
+  html[data-large-text="true"] .menu-grid { grid-template-columns: minmax(0, 1fr); }
+  html[data-large-text="true"] .manual-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    overflow: visible;
+    margin: 0 0 14px;
+    padding: 0;
+  }
+  html[data-large-text="true"] .manual-choice { width: 100%; min-width: 0; }
+  html[data-large-text="true"] .personal-vacation-list { grid-template-columns: minmax(0, 1fr); }
+  html[data-large-text="true"] .today-off-names,
+  html[data-large-text="true"] .today-off-shifts { grid-template-columns: minmax(0, 1fr); }
+  html[data-large-text="true"] .allowance-slot { align-items: flex-start; flex-direction: column; }
+  html[data-large-text="true"] .allowance-slot-actions { flex-wrap: wrap; }
+  html[data-large-text="true"] .stats-grid { grid-template-columns: minmax(0, 1fr); }
+}
 
 @media (max-width: 600px) {
   #navbar .nav-header { min-height: 58px; padding-block: 9px; }
