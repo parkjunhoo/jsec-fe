@@ -112,18 +112,33 @@ document.addEventListener('DOMContentLoaded', async () => {
       right: -280px;
       width: 280px;
       height: 100vh;
+      height: 100dvh;
       background: #1e293b;
       z-index: 201;
-      padding: 30px 20px;
+      padding: 0 20px 20px;
       display: flex;
       flex-direction: column;
-      justify-content: space-between;
+      justify-content: flex-start;
+      gap: 20px;
+      overflow-y: auto;
+      overscroll-behavior: contain;
       transition: right 0.3s cubic-bezier(0.16, 1, 0.3, 1);
       border-left: 1px solid rgba(255, 255, 255, 0.1);
       box-sizing: border-box;
     }
     .drawer-menu.active { right: 0; }
-    .drawer-header { margin-bottom: 30px; }
+    .drawer-header {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      flex: 0 0 auto;
+      margin: 0 -20px;
+      padding: max(20px, env(safe-area-inset-top)) 20px 8px;
+      background: var(--app-surface, #1e293b);
+      box-shadow: 0 8px 12px -10px rgba(0, 0, 0, 0.45);
+    }
+    .drawer-menu > div:first-child { flex: 0 0 auto; }
+    .drawer-menu > .btn-nav-logout { flex: 0 0 auto; margin-top: auto; }
     
     /* 톱니바퀴 및 유저 정보 행 스타일 */
     .drawer-user-row {

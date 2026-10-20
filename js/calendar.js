@@ -52,6 +52,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const dateDetailsTitle = document.getElementById('dateDetailsTitle');
   const dateDetailsList = document.getElementById('dateDetailsList');
   const closeDateDetailsBtn = document.getElementById('closeDateDetailsBtn');
+  const addAllMonthEventsBtn = document.getElementById('addAllMonthEventsBtn');
   const openModalBtn = document.getElementById('openModalBtn');
   const closeModalBtn = document.getElementById('closeModalBtn');
   const vacationModal = document.getElementById('vacationModal');
@@ -394,6 +395,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     const dayNote = allCalendarNotes.find(note => note.date === date);
     dateDetailsTitle.textContent = dateLabel;
     dateDetailsModal.dataset.date = date;
+    if (addAllMonthEventsBtn) {
+      addAllMonthEventsBtn.style.display = window.AndroidCalendar ? 'inline-flex' : 'none';
+    }
 
     const vacationItems = dayVacations.map(vacation => {
       const canManage = vacation.user_id === userId || userRole === 'admin';
@@ -503,6 +507,32 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   if (closeDateDetailsBtn) closeDateDetailsBtn.addEventListener('click', closeDateDetails);
+  if (addAllMonthEventsBtn) {
+    addAllMonthEventsBtn.addEventListener('click', () => {
+      if (!window.AndroidCalendar) return;
+      const year = currentDate.getFullYear();
+      const month = currentDate.getMonth();
+      const monthStart = `${year}-${String(month + 1).padStart(2, '0')}-01`;
+      const monthEnd = `${year}-${String(month + 1).padStart(2, '0')}-${String(new Date(year, month + 1, 0).getDate()).padStart(2, '0')}`;
+      const monthEvents = allVacations
+        .filter(vacation => vacation.date >= monthStart && vacation.date <= monthEnd)
+        .map(vacation => ({
+          date: vacation.date,
+          title: `${vacation.username || '휴무 일정'} - ${vacation.leave_type || '휴무'}`,
+          description: [
+            `종류: ${vacation.leave_type || '휴무'}`,
+            vacation.time_detail ? `세부 시간: ${vacation.time_detail}` : '',
+            vacation.hours_used ? `사용 시간: ${vacation.hours_used}시간` : '',
+            vacation.memo ? `메모: ${vacation.memo}` : ''
+          ].filter(Boolean).join('\n')
+        }));
+      if (monthEvents.length === 0) {
+        Swal.fire({ icon: 'info', text: '현재 선택한 달에 등록된 휴무 일정이 없습니다.' });
+        return;
+      }
+      window.AndroidCalendar.addAllMonthEvents(JSON.stringify(monthEvents));
+    });
+  }
   if (dateDetailsModal) {
     dateDetailsModal.addEventListener('click', event => {
       if (event.target === dateDetailsModal) closeDateDetails();

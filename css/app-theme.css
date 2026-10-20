@@ -592,9 +592,9 @@ html[data-large-text="true"] #navbar .drawer-header {
   position: sticky;
   top: 0;
   z-index: 10;
-  margin: 0 -20px 18px;
-  padding: 8px 20px;
-  background: var(--app-surface);
+  margin: 0 -20px;
+  padding: max(20px, env(safe-area-inset-top)) 20px 8px;
+  background: var(--app-surface, #1e293b);
   box-shadow: 0 8px 12px -10px rgba(0, 0, 0, 0.45);
 }
 html[data-large-text="true"] #navbar .drawer-links { gap: 6px; }
