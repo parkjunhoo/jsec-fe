@@ -285,6 +285,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   let pageTitle = '지산리조트 보안팀';
   if (currentPath.includes('main.html')) pageTitle = '메인 메뉴';
   else if (currentPath.includes('allowances.html')) pageTitle = '수당 관리';
+  else if (currentPath.includes('item-requests.html')) pageTitle = '물품 신청';
   else if (currentPath.includes('users.html')) pageTitle = '회원 조회 및 관리';
   else if (currentPath.includes('vehicle.html')) pageTitle = '차량 조회';
   else if (currentPath.includes('calendar.html')) pageTitle = '휴무 캘린더';
@@ -351,6 +352,9 @@ document.addEventListener('DOMContentLoaded', async () => {
           </a>
           <a href="/pages/allowances.html" class="drawer-item ${currentPath.includes('allowances.html') ? 'active' : ''}">
             <span>🧾</span> 수당 관리
+          </a>
+          <a href="/pages/item-requests.html" class="drawer-item ${currentPath.includes('item-requests.html') ? 'active' : ''}">
+            <span>📦</span> 물품 신청
           </a>
           <a href="/pages/vehicle.html" class="drawer-item ${currentPath.includes('vehicle.html') ? 'active' : ''}">
             <span>🚗</span> 차량 조회
