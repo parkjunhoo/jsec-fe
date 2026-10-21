@@ -11,17 +11,19 @@ document.addEventListener('DOMContentLoaded', async () => {
   const userId = session.user.id;
   let userRole = 'user';
   let userName = '팀원';
+  let userDepartment = '';
 
   try {
     const { data: profile } = await supabaseClient
       .from('users')
-      .select('name, username, role')
+      .select('name, username, role, work_location')
       .eq('id', userId)
       .maybeSingle();
 
     if (profile) {
       userName = profile.name || profile.username || '팀원';
       userRole = profile.role || 'user';
+      userDepartment = profile.work_location || '';
     }
   } catch (err) {
     console.error('프로필 조회 오류:', err);
@@ -100,10 +102,28 @@ document.addEventListener('DOMContentLoaded', async () => {
   const vTargetUserId = document.getElementById('vTargetUserId');
   const VACATIONS_API = 'https://jsec-serverless.adobephotoshop.workers.dev/api/vacations';
   const CALENDAR_NOTES_API = 'https://jsec-serverless.adobephotoshop.workers.dev/api/calendar-notes';
+  const ANNUAL_LEAVE_API = 'https://jsec-serverless.adobephotoshop.workers.dev/api/annual-leave-requests';
   const CALENDAR_NOTE_EMOJIS = ['📌', '📣', '🎉', '⚠️', '📅', '🎂', '🏖️', '🏥', '🚨', '✅', '⭐', '🎁', '🍀', '☕', '📝', '💡'];
+  const annualLeaveModal = document.getElementById('annualLeaveModal');
+  const annualLeaveForm = document.getElementById('annualLeaveForm');
+  const annualLeaveFormError = document.getElementById('annualLeaveFormError');
+  const annualLeaveListError = document.getElementById('annualLeaveListError');
+  const annualLeaveRequestList = document.getElementById('annualLeaveRequestList');
+  const annualLeaveStatusFilter = document.getElementById('annualLeaveStatusFilter');
+  const annualLeaveStartDate = document.getElementById('annualLeaveStartDate');
+  const annualLeaveEndDate = document.getElementById('annualLeaveEndDate');
+  const annualLeaveDays = document.getElementById('annualLeaveDays');
+  const submitAnnualLeaveBtn = document.getElementById('submitAnnualLeaveBtn');
+  let annualLeaveRequests = [];
   if (userRole === 'guest' || userRole === 'monitor') {
     if (openModalBtn) openModalBtn.style.display = 'none';
     if (openBulkVacationBtn) openBulkVacationBtn.hidden = true;
+    document.getElementById('openAnnualLeaveBtn').hidden = true;
+    document.querySelector('.annual-leave-section').hidden = true;
+  }
+  if (userRole === 'admin') {
+    annualLeaveStatusFilter.hidden = false;
+    document.getElementById('annualLeaveDescription').textContent = '신청 내역을 검토하고 승인하면 휴무 일정에 등록됩니다.';
   }
 
   async function mutateVacation(path, method, payload) {
@@ -168,6 +188,249 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (!response.ok) throw new Error(result.error || `HTTP ${response.status}`);
     return result;
   }
+
+  async function requestAnnualLeave(path = '', options = {}) {
+    const { data: { session: currentSession }, error: sessionError } = await supabaseClient.auth.getSession();
+    if (sessionError) throw sessionError;
+    if (!currentSession) throw new Error('로그인이 필요합니다.');
+
+    const response = await fetch(`${ANNUAL_LEAVE_API}${path}`, {
+      ...options,
+      headers: {
+        Authorization: `Bearer ${currentSession.access_token}`,
+        ...(options.body ? { 'Content-Type': 'application/json' } : {}),
+        ...options.headers
+      }
+    });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(result.error || `HTTP ${response.status}`);
+    return result;
+  }
+
+  function countAnnualLeaveWeekdays(startDate, endDate) {
+    if (!startDate || !endDate || endDate < startDate) return 0;
+    const start = new Date(`${startDate}T00:00:00Z`);
+    const end = new Date(`${endDate}T00:00:00Z`);
+    if (end.getTime() - start.getTime() > 366 * 24 * 60 * 60 * 1000) return 0;
+    let count = 0;
+    for (let date = start; date <= end; date.setUTCDate(date.getUTCDate() + 1)) {
+      const day = date.getUTCDay();
+      if (day !== 0 && day !== 6) count += 1;
+    }
+    return count;
+  }
+
+  function updateAnnualLeaveDays() {
+    annualLeaveDays.value = String(countAnnualLeaveWeekdays(
+      annualLeaveStartDate.value,
+      annualLeaveEndDate.value
+    ));
+  }
+
+  function formatAnnualLeaveDate(date) {
+    const [year, month, day] = date.split('-').map(Number);
+    return `${year}년 ${month}월 ${day}일`;
+  }
+
+  function annualLeaveStatusLabel(status) {
+    return status === 'approved' ? '승인' : status === 'rejected' ? '반려' : '승인 대기';
+  }
+
+  function renderAnnualLeaveRequests() {
+    const status = annualLeaveStatusFilter.value;
+    const visibleRequests = annualLeaveRequests.filter(item => !status || item.status === status);
+    if (visibleRequests.length === 0) {
+      annualLeaveRequestList.innerHTML = `<div class="annual-leave-empty">${
+        annualLeaveRequests.length ? '선택한 상태의 신청 내역이 없습니다.' : '아직 연차 신청 내역이 없습니다.'
+      }</div>`;
+      return;
+    }
+
+    annualLeaveRequestList.innerHTML = visibleRequests.map(item => `
+      <article class="annual-leave-item" data-annual-request-id="${escapeHtml(item.id)}">
+        <header class="annual-leave-item-header">
+          <div>
+            <h4 class="annual-leave-item-title">${escapeHtml(item.username)} · ${escapeHtml(item.total_days)}일</h4>
+            <p class="annual-leave-item-meta">${escapeHtml(item.department || '부서 미기재')} · ${escapeHtml(formatAnnualLeaveDate(item.start_date))} ${escapeHtml(item.start_time.slice(0, 5))} ~ ${escapeHtml(formatAnnualLeaveDate(item.end_date))} ${escapeHtml(item.end_time.slice(0, 5))}</p>
+            <p class="annual-leave-item-meta">신청일 ${escapeHtml(new Intl.DateTimeFormat('ko-KR', { dateStyle: 'medium', timeZone: 'Asia/Seoul' }).format(new Date(item.created_at)))}</p>
+          </div>
+          <span class="annual-leave-status ${escapeHtml(item.status)}">${annualLeaveStatusLabel(item.status)}</span>
+        </header>
+        <p class="annual-leave-item-details">${escapeHtml(item.details || '세부 사항 없음')}${item.review_note ? `\n관리자 메모: ${escapeHtml(item.review_note)}` : ''}</p>
+        ${userRole === 'admin' && item.status === 'pending' ? `
+          <div class="annual-leave-review">
+            <textarea data-annual-review-note maxlength="1000" aria-label="관리자 검토 메모" placeholder="신청자에게 전달할 메모 (선택)"></textarea>
+            <div class="annual-leave-review-actions">
+              <button type="button" data-annual-review="rejected">반려</button>
+              <button type="button" data-annual-review="approved">승인</button>
+            </div>
+          </div>` : ''}
+        <button type="button" class="annual-leave-download" data-annual-download>연차 신청서 엑셀 다운로드</button>
+      </article>
+    `).join('');
+  }
+
+  async function loadAnnualLeaveRequests() {
+    if (userRole === 'guest' || userRole === 'monitor') return;
+    annualLeaveListError.hidden = true;
+    annualLeaveRequestList.innerHTML = '<div class="annual-leave-empty">연차 신청 내역을 불러오는 중입니다.</div>';
+    try {
+      annualLeaveRequests = await requestAnnualLeave();
+      renderAnnualLeaveRequests();
+    } catch (error) {
+      console.error('연차 신청 목록 조회 오류:', error);
+      annualLeaveListError.textContent = `연차 신청 목록을 불러오지 못했습니다: ${error.message}`;
+      annualLeaveListError.hidden = false;
+      annualLeaveRequestList.innerHTML = '<div class="annual-leave-empty">신청 내역을 표시할 수 없습니다.</div>';
+    }
+  }
+
+  function setAnnualLeaveCell(sheet, address, value) {
+    if (!sheet[address]) sheet[address] = { t: 's', v: '' };
+    sheet[address].t = 's';
+    sheet[address].v = value;
+  }
+
+  async function downloadAnnualLeaveForm(item) {
+    if (!window.XLSX) throw new Error('엑셀 라이브러리를 불러오지 못했습니다. 페이지를 새로고침해 주세요.');
+    const response = await fetch(encodeURI('/templates/연차신청서.xlsx'));
+    if (!response.ok) throw new Error(`연차 신청서 양식을 불러오지 못했습니다. (HTTP ${response.status})`);
+
+    const workbook = XLSX.read(await response.arrayBuffer(), { type: 'array' });
+    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+    if (!sheet) throw new Error('연차 신청서 양식의 시트를 찾을 수 없습니다.');
+
+    const formatDateTime = (date, time) => `${formatAnnualLeaveDate(date)} ${time.slice(0, 5).replace(':', '시 ')}분`;
+    const applicationDate = new Intl.DateTimeFormat('ko-KR', {
+      year: 'numeric', month: 'long', day: 'numeric', timeZone: 'Asia/Seoul'
+    }).format(new Date(item.created_at));
+    setAnnualLeaveCell(sheet, 'C7', item.department || '');
+    setAnnualLeaveCell(sheet, 'H7', item.username);
+    setAnnualLeaveCell(sheet, 'C8', '연차');
+    setAnnualLeaveCell(sheet, 'C9', `${formatDateTime(item.start_date, item.start_time)}부터\n${formatDateTime(item.end_date, item.end_time)}까지 (총 ${item.total_days}일)`);
+    setAnnualLeaveCell(sheet, 'C10', item.details || '');
+    setAnnualLeaveCell(sheet, 'B17', `위와 같이 휴가를 신청하오니 허락하여 주시기 바랍니다.\n\n\n${applicationDate}\n\n\n신청자 : ${item.username} (인)`);
+
+    const safeName = String(item.username || '신청자').replace(/[\\\\/:*?\"<>|]/g, '_');
+    XLSX.writeFile(workbook, `연차신청서_${safeName}_${item.start_date}.xlsx`);
+  }
+
+  function openAnnualLeaveModal() {
+    annualLeaveForm.reset();
+    annualLeaveFormError.hidden = true;
+    document.getElementById('annualLeaveDepartment').value = userDepartment;
+    document.getElementById('annualLeaveName').value = userName;
+    const today = getKSTDateString();
+    annualLeaveStartDate.value = today;
+    annualLeaveEndDate.value = today;
+    document.getElementById('annualLeaveStartTime').value = '09:00';
+    document.getElementById('annualLeaveEndTime').value = '18:00';
+    updateAnnualLeaveDays();
+    annualLeaveModal.classList.add('active');
+    annualLeaveModal.setAttribute('aria-hidden', 'false');
+  }
+
+  function closeAnnualLeaveModal() {
+    annualLeaveModal.classList.remove('active');
+    annualLeaveModal.setAttribute('aria-hidden', 'true');
+  }
+
+  document.getElementById('openAnnualLeaveBtn').addEventListener('click', openAnnualLeaveModal);
+  document.getElementById('closeAnnualLeaveBtn').addEventListener('click', closeAnnualLeaveModal);
+  document.getElementById('cancelAnnualLeaveBtn').addEventListener('click', closeAnnualLeaveModal);
+  annualLeaveModal.addEventListener('click', event => {
+    if (event.target === annualLeaveModal) closeAnnualLeaveModal();
+  });
+  annualLeaveStartDate.addEventListener('change', updateAnnualLeaveDays);
+  annualLeaveEndDate.addEventListener('change', updateAnnualLeaveDays);
+  annualLeaveStatusFilter.addEventListener('change', renderAnnualLeaveRequests);
+
+  annualLeaveForm.addEventListener('submit', async event => {
+    event.preventDefault();
+    annualLeaveFormError.hidden = true;
+    submitAnnualLeaveBtn.disabled = true;
+    submitAnnualLeaveBtn.textContent = '신청 중...';
+    try {
+      const result = await requestAnnualLeave('', {
+        method: 'POST',
+        body: JSON.stringify({
+          start_date: annualLeaveStartDate.value,
+          start_time: document.getElementById('annualLeaveStartTime').value,
+          end_date: annualLeaveEndDate.value,
+          end_time: document.getElementById('annualLeaveEndTime').value,
+          total_days: Number(annualLeaveDays.value),
+          details: document.getElementById('annualLeaveDetails').value.trim()
+        })
+      });
+      closeAnnualLeaveModal();
+      await loadAnnualLeaveRequests();
+      await Swal.fire({
+        icon: result.notificationWarning ? 'warning' : 'success',
+        text: result.notificationWarning || '연차 신청이 접수되었습니다. 관리자 승인 후 휴무 일정에 등록됩니다.'
+      });
+    } catch (error) {
+      console.error('연차 신청 등록 오류:', error);
+      annualLeaveFormError.textContent = error.message || '연차 신청을 등록하지 못했습니다.';
+      annualLeaveFormError.hidden = false;
+    } finally {
+      submitAnnualLeaveBtn.disabled = false;
+      submitAnnualLeaveBtn.textContent = '신청하기';
+    }
+  });
+
+  annualLeaveRequestList.addEventListener('click', async event => {
+    const downloadButton = event.target.closest('[data-annual-download]');
+    if (downloadButton) {
+      const card = downloadButton.closest('[data-annual-request-id]');
+      const item = annualLeaveRequests.find(requestItem => requestItem.id === card?.dataset.annualRequestId);
+      if (!item) return;
+      downloadButton.disabled = true;
+      try {
+        await downloadAnnualLeaveForm(item);
+      } catch (error) {
+        await Swal.fire({ icon: 'error', text: `엑셀 다운로드 실패: ${error.message}` });
+      } finally {
+        downloadButton.disabled = false;
+      }
+      return;
+    }
+
+    const reviewButton = event.target.closest('[data-annual-review]');
+    if (!reviewButton || userRole !== 'admin' || reviewButton.disabled) return;
+    const card = reviewButton.closest('[data-annual-request-id]');
+    const item = annualLeaveRequests.find(requestItem => requestItem.id === card?.dataset.annualRequestId);
+    if (!item) return;
+    const status = reviewButton.dataset.annualReview;
+    const reviewNote = card.querySelector('[data-annual-review-note]').value.trim();
+    const confirmation = await Swal.fire({
+      icon: status === 'approved' ? 'question' : 'warning',
+      text: `${item.username} 님의 연차 신청을 ${status === 'approved' ? '승인' : '반려'}하시겠습니까?`,
+      showCancelButton: true,
+      confirmButtonText: status === 'approved' ? '승인' : '반려',
+      cancelButtonText: '취소'
+    });
+    if (!confirmation.isConfirmed) return;
+
+    card.querySelectorAll('[data-annual-review]').forEach(button => { button.disabled = true; });
+    annualLeaveListError.hidden = true;
+    try {
+      const result = await requestAnnualLeave(`/${encodeURIComponent(item.id)}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ status, review_note: reviewNote })
+      });
+      await loadAnnualLeaveRequests();
+      if (status === 'approved') await fetchMonthData();
+      if (result.notificationWarning) {
+        annualLeaveListError.textContent = result.notificationWarning;
+        annualLeaveListError.hidden = false;
+      }
+    } catch (error) {
+      console.error('연차 신청 검토 오류:', error);
+      annualLeaveListError.textContent = error.message || '연차 신청을 처리하지 못했습니다.';
+      annualLeaveListError.hidden = false;
+      card.querySelectorAll('[data-annual-review]').forEach(button => { button.disabled = false; });
+    }
+  });
 
   // 필터 요소
   const locationCheckboxes = document.querySelectorAll('input[name="locFilter"]');
@@ -2095,5 +2358,5 @@ document.addEventListener('DOMContentLoaded', async () => {
       : '전체 선택';
   }
   await fetchUsersInfo();
-  fetchMonthData();
+  await Promise.all([fetchMonthData(), loadAnnualLeaveRequests()]);
 });

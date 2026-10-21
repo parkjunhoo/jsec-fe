@@ -476,6 +476,46 @@
     .date-details-title { min-width: 0; flex: 1; font-size: 18px; font-weight: 750; color: var(--text-main); }
     .calendar-bulk-actions { display: flex; justify-content: center; margin: 12px 0 20px; }
     #addAllMonthEventsBtn { width: 100%; max-width: 420px; min-height: 44px; padding: 0 16px; border: 1px solid var(--app-border); border-radius: 10px; background: var(--app-surface); color: var(--text-main); font-size: 14px; font-weight: 700; cursor: pointer; }
+    .annual-leave-section { margin: 0 0 18px; padding: 16px; border: 1px solid var(--app-border); border-radius: 14px; background: var(--app-surface); box-shadow: var(--app-shadow); }
+    .annual-leave-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    .annual-leave-heading h3 { margin: 0; color: var(--text-main); font-size: 16px; }
+    .annual-leave-heading p { margin: 5px 0 0; color: var(--text-sub); font-size: 12px; }
+    .annual-leave-actions, .annual-leave-filters { display: flex; align-items: center; gap: 8px; }
+    .btn-annual-leave { min-height: 38px; padding: 0 13px; border: 1px solid #34734c; border-radius: 9px; background: #367b51; color: #fff; font-size: 13px; font-weight: 700; cursor: pointer; }
+    .annual-leave-filter { min-height: 36px; padding: 0 9px; border: 1px solid var(--app-border); border-radius: 8px; background: var(--app-surface-raised); color: var(--text-main); font: inherit; font-size: 12px; }
+    .annual-leave-list { display: grid; gap: 9px; margin-top: 13px; }
+    .annual-leave-item { min-width: 0; padding: 13px; border: 1px solid var(--app-border); border-radius: 11px; background: var(--app-surface-raised); }
+    .annual-leave-item-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+    .annual-leave-item-title { margin: 0; color: var(--text-main); font-size: 14px; font-weight: 750; }
+    .annual-leave-item-meta, .annual-leave-item-details { margin: 5px 0 0; color: var(--text-sub); font-size: 12px; line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere; }
+    .annual-leave-status { flex: 0 0 auto; padding: 4px 8px; border: 1px solid var(--app-border); border-radius: 999px; color: var(--text-sub); font-size: 11px; font-weight: 750; }
+    .annual-leave-status.pending { border-color: rgba(190, 132, 40, 0.35); color: #a66a08; }
+    .annual-leave-status.approved { border-color: rgba(49, 132, 83, 0.35); color: #287348; }
+    .annual-leave-status.rejected { border-color: rgba(185, 59, 69, 0.35); color: #b83c45; }
+    .annual-leave-review { display: grid; gap: 8px; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--app-border); }
+    .annual-leave-review textarea { width: 100%; min-height: 54px; padding: 8px 10px; border: 1px solid var(--app-border); border-radius: 8px; background: var(--input-bg); color: var(--text-main); font: inherit; font-size: 12px; resize: vertical; }
+    .annual-leave-review-actions { display: flex; justify-content: flex-end; gap: 7px; }
+    .annual-leave-review-actions button, .annual-leave-download { min-height: 33px; padding: 0 10px; border: 1px solid var(--app-border); border-radius: 8px; background: transparent; color: var(--text-main); font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; }
+    .annual-leave-review-actions [data-annual-review="approved"] { border-color: rgba(49, 132, 83, 0.35); color: #287348; }
+    .annual-leave-review-actions [data-annual-review="rejected"] { border-color: rgba(185, 59, 69, 0.35); color: #b83c45; }
+    .annual-leave-download { margin-top: 10px; color: var(--primary); }
+    .annual-leave-error { margin: 10px 0 0; color: var(--danger); font-size: 12px; }
+    .annual-leave-empty { padding: 15px 10px; border: 1px dashed var(--app-border); border-radius: 9px; color: var(--text-sub); font-size: 12px; text-align: center; }
+    .annual-leave-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+    .annual-leave-field { display: grid; gap: 6px; min-width: 0; }
+    .annual-leave-field.full { grid-column: 1 / -1; }
+    .annual-leave-field label { color: var(--text-sub); font-size: 12px; font-weight: 650; }
+    .annual-leave-field input, .annual-leave-field textarea { width: 100%; min-height: 42px; padding: 9px 11px; border: 1px solid var(--app-border); border-radius: 8px; background: var(--input-bg); color: var(--text-main); font: inherit; font-size: 13px; }
+    .annual-leave-field textarea { min-height: 78px; resize: vertical; }
+    .annual-leave-hint { margin: -4px 0 0; color: var(--text-sub); font-size: 11px; }
+    .annual-leave-modal-card { width: min(100%, 560px); }
+    @media (max-width: 480px) {
+      .annual-leave-section { padding: 13px; }
+      .annual-leave-heading { align-items: flex-start; flex-direction: column; }
+      .annual-leave-actions, .annual-leave-actions .btn-annual-leave { width: 100%; }
+      .annual-leave-form { grid-template-columns: minmax(0, 1fr); }
+      .annual-leave-field.full { grid-column: auto; }
+    }
     .calendar-export-dialog { width: min(94vw, 540px) !important; }
     .calendar-export-picker { display: grid; gap: 14px; text-align: left; }
     .calendar-export-group { padding: 12px; border: 1px solid var(--app-border); border-radius: 12px; background: var(--app-surface-raised); }
@@ -525,6 +565,28 @@
         <button class="btn-add-vacation" id="openModalBtn" type="button">+ 휴무 등록</button>
       </div>
     </div>
+
+    <section class="annual-leave-section" aria-labelledby="annualLeaveTitle">
+      <div class="annual-leave-heading">
+        <div>
+          <h3 id="annualLeaveTitle">연차 신청</h3>
+          <p id="annualLeaveDescription">연차 신청 후 관리자 승인 시 휴무 일정에 등록됩니다.</p>
+        </div>
+        <div class="annual-leave-actions">
+          <select class="annual-leave-filter" id="annualLeaveStatusFilter" aria-label="연차 신청 상태 필터" hidden>
+            <option value="">전체 신청</option>
+            <option value="pending">승인 대기</option>
+            <option value="approved">승인</option>
+            <option value="rejected">반려</option>
+          </select>
+          <button class="btn-annual-leave" id="openAnnualLeaveBtn" type="button">연차 신청하기</button>
+        </div>
+      </div>
+      <p class="annual-leave-error" id="annualLeaveListError" role="alert" hidden></p>
+      <div class="annual-leave-list" id="annualLeaveRequestList" aria-live="polite">
+        <div class="annual-leave-empty">연차 신청 내역을 불러오는 중입니다.</div>
+      </div>
+    </section>
 
     <!-- 필터 및 정렬 박스 -->
     <div class="filter-box">
@@ -610,6 +672,61 @@
       </div>
     </div>
   </main>
+
+  <div class="modal-overlay" id="annualLeaveModal" aria-hidden="true">
+    <section class="modal-card annual-leave-modal-card" role="dialog" aria-modal="true" aria-labelledby="annualLeaveModalTitle">
+      <div class="modal-header">
+        <h3 id="annualLeaveModalTitle">연차 신청</h3>
+        <button class="btn-close-modal" id="closeAnnualLeaveBtn" type="button" aria-label="닫기">&times;</button>
+      </div>
+      <form id="annualLeaveForm">
+        <div class="annual-leave-form">
+          <div class="annual-leave-field">
+            <label for="annualLeaveDepartment">부서 / 근무지</label>
+            <input id="annualLeaveDepartment" type="text" readonly>
+          </div>
+          <div class="annual-leave-field">
+            <label for="annualLeaveName">성명</label>
+            <input id="annualLeaveName" type="text" readonly>
+          </div>
+          <div class="annual-leave-field full">
+            <label>구분</label>
+            <input type="text" value="연차" readonly>
+          </div>
+          <div class="annual-leave-field">
+            <label for="annualLeaveStartDate">신청 시작일 *</label>
+            <input id="annualLeaveStartDate" type="date" required>
+          </div>
+          <div class="annual-leave-field">
+            <label for="annualLeaveStartTime">시작 시간 *</label>
+            <input id="annualLeaveStartTime" type="time" value="09:00" readonly required>
+          </div>
+          <div class="annual-leave-field">
+            <label for="annualLeaveEndDate">신청 종료일 *</label>
+            <input id="annualLeaveEndDate" type="date" required>
+          </div>
+          <div class="annual-leave-field">
+            <label for="annualLeaveEndTime">종료 시간 *</label>
+            <input id="annualLeaveEndTime" type="time" value="18:00" readonly required>
+          </div>
+          <div class="annual-leave-field full">
+            <label for="annualLeaveDays">총 연차 일수 *</label>
+            <input id="annualLeaveDays" type="number" min="1" max="31" step="1" readonly required>
+            <p class="annual-leave-hint">기간 내 주말을 제외한 평일 수입니다. 승인 시 해당 평일 일정이 연차로 등록됩니다.</p>
+          </div>
+          <div class="annual-leave-field full">
+            <label for="annualLeaveDetails">세부 사항</label>
+            <textarea id="annualLeaveDetails" maxlength="2000" placeholder="신청 사유나 전달할 내용을 적어 주세요."></textarea>
+          </div>
+        </div>
+        <p class="annual-leave-error" id="annualLeaveFormError" role="alert" hidden></p>
+        <div class="modal-btn-group">
+          <button type="button" class="btn-delete" id="cancelAnnualLeaveBtn" style="display: block;">취소</button>
+          <button type="submit" class="btn-submit" id="submitAnnualLeaveBtn">신청하기</button>
+        </div>
+      </form>
+    </section>
+  </div>
 
   <div class="modal-overlay" id="dateDetailsModal" aria-hidden="true">
     <section class="date-details-card" role="dialog" aria-modal="true" aria-labelledby="dateDetailsTitle">

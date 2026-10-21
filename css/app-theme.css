@@ -357,6 +357,11 @@ html[data-theme="light"] .stat-card { background: #f4f7f3; }
 html[data-theme="light"] .calendar-note-text { color: #795c12; }
 html[data-theme="light"] .event-pill { color: #18251e; }
 html[data-theme="light"] .btn-export-excel { border-color: #34734c !important; background: #367b51 !important; color: #fff !important; }
+html:not([data-theme="light"]) .annual-leave-status.pending,
+html:not([data-theme="light"]) .annual-leave-review-actions [data-annual-review="rejected"] { color: #edc673; }
+html:not([data-theme="light"]) .annual-leave-status.approved,
+html:not([data-theme="light"]) .annual-leave-review-actions [data-annual-review="approved"] { color: #79cf98; }
+html:not([data-theme="light"]) .annual-leave-status.rejected { color: #f08c92; }
 html[data-theme="light"] .btn-bulk-vacation {
   border-color: #4b8e67;
   background: #e3f1e7;
