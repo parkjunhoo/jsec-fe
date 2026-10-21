@@ -24,6 +24,13 @@ const notificationDestinations = {
 };
 let hasAuthenticatedSession = false;
 let intentionalSignOutPending = false;
+let expirationRedirectStarted = false;
+
+function redirectToLoginForExpiredSession() {
+  if (expirationRedirectStarted) return;
+  expirationRedirectStarted = true;
+  window.location.replace('/index.html?session=expired');
+}
 
 window.onNativePushDestination = async destination => {
   const path = notificationDestinations[destination];
@@ -92,6 +99,44 @@ window.onNativePushToken = async token => {
 
 window.getNativePushToken = () => nativePushToken;
 
+window.addEventListener('app-unauthorized', event => {
+  const allowedOrigins = [
+    new URL(SUPABASE_URL).origin,
+    new URL(PUSH_TOKEN_API).origin
+  ];
+  if (!allowedOrigins.includes(event.detail?.origin)) return;
+
+  const hadAuthenticatedSession = hasAuthenticatedSession ||
+    localStorage.getItem('jsec-had-authenticated-session') === 'true';
+  if (!hadAuthenticatedSession) return;
+
+  supabaseClient.auth.signOut({ scope: 'local' }).then(({ error }) => {
+    if (error) console.error('만료된 세션 정리 오류:', error);
+    redirectToLoginForExpiredSession();
+  }).catch(error => {
+    console.error('만료된 세션 정리 오류:', error);
+    redirectToLoginForExpiredSession();
+  });
+});
+
+if (window.location.pathname.startsWith('/pages/')) {
+  supabaseClient.auth.getSession().then(({ data: { session }, error }) => {
+    if (error) {
+      console.error('페이지 접근 전 세션 확인 오류:', error);
+      return;
+    }
+    if (session) return;
+
+    const hadAuthenticatedSession = hasAuthenticatedSession ||
+      localStorage.getItem('jsec-had-authenticated-session') === 'true';
+    window.location.replace(hadAuthenticatedSession
+      ? '/index.html?session=expired'
+      : '/index.html');
+  }).catch(error => {
+    console.error('페이지 접근 전 세션 확인 오류:', error);
+  });
+}
+
 supabaseClient.auth.onAuthStateChange((event, session) => {
   if (session) {
     hasAuthenticatedSession = true;
@@ -105,7 +150,7 @@ supabaseClient.auth.onAuthStateChange((event, session) => {
     intentionalSignOutPending = false;
     localStorage.removeItem('jsec-had-authenticated-session');
     if (hadAuthenticatedSession && !intentionalSignOut) {
-      window.location.replace('/index.html?session=expired');
+      redirectToLoginForExpiredSession();
     }
   }
 });

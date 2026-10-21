@@ -5,6 +5,21 @@
   let hideTimer;
   const scriptPromises = new Map();
 
+  async function fetchWithoutLoading(...args) {
+    const response = await nativeFetch(...args);
+    if (response.status === 401) {
+      const input = args[0];
+      const url = input instanceof Request ? input.url : input;
+      try {
+        const origin = new URL(url, window.location.href).origin;
+        window.dispatchEvent(new CustomEvent('app-unauthorized', { detail: { origin } }));
+      } catch (error) {
+        console.error('인증 오류 응답 주소 확인 실패:', error);
+      }
+    }
+    return response;
+  }
+
   function loadScript(src) {
     const existing = scriptPromises.get(src);
     if (existing) return existing;
@@ -68,7 +83,7 @@
 
   window.appLoading = {
     begin,
-    fetchWithoutLoading: (...args) => nativeFetch(...args),
+    fetchWithoutLoading,
     loadScript,
     async track(operation) {
       const finish = begin();
@@ -80,5 +95,5 @@
     }
   };
 
-  window.fetch = (...args) => window.appLoading.track(() => nativeFetch(...args));
+  window.fetch = (...args) => window.appLoading.track(() => fetchWithoutLoading(...args));
 })();
