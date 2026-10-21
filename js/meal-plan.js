@@ -20,6 +20,15 @@
   const uploadPhotoButton = document.getElementById('uploadMealPhoto');
   const cancelPhotoButton = document.getElementById('cancelMealPhoto');
   const photoInput = document.getElementById('mealPhotoInput');
+  const mealViewer = document.getElementById('mealViewer');
+  const mealViewerTitle = document.getElementById('mealViewerTitle');
+  const mealViewerStage = document.getElementById('mealViewerStage');
+  const mealViewerImage = document.getElementById('mealViewerImage');
+  const mealZoomOutButton = document.getElementById('mealZoomOut');
+  const mealZoomInButton = document.getElementById('mealZoomIn');
+  const mealZoomFitButton = document.getElementById('mealZoomFit');
+  const mealZoomLabel = document.getElementById('mealZoomLabel');
+  const mealDownloadLink = document.getElementById('mealDownload');
 
   let selectedWeek = getCurrentWeekStart();
   let mealPlan = null;
@@ -27,6 +36,8 @@
   let displayedImageUrl = '';
   let loadSequence = 0;
   let isBusy = false;
+  let imageZoom = 1;
+  let viewerBaseScale = 1;
 
   function localDateString(date) {
     const year = date.getFullYear();
@@ -98,6 +109,8 @@
     }
     displayedImageUrl = url;
     mealPhoto.src = url;
+    mealDownloadLink.href = url;
+    mealDownloadLink.download = `식단표-${selectedWeek}.jpg`;
     mealPhotoFrame.hidden = false;
     mealEmpty.hidden = true;
   }
@@ -108,8 +121,65 @@
       displayedImageUrl = '';
     }
     mealPhoto.removeAttribute('src');
+    mealDownloadLink.removeAttribute('href');
     mealPhotoFrame.hidden = true;
     mealEmpty.hidden = false;
+  }
+
+  function updateViewerImageSize() {
+    if (!mealViewerImage.naturalWidth || !mealViewerImage.naturalHeight) return;
+    const availableWidth = Math.max(1, mealViewerStage.clientWidth - 24);
+    const availableHeight = Math.max(1, mealViewerStage.clientHeight - 24);
+    viewerBaseScale = Math.min(
+      availableWidth / mealViewerImage.naturalWidth,
+      availableHeight / mealViewerImage.naturalHeight,
+      1
+    );
+    const width = Math.max(1, Math.round(mealViewerImage.naturalWidth * viewerBaseScale * imageZoom));
+    mealViewerImage.style.width = `${width}px`;
+    mealViewerImage.style.height = 'auto';
+    mealZoomLabel.textContent = imageZoom === 1 ? '맞춤' : `${Math.round(imageZoom * 100)}%`;
+  }
+
+  function setImageZoom(zoom) {
+    imageZoom = Math.max(0.5, Math.min(4, Math.round(zoom * 100) / 100));
+    updateViewerImageSize();
+  }
+
+  function openImageViewer() {
+    if (!displayedImageUrl) return;
+    imageZoom = 1;
+    mealViewerTitle.textContent = `식단표 · ${selectedWeek}`;
+    mealViewerImage.src = displayedImageUrl;
+    mealViewer.showModal();
+    mealViewerStage.scrollTop = 0;
+    mealViewerStage.scrollLeft = 0;
+    requestAnimationFrame(updateViewerImageSize);
+  }
+
+  async function downloadMealPlanImage(event) {
+    const nativeDownloader = window.AndroidMealPlanDownloader;
+    if (!nativeDownloader) return;
+    event.preventDefault();
+
+    try {
+      const image = await fetch(mealDownloadLink.href).then(response => {
+        if (!response.ok) throw new Error('사진 파일을 준비하지 못했습니다.');
+        return response.blob();
+      });
+      const reader = new FileReader();
+      const dataUrl = await new Promise((resolve, reject) => {
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = () => reject(new Error('사진 파일을 읽지 못했습니다.'));
+        reader.readAsDataURL(image);
+      });
+      nativeDownloader.saveImage(
+        dataUrl.slice(dataUrl.indexOf(',') + 1),
+        mealDownloadLink.download
+      );
+    } catch (error) {
+      setStatus(error.message || '사진을 다운로드하지 못했습니다.', 'error');
+    }
   }
 
   function updateWeekLabel() {
@@ -289,6 +359,28 @@
   cancelPhotoButton.addEventListener('click', () => {
     clearPendingImage();
     loadMealPlan();
+  });
+  mealPhoto.addEventListener('click', openImageViewer);
+  mealViewerImage.addEventListener('load', updateViewerImageSize);
+  mealZoomOutButton.addEventListener('click', () => setImageZoom(imageZoom - 0.25));
+  mealZoomInButton.addEventListener('click', () => setImageZoom(imageZoom + 0.25));
+  mealZoomFitButton.addEventListener('click', () => {
+    setImageZoom(1);
+    mealViewerStage.scrollTop = 0;
+    mealViewerStage.scrollLeft = 0;
+  });
+  mealDownloadLink.addEventListener('click', downloadMealPlanImage);
+  document.getElementById('closeMealViewer').addEventListener('click', () => mealViewer.close());
+  mealViewer.addEventListener('click', event => {
+    if (event.target === mealViewer) mealViewer.close();
+  });
+  mealViewerStage.addEventListener('wheel', event => {
+    if (!event.ctrlKey) return;
+    event.preventDefault();
+    setImageZoom(imageZoom + (event.deltaY < 0 ? 0.1 : -0.1));
+  }, { passive: false });
+  window.addEventListener('resize', () => {
+    if (mealViewer.open) updateViewerImageSize();
   });
   window.addEventListener('beforeunload', () => {
     if (displayedImageUrl) URL.revokeObjectURL(displayedImageUrl);
