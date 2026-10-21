@@ -12,7 +12,7 @@
     if (dialog) return { close: () => dialog.close() };
 
     const overlay = document.querySelector(
-      '.modal-overlay.active, #notificationOverlay.active, .resort-notice-modal.active'
+      '.modal-overlay.active, #notificationOverlay.active, .resort-notice-modal.active, .payroll-modal.active'
     );
     if (overlay) {
       return {
@@ -455,6 +455,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     .resort-notice-detail-date { flex: 0 0 auto; color: var(--text-sub, #94a3b8); font-size: 12px; }
     .resort-notice-detail-image { display: block; width: 100%; height: auto; margin: 0 auto 10px; border-radius: 6px; }
     .resort-notice-original { display: inline-block; margin-top: 8px; color: var(--primary, #38bdf8); font-size: 12px; }
+    .payroll-modal { position: fixed; inset: 0; z-index: 1001; display: none; align-items: center; justify-content: center; padding: 16px; background: rgba(0, 0, 0, 0.76); }
+    .payroll-modal.active { display: flex; }
+    .payroll-dialog { display: flex; width: min(100%, 760px); height: min(88dvh, 820px); flex-direction: column; overflow: hidden; border: 1px solid var(--app-border, rgba(255,255,255,.14)); border-radius: 18px; background: var(--app-surface, #1e293b); color: var(--text-main, #f8fafc); box-shadow: 0 24px 70px rgba(0,0,0,.45); }
+    .payroll-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 18px; border-bottom: 1px solid var(--app-border, rgba(255,255,255,.12)); }
+    .payroll-header h2 { margin: 0; font-size: 17px; }
+    .payroll-header-actions { display: flex; align-items: center; gap: 8px; }
+    .payroll-header button, .payroll-open-link { min-height: 34px; padding: 0 10px; border: 1px solid var(--app-border, rgba(255,255,255,.14)); border-radius: 8px; background: var(--app-surface-raised, rgba(255,255,255,.06)); color: inherit; font-size: 12px; text-decoration: none; cursor: pointer; }
+    .payroll-content { min-height: 0; flex: 1; padding: 10px; }
+    .payroll-frame { width: 100%; height: 100%; border: 0; border-radius: 8px; background: #fff; }
+    .payroll-mobile-help { margin: 10px; padding: 18px; border: 1px solid var(--app-border, rgba(255,255,255,.12)); border-radius: 12px; color: var(--text-sub, #94a3b8); font-size: 14px; line-height: 1.6; }
+    .payroll-mobile-help a { display: inline-flex; align-items: center; min-height: 42px; margin-top: 12px; padding: 0 14px; border-radius: 8px; background: var(--primary, #38bdf8); color: #082032; font-weight: 700; text-decoration: none; }
     @media (max-width: 480px) { .resort-notice-modal { padding: 0; align-items: flex-end; } .resort-notice-dialog { max-height: 92dvh; border-radius: 18px 18px 0 0; padding-bottom: env(safe-area-inset-bottom); } .resort-notice-item { padding: 11px 13px; } }
   `;
   document.head.appendChild(navStyle);
@@ -559,6 +570,9 @@ document.addEventListener('DOMContentLoaded', async () => {
           <a href="#" class="drawer-item" id="openResortNoticesFromDrawer">
             <span>📢</span> 지산 공지사항 &lt;&lt;
           </a>
+          <a href="#" class="drawer-item" id="openPayrollFromDrawer">
+            <span>💳</span> 급여 조회
+          </a>
         </nav>
       </div>
 
@@ -598,6 +612,24 @@ document.addEventListener('DOMContentLoaded', async () => {
         </footer>
       </section>
     </div>
+    <div class="payroll-modal" id="payrollModal" aria-hidden="true">
+      <section class="payroll-dialog" role="dialog" aria-modal="true" aria-labelledby="payrollTitle">
+        <header class="payroll-header">
+          <h2 id="payrollTitle">급여 조회</h2>
+          <div class="payroll-header-actions">
+            <a class="payroll-open-link" id="payrollOpenExternal" href="https://www.ibro.co.kr/PayRoll/JOBWITH/index.asp">외부 브라우저에서 열기</a>
+            <button id="closePayroll" type="button" aria-label="급여 조회 닫기">닫기</button>
+          </div>
+        </header>
+        <div class="payroll-content">
+          <iframe class="payroll-frame" id="payrollFrame" title="급여 조회 사이트" src="about:blank"></iframe>
+          <div class="payroll-mobile-help" id="payrollMobileHelp" hidden>
+            급여 조회 사이트를 안전하게 열기 위해 외부 브라우저에서 로그인해 주세요. 로그인 정보는 앱에 저장되지 않습니다.
+            <br><a id="payrollMobileLink" href="https://www.ibro.co.kr/PayRoll/JOBWITH/index.asp">급여 조회 사이트 열기</a>
+          </div>
+        </div>
+      </section>
+    </div>
   `;
 
   // Attach event handlers and load user information.
@@ -633,6 +665,24 @@ document.addEventListener('DOMContentLoaded', async () => {
   const resortNoticeNext = document.getElementById('resortNoticeNext');
   const resortNoticePageLabel = document.getElementById('resortNoticePageLabel');
   const resortNoticeListButton = document.getElementById('resortNoticeListButton');
+  const payrollModal = document.getElementById('payrollModal');
+  const payrollFrame = document.getElementById('payrollFrame');
+  const payrollMobileHelp = document.getElementById('payrollMobileHelp');
+  const payrollExternalLinks = [
+    document.getElementById('payrollOpenExternal'),
+    document.getElementById('payrollMobileLink')
+  ];
+  const isAndroidApp = Boolean(window.AndroidSecurity);
+  payrollMobileHelp.hidden = !isAndroidApp;
+  payrollFrame.hidden = isAndroidApp;
+  if (isAndroidApp) {
+    payrollExternalLinks.forEach(link => { link.target = '_self'; });
+  } else {
+    payrollExternalLinks.forEach(link => {
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
+    });
+  }
   const RESORT_NOTICES_API = 'https://jsec-serverless.adobephotoshop.workers.dev/api/resort-notices';
   let resortNoticePage = 1;
   let resortNoticeTotalPages = 1;
@@ -894,8 +944,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       const original = document.createElement('a');
       original.className = 'resort-notice-original';
       original.href = `https://www.jisanresort.co.kr/w/event/board_view.asp?board_sw=notice&seq=${encodeURIComponent(notice.id)}`;
-      original.target = '_blank';
-      original.rel = 'noopener noreferrer';
+      original.target = isAndroidApp ? '_self' : '_blank';
+      if (!isAndroidApp) original.rel = 'noopener noreferrer';
       original.textContent = '지산리조트 원문 보기 ↗';
       detail.appendChild(original);
       resortNoticeContent.appendChild(detail);
@@ -923,14 +973,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     resortNoticeModal.setAttribute('aria-hidden', 'true');
   }
 
-  document.addEventListener('click', event => {
-    const trigger = event.target.closest('#openResortNotices, #openResortNoticesFromDrawer');
-    if (trigger) {
+  ['openResortNotices', 'openResortNoticesFromDrawer'].forEach(id => {
+    document.getElementById(id)?.addEventListener('click', event => {
       event.preventDefault();
       openResortNotices();
-      return;
-    }
-    const noticeItem = event.target.closest('[data-notice-id]');
+    });
+  });
+  resortNoticeContent.addEventListener('click', event => {
+    const target = event.target instanceof Element ? event.target : null;
+    const noticeItem = target?.closest('[data-notice-id]');
     if (noticeItem && resortNoticeModal.contains(noticeItem)) {
       openResortNoticeDetail(noticeItem.dataset.noticeId);
     }
@@ -947,6 +998,31 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
   document.addEventListener('keydown', event => {
     if (event.key === 'Escape' && resortNoticeModal.classList.contains('active')) closeResortNotices();
+  });
+  function openPayroll() {
+    setDrawerOpen(false);
+    payrollModal.classList.add('active');
+    payrollModal.setAttribute('aria-hidden', 'false');
+    if (!isAndroidApp && payrollFrame.src === 'about:blank') {
+      payrollFrame.src = 'https://www.ibro.co.kr/PayRoll/JOBWITH/index.asp';
+    }
+  }
+  function closePayroll() {
+    payrollModal.classList.remove('active');
+    payrollModal.setAttribute('aria-hidden', 'true');
+  }
+  ['openPayroll', 'openPayrollFromDrawer'].forEach(id => {
+    document.getElementById(id)?.addEventListener('click', event => {
+      event.preventDefault();
+      openPayroll();
+    });
+  });
+  document.getElementById('closePayroll').addEventListener('click', closePayroll);
+  payrollModal.addEventListener('click', event => {
+    if (event.target === payrollModal) closePayroll();
+  });
+  document.addEventListener('keydown', event => {
+    if (event.key === 'Escape' && payrollModal.classList.contains('active')) closePayroll();
   });
 
   async function signOutRetiredUser() {
