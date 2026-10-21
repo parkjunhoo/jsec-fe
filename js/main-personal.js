@@ -14,6 +14,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   const previousMonthButton = document.getElementById('personalPreviousMonth');
   const nextMonthButton = document.getElementById('personalNextMonth');
   const welcomeMessage = document.getElementById('personalWelcome');
+  const personalTitle = document.getElementById('personalTitle');
+  const personalTabs = document.getElementById('personalTabs');
+  const guestDashboard = document.getElementById('guestDashboard');
+  const guestDashboardContent = document.getElementById('guestDashboardContent');
+  const guestDashboardError = document.getElementById('guestDashboardError');
 
   function getKstParts(date = new Date()) {
     const parts = new Intl.DateTimeFormat('en-US', {
@@ -30,6 +35,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   let selectedMonth = new Date(Number(todayParts.year), Number(todayParts.month) - 1, 1);
   let monthRequestId = 0;
   let isGuest = true;
+  let allVacations = [];
 
   function getSelectedMonthRange() {
     const year = selectedMonth.getFullYear();
@@ -74,7 +80,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     const { start, end, label } = getSelectedMonthRange();
     const requestId = ++monthRequestId;
     monthLabel.textContent = label;
-    welcomeMessage.textContent = `${label} 내 일정과 수당을 확인하세요.`;
+    welcomeMessage.textContent = isGuest
+      ? `${label} 팀 휴무와 수당 현황입니다.`
+      : `${label} 내 일정과 수당을 확인하세요.`;
     animateMonthChange(offset);
     await Promise.all([
       loadVacations(start, end, requestId),
@@ -166,10 +174,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (name) welcomeMessage.textContent = `${name}님, ${getSelectedMonthRange().label} 내 일정과 수당을 확인하세요.`;
   }
   if (isGuest) {
+    personalTitle.textContent = '팀 운영 대시보드';
+    personalTabs.hidden = true;
+    vacationPanel.hidden = true;
+    allowancePanel.hidden = true;
+    guestDashboard.hidden = false;
     dutyList.hidden = true;
     dutyList.style.display = 'none';
     dutyStatus.hidden = true;
     dutyStatus.style.display = 'none';
+    welcomeMessage.textContent = `${getSelectedMonthRange().label} 팀 휴무와 수당 현황입니다.`;
   }
 
   async function request(path, options = {}) {
@@ -191,6 +205,12 @@ document.addEventListener('DOMContentLoaded', async () => {
       const params = new URLSearchParams({ start, end });
       const vacations = await request(`/vacations?${params.toString()}`);
       if (requestId !== monthRequestId) return;
+      allVacations = vacations;
+      if (isGuest) {
+        guestDashboardError.textContent = '';
+        renderGuestDashboard();
+        return;
+      }
       const mine = vacations.filter(vacation => vacation.user_id === session.user.id);
       const typeCounts = mine.reduce((counts, vacation) => {
         counts[vacation.leave_type] = (counts[vacation.leave_type] || 0) + 1;
@@ -231,7 +251,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     } catch (error) {
       if (requestId !== monthRequestId) return;
       console.error('내 휴무 요약 조회 오류:', error);
-      vacationError.textContent = '휴무 일정을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.';
+      if (isGuest) {
+        guestDashboardError.textContent = '팀 휴무 현황을 불러오지 못했습니다.';
+      } else {
+        vacationError.textContent = '휴무 일정을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.';
+      }
     }
   }
 
@@ -317,6 +341,72 @@ document.addEventListener('DOMContentLoaded', async () => {
     ${rows ? `<div class="personal-list">${rows}</div>` : `<div class="personal-empty">${getSelectedMonthRange().label} 등록된 수당 내역이 없습니다.</div>`}`;
   }
 
+  function renderGuestDashboard() {
+    if (!isGuest) return;
+    const allowanceTotal = allowanceEntries.reduce((sum, entry) => sum + (Number(entry.unit_amount) || 0), 0);
+    const upcoming = allVacations
+      .filter(vacation => vacation.date >= today)
+      .sort((a, b) => a.date.localeCompare(b.date));
+    const leaveCounts = new Map();
+    allVacations.forEach(vacation => {
+      const type = vacation.leave_type || '기타';
+      leaveCounts.set(type, (leaveCounts.get(type) || 0) + 1);
+    });
+    const allowanceTotals = new Map();
+    allowanceEntries.forEach(entry => {
+      const label = entry.type_label || '기타 수당';
+      allowanceTotals.set(label, (allowanceTotals.get(label) || 0) + (Number(entry.unit_amount) || 0));
+    });
+
+    const renderBars = (items, formatter) => {
+      if (!items.length) return '<div class="personal-empty">해당 기간에 데이터가 없습니다.</div>';
+      const max = Math.max(...items.map(([, value]) => value), 1);
+      return `<div class="guest-bar-list">${items.map(([label, value]) => `
+        <div class="guest-bar-row">
+          <span class="guest-bar-label" title="${escapeHtml(label)}">${escapeHtml(label)}</span>
+          <span class="guest-bar-track" aria-hidden="true"><span class="guest-bar-fill" style="display:block;width:${Math.max(value > 0 ? 2 : 0, value / max * 100)}%"></span></span>
+          <span class="guest-bar-value">${formatter(value)}</span>
+        </div>`).join('')}</div>`;
+    };
+
+    const leaveRows = [...leaveCounts.entries()].sort((a, b) => b[1] - a[1]);
+    const allowanceRows = [...allowanceTotals.entries()].sort((a, b) => b[1] - a[1]);
+    const upcomingRows = upcoming.slice(0, 6).map(vacation => `
+      <article class="guest-upcoming-item">
+        <div class="guest-upcoming-date">${escapeHtml(formatVacationDate(vacation.date))}</div>
+        <div class="guest-upcoming-name">${escapeHtml(vacation.username || '직원')}</div>
+        <div class="guest-upcoming-type">${escapeHtml(vacation.leave_type || '휴무')} · ${escapeHtml(vacation.time_detail || '종일')}</div>
+      </article>`).join('');
+
+    guestDashboardContent.innerHTML = `
+      <div class="guest-kpis">
+        <article class="guest-kpi"><span class="guest-kpi-label">이번 달 휴무 등록</span><strong class="guest-kpi-value">${allVacations.length}건</strong></article>
+        <article class="guest-kpi"><span class="guest-kpi-label">앞으로 예정된 휴무</span><strong class="guest-kpi-value">${upcoming.length}건</strong></article>
+        <article class="guest-kpi"><span class="guest-kpi-label">이번 달 수당 기록</span><strong class="guest-kpi-value">${allowanceEntries.length}건</strong></article>
+        <article class="guest-kpi"><span class="guest-kpi-label">이번 달 수당 합계</span><strong class="guest-kpi-value">${formatMoney(allowanceTotal)}</strong></article>
+      </div>
+      <div class="guest-dashboard-grid">
+        <section class="guest-chart-card" aria-label="휴무 유형별 건수">
+          <h3>휴무 유형별 현황</h3>
+          ${renderBars(leaveRows, value => `${value}건`)}
+        </section>
+        <section class="guest-chart-card" aria-label="수당 종류별 금액">
+          <h3>수당 종류별 금액</h3>
+          ${renderBars(allowanceRows, formatMoney)}
+        </section>
+      </div>
+      <section class="guest-upcoming">
+        <h3>다가오는 휴무 일정</h3>
+        ${upcomingRows
+          ? `<div class="guest-upcoming-list">${upcomingRows}</div>`
+          : '<div class="personal-empty">남은 휴무 일정이 없습니다.</div>'}
+      </section>
+      <nav class="guest-dashboard-links" aria-label="모니터링 바로가기">
+        <a class="guest-dashboard-link" href="/pages/calendar.html">전체 휴무 일정 보기 ↗</a>
+        <a class="guest-dashboard-link" href="/pages/allowances.html">수당 상세 및 엑셀 ↗</a>
+      </nav>`;
+  }
+
   async function loadAllowanceData(start, end, requestId) {
     try {
       const monthParams = new URLSearchParams({ start, end });
@@ -324,11 +414,16 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (requestId !== monthRequestId) return;
       allowanceEntries = entries;
       allowanceError.textContent = '';
-      renderAllowanceSummary();
+      if (isGuest) renderGuestDashboard();
+      else renderAllowanceSummary();
     } catch (error) {
       if (requestId !== monthRequestId) return;
       console.error('내 수당 요약 조회 오류:', error);
-      allowanceError.textContent = '수당 정보를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.';
+      if (isGuest) {
+        guestDashboardError.textContent = '팀 수당 현황을 불러오지 못했습니다.';
+      } else {
+        allowanceError.textContent = '수당 정보를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.';
+      }
     }
   }
 
@@ -412,6 +507,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   await Promise.all([
     loadVacations(initialMonth.start, initialMonth.end, initialRequestId),
     loadAllowanceData(initialMonth.start, initialMonth.end, initialRequestId),
-    loadTodayAvailability()
+    isGuest ? Promise.resolve() : loadTodayAvailability()
   ]);
 });

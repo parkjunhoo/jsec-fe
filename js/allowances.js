@@ -125,6 +125,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     profile = users?.find(user => user.id === session.user.id) || null;
     isAdmin = profile?.role === 'admin';
     isGuest = profile?.role === 'guest' || profile?.role === 'monitor';
+    document.getElementById('tab-entry').hidden = isGuest;
     canViewAll = isAdmin || isGuest;
     teamMembers = (users || []).filter(user => user.role !== 'guest' && user.role !== 'monitor').map(user => ({
       id: user.id,
@@ -557,6 +558,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   function render() {
+    if (isGuest && activeTab === 'entry') activeTab = 'journal';
     const isEntryTab = activeTab === 'entry';
     categoryCalendarHead.hidden = isEntryTab;
     summaryContainer.hidden = isEntryTab;
@@ -1090,6 +1092,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
   tabs.forEach(tab => tab.addEventListener('click', () => {
+    if (isGuest && tab.dataset.tab === 'entry') return;
     activeTab = tab.dataset.tab;
     render();
   }));

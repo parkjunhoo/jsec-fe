@@ -365,6 +365,30 @@
     .personal-row-value { flex: 0 0 auto; color: #b6ddf2; font-size: 13px; font-weight: 750; text-align: right; }
     .personal-empty { padding: 16px 12px; border: 1px dashed rgba(190, 211, 239, 0.13); border-radius: 11px; color: var(--muted); font-size: 13px; text-align: center; }
     .personal-subheading { margin: 20px 0 9px; color: #dce7f2; font-size: 13px; font-weight: 750; }
+    .guest-dashboard[hidden] { display: none; }
+    .guest-kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-bottom: 15px; }
+    .guest-kpi { min-width: 0; padding: 14px; border: 1px solid rgba(190, 211, 239, 0.1); border-radius: 12px; background: rgba(255, 255, 255, 0.035); }
+    .guest-kpi-label { display: block; color: var(--muted); font-size: 11px; }
+    .guest-kpi-value { display: block; margin-top: 7px; color: #f3f7fc; font-size: 21px; font-weight: 780; letter-spacing: -0.035em; overflow-wrap: anywhere; }
+    .guest-dashboard-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+    .guest-chart-card { min-width: 0; padding: 15px; border: 1px solid rgba(190, 211, 239, 0.1); border-radius: 12px; background: rgba(255, 255, 255, 0.025); }
+    .guest-chart-card h3 { margin: 0 0 13px; color: #dce7f2; font-size: 13px; font-weight: 750; }
+    .guest-bar-list { display: grid; gap: 11px; }
+    .guest-bar-row { display: grid; grid-template-columns: minmax(64px, 0.8fr) minmax(0, 2fr) auto; align-items: center; gap: 9px; }
+    .guest-bar-label { color: #c9d5e2; font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .guest-bar-track { height: 8px; overflow: hidden; border-radius: 999px; background: rgba(190, 211, 239, 0.1); }
+    .guest-bar-fill { height: 100%; min-width: 2px; border-radius: inherit; background: linear-gradient(90deg, #3a9b80, #72c7ff); }
+    .guest-bar-value { color: #dce7f2; font-size: 11px; font-weight: 700; text-align: right; white-space: nowrap; }
+    .guest-upcoming { margin-top: 13px; }
+    .guest-upcoming h3 { margin: 0 0 9px; color: #dce7f2; font-size: 13px; font-weight: 750; }
+    .guest-upcoming-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; }
+    .guest-upcoming-item { min-width: 0; padding: 10px 11px; border: 1px solid rgba(190, 211, 239, 0.08); border-radius: 10px; background: rgba(255, 255, 255, 0.025); }
+    .guest-upcoming-date { color: #b6ddf2; font-size: 11px; font-weight: 700; }
+    .guest-upcoming-name { margin-top: 4px; color: #e8f0f7; font-size: 12px; font-weight: 700; overflow-wrap: anywhere; }
+    .guest-upcoming-type { margin-top: 3px; color: var(--muted); font-size: 11px; }
+    .guest-dashboard-links { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 13px; }
+    .guest-dashboard-link { display: inline-flex; min-height: 35px; align-items: center; padding: 0 11px; border: 1px solid rgba(190, 211, 239, 0.12); border-radius: 9px; color: #b6ddf2; font-size: 11px; font-weight: 700; text-decoration: none; }
+    .guest-dashboard-link:hover { border-color: rgba(114, 199, 255, 0.4); }
     .duty-list { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 9px; }
     .duty-toggle {
       display: grid;
@@ -418,6 +442,14 @@
     html[data-theme="light"] .personal-vacation-row.today { border-color: rgba(25, 114, 84, 0.24); background: #f2f8f3; }
     html[data-theme="light"] .personal-row-value { color: #176346; }
     html[data-theme="light"] .personal-empty { border-color: var(--app-border); color: var(--text-sub); }
+    html[data-theme="light"] .guest-kpi, html[data-theme="light"] .guest-chart-card,
+    html[data-theme="light"] .guest-upcoming-item { border-color: var(--app-border); background: #f7faf7; }
+    html[data-theme="light"] .guest-kpi-value, html[data-theme="light"] .guest-chart-card h3,
+    html[data-theme="light"] .guest-bar-label, html[data-theme="light"] .guest-bar-value,
+    html[data-theme="light"] .guest-upcoming h3, html[data-theme="light"] .guest-upcoming-name { color: var(--text-main); }
+    html[data-theme="light"] .guest-kpi-label, html[data-theme="light"] .guest-upcoming-type { color: var(--text-sub); }
+    html[data-theme="light"] .guest-bar-track { background: #e6eee8; }
+    html[data-theme="light"] .guest-dashboard-link { border-color: var(--app-border); color: #176346; }
     html[data-theme="light"] .duty-toggle { color: var(--text-main); }
     html[data-theme="light"] .duty-toggle:hover:not(:disabled) { border-color: rgba(25, 114, 84, 0.42); }
     html[data-theme="light"] .duty-toggle[aria-pressed="true"] {
@@ -432,6 +464,7 @@
     @media (max-width: 760px) {
       .personal-panel { padding: 18px; }
       .duty-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .guest-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     }
     @media (max-width: 760px) {
       .home-shell { padding: 22px 16px 38px; }
@@ -485,6 +518,10 @@
       .personal-row { padding: 10px; }
       .personal-row-title, .personal-row-value { font-size: 12px; }
       .personal-row-detail { font-size: 11px; }
+      .guest-dashboard-grid { grid-template-columns: 1fr; }
+      .guest-upcoming-list { grid-template-columns: 1fr; }
+      .guest-kpi { padding: 12px; }
+      .guest-kpi-value { font-size: 19px; }
       .personal-vacation-list { gap: 6px; }
       .personal-vacation-row { min-height: 64px; padding: 8px; }
       .personal-vacation-row .personal-row-title { font-size: 11px; }
@@ -561,7 +598,7 @@
           <button id="personalNextMonth" type="button" aria-label="다음 달">›</button>
         </div>
       </div>
-      <div class="personal-tabs" role="tablist" aria-label="내 메뉴">
+      <div class="personal-tabs" id="personalTabs" role="tablist" aria-label="내 메뉴">
         <button class="personal-tab" id="personalVacationTab" type="button" role="tab" aria-selected="true" aria-controls="personalVacationPanel">내 휴무</button>
         <button class="personal-tab" id="personalAllowanceTab" type="button" role="tab" aria-selected="false" aria-controls="personalAllowancePanel" tabindex="-1">수당 관리</button>
       </div>
@@ -581,6 +618,10 @@
         </div>
         <p class="duty-note">등록된 항목을 다시 누르면 취소됩니다. 이미 다른 직원이 등록한 항목은 선택할 수 없습니다.</p>
         <p class="personal-error" id="personalDutyStatus" role="status" aria-live="polite"></p>
+      </section>
+      <section class="guest-dashboard" id="guestDashboard" aria-label="팀 운영 대시보드" hidden>
+        <p class="personal-error" id="guestDashboardError" role="alert"></p>
+        <div id="guestDashboardContent" aria-live="polite"><div class="personal-empty">팀 현황을 불러오는 중입니다.</div></div>
       </section>
     </section>
 
