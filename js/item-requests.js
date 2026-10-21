@@ -97,9 +97,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     return;
   }
   isAdmin = profile?.role === 'admin';
-  const isMonitor = profile?.role === 'monitor';
-  canViewAll = isAdmin || isMonitor;
-  if (isMonitor) {
+  const isGuest = profile?.role === 'guest' || profile?.role === 'monitor';
+  canViewAll = isAdmin || isGuest;
+  if (isGuest) {
     form.hidden = true;
     form.style.display = 'none';
   }
@@ -110,7 +110,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       : '팀 전체의 물품 신청 내역을 조회합니다.';
     document.getElementById('requestIntro').textContent = isAdmin
       ? '필요한 물품을 신청하거나 팀원의 신청을 검토하세요.'
-      : '본사 모니터링 계정은 신청 내역을 조회할 수 있습니다.';
+      : '게스트 계정은 신청 내역을 조회할 수 있습니다.';
     statusFilter.hidden = false;
   }
 

@@ -29,7 +29,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const today = `${todayParts.year}-${todayParts.month}-${todayParts.day}`;
   let selectedMonth = new Date(Number(todayParts.year), Number(todayParts.month) - 1, 1);
   let monthRequestId = 0;
-  let isMonitor = true;
+  let isGuest = true;
 
   function getSelectedMonthRange() {
     const year = selectedMonth.getFullYear();
@@ -161,11 +161,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (profileError) {
     console.error('개인 메뉴 사용자 정보 조회 오류:', profileError);
   } else if (profile) {
-    isMonitor = profile.role === 'monitor';
+    isGuest = profile.role === 'guest' || profile.role === 'monitor';
     const name = profile.name || profile.username;
     if (name) welcomeMessage.textContent = `${name}님, ${getSelectedMonthRange().label} 내 일정과 수당을 확인하세요.`;
   }
-  if (isMonitor) {
+  if (isGuest) {
     dutyList.hidden = true;
     dutyList.style.display = 'none';
     dutyStatus.hidden = true;
@@ -252,7 +252,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   function renderDuties() {
-    if (isMonitor) return;
+    if (isGuest) return;
     dutyList.querySelectorAll('[data-duty]').forEach(button => {
       const duty = duties.find(item => item.key === button.dataset.duty);
       const mine = todayAvailability.find(entry =>
@@ -347,7 +347,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   dutyList.addEventListener('click', async event => {
-    if (isMonitor) return;
+    if (isGuest) return;
     const button = event.target.closest('[data-duty]');
     if (!button || button.disabled) return;
     const duty = duties.find(item => item.key === button.dataset.duty);

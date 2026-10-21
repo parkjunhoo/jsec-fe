@@ -497,9 +497,9 @@
 
     <div class="user-category-tabs" id="userCategoryTabs" role="tablist" aria-label="회원 분류" hidden>
       <button class="user-category-tab" type="button" role="tab" id="workersTab"
-        aria-controls="userList" aria-selected="true" data-user-category="workers">근무자</button>
-      <button class="user-category-tab" type="button" role="tab" id="observersTab"
-        aria-controls="userList" aria-selected="false" data-user-category="observers">옵저버 계정</button>
+        aria-controls="userList" aria-selected="true" data-user-category="workers">근무자 계정</button>
+      <button class="user-category-tab" type="button" role="tab" id="guestsTab"
+        aria-controls="userList" aria-selected="false" data-user-category="guests">게스트 계정</button>
     </div>
 
     <!-- 검색창 및 회원 등록 버튼 -->
@@ -596,15 +596,15 @@
         </div>
 
         <div class="form-grid-2">
-          <div class="form-group">
+          <div class="form-group" id="roleGroup">
             <label>권한</label>
             <select id="newRole">
               <option value="user">일반 회원</option>
-              <option value="monitor">본사 모니터링</option>
+              <option value="guest">게스트</option>
               <option value="admin">관리자 (Admin)</option>
             </select>
           </div>
-          <div class="form-group">
+          <div class="form-group" id="contractTypeGroup">
             <label>계약 형태</label>
             <select id="newContractType">
               <option value="정규직">정규직</option>
@@ -614,7 +614,7 @@
           </div>
         </div>
 
-        <div class="form-group">
+        <div class="form-group" id="jobTitleGroup">
           <label for="newJobTitle">직책</label>
           <select id="newJobTitle">
             <option value="사원">사원</option>
@@ -631,12 +631,12 @@
           </select>
         </div>
 
-        <div class="form-group">
+        <div class="form-group" id="workLocationGroup">
           <label>근무지 *</label>
           <input type="text" id="newWorkLocation" placeholder="예: 스키장 야간 / 현관" required>
         </div>
 
-        <div class="form-grid-2">
+        <div class="form-grid-2" id="employmentDatesGroup">
           <div class="form-group">
             <label>입사일</label>
             <input type="date" id="newHireDate">
@@ -653,7 +653,7 @@
         </div>
 
         <!-- 컬러 피커 입력 영역 -->
-        <div class="form-group">
+        <div class="form-group" id="memberColorGroup">
           <label>회원 색상</label>
           <div style="display: flex; align-items: center; gap: 10px;">
             <input type="color" id="newColor" value="#38bdf8" style="width: 50px; height: 44px; padding: 4px; background: var(--input-bg); border: 1px solid var(--border-color); border-radius: 10px; cursor: pointer;">

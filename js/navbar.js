@@ -844,8 +844,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (userRoleEl) {
           userRoleEl.textContent = profile.role === 'admin'
             ? '관리자 (Admin)'
-            : profile.role === 'monitor'
-              ? '본사 모니터링'
+            : profile.role === 'guest'
+              ? '게스트'
               : '일반 회원';
         }
       }

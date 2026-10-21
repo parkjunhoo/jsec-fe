@@ -38,15 +38,21 @@ document.addEventListener('DOMContentLoaded', async () => {
   const newUsername = document.getElementById('newUsername');
   const newPassword = document.getElementById('newPassword');
   const newRole = document.getElementById('newRole');
+  const guestRoleOption = newRole.querySelector('option[value="guest"]');
   const newJobTitle = document.getElementById('newJobTitle');
+  const jobTitleGroup = document.getElementById('jobTitleGroup');
   const newContractType = document.getElementById('newContractType');
+  const contractTypeGroup = document.getElementById('contractTypeGroup');
   const employmentStatusGroup = document.getElementById('employmentStatusGroup');
   const newStatus = document.getElementById('newStatus');
   const newWorkLocation = document.getElementById('newWorkLocation');
+  const workLocationGroup = document.getElementById('workLocationGroup');
   const newHireDate = document.getElementById('newHireDate');
   const newAnnualBaseDate = document.getElementById('newAnnualBaseDate');
+  const employmentDatesGroup = document.getElementById('employmentDatesGroup');
   const newPhone = document.getElementById('newPhone');
   const newColor = document.getElementById('newColor');
+  const memberColorGroup = document.getElementById('memberColorGroup');
   const colorHexText = document.getElementById('colorHexText');
 
   // API 엔드포인트 설정
@@ -78,6 +84,24 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (name === '지은석') return '소장';
     if (name === '김동석') return '부소장';
     return '사원';
+  }
+
+  function isGuestRole(role) {
+    return role === 'guest' || role === 'monitor';
+  }
+
+  function setGuestFields(guest) {
+    [contractTypeGroup, jobTitleGroup, workLocationGroup, employmentDatesGroup, memberColorGroup]
+      .forEach(group => {
+        if (group) {
+          group.hidden = guest;
+          group.style.display = guest ? 'none' : '';
+        }
+      });
+    if (guestRoleOption) guestRoleOption.hidden = !guest;
+    newRole.disabled = guest;
+    if (newContractType) newContractType.required = !guest;
+    if (newWorkLocation) newWorkLocation.required = !guest;
   }
 
   async function workerHeaders(json = false) {
@@ -143,15 +167,16 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // 모달 제어 함수
   function openAddModal() {
-    const isObserverCategory = currentCategory === 'observers';
-    modalTitle.textContent = isObserverCategory ? '옵저버 계정 등록' : '신규 회원 등록';
+    const isGuestCategory = currentCategory === 'guests';
+    modalTitle.textContent = isGuestCategory ? '게스트 계정 등록' : '신규 회원 등록';
     submitUserBtn.textContent = '등록 완료';
     deleteUserBtn.style.display = 'none';
     passwordLabel.textContent = '비밀번호 *';
     newPassword.required = true;
     userForm.reset();
     editUserId.value = '';
-    newRole.value = isObserverCategory ? 'monitor' : 'user';
+    newRole.value = isGuestCategory ? 'guest' : 'user';
+    setGuestFields(isGuestCategory);
     if (employmentStatusGroup) employmentStatusGroup.style.display = 'none';
     if (newColor) newColor.value = '#38bdf8';
     if (colorHexText) colorHexText.textContent = '#38bdf8';
@@ -171,7 +196,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       return;
     }
 
-    modalTitle.textContent = user.role === 'monitor' ? '옵저버 계정 수정' : '회원 정보 수정';
+    const isGuest = isGuestRole(user.role);
+    modalTitle.textContent = isGuest ? '게스트 계정 수정' : '회원 정보 수정';
     submitUserBtn.textContent = '수정 완료';
     deleteUserBtn.style.display = 'block';
     passwordLabel.textContent = '새 비밀번호 (변경시에만 입력)';
@@ -179,7 +205,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     editUserId.value = user.id;
     newUsername.value = user.name || user.username || '';
-    newRole.value = user.role || 'user';
+    newRole.value = isGuest ? 'guest' : user.role || 'user';
+    setGuestFields(isGuest);
     if (newJobTitle) {
       newJobTitle.value = user.job_title || '사원';
       newJobTitle.disabled = false;
@@ -244,16 +271,16 @@ document.addEventListener('DOMContentLoaded', async () => {
       .filter(cb => cb.checked)
       .map(cb => cb.value);
 
-    const categoryUsers = allUsers.filter(user => currentCategory === 'observers'
-      ? user.role === 'monitor'
-      : user.role !== 'monitor');
+    const categoryUsers = allUsers.filter(user => currentCategory === 'guests'
+      ? isGuestRole(user.role)
+      : !isGuestRole(user.role));
     if (totalUserCountEl) totalUserCountEl.textContent = categoryUsers.length;
-    if (userCountLabel) userCountLabel.textContent = currentCategory === 'observers' ? '옵저버 계정' : '근무자';
+    if (userCountLabel) userCountLabel.textContent = currentCategory === 'guests' ? '게스트 계정' : '근무자 계정';
     if (filterBox) {
-      filterBox.hidden = currentCategory === 'observers';
-      filterBox.style.display = currentCategory === 'observers' ? 'none' : '';
+      filterBox.hidden = currentCategory === 'guests';
+      filterBox.style.display = currentCategory === 'guests' ? 'none' : '';
     }
-    if (addUserBtn) addUserBtn.textContent = currentCategory === 'observers' ? '+ 옵저버 등록' : '+ 회원 등록';
+    if (addUserBtn) addUserBtn.textContent = currentCategory === 'guests' ? '+ 게스트 계정 등록' : '+ 회원 등록';
 
     let result = categoryUsers.filter(u => {
       const name = (u.name || u.username || '').toLowerCase();
@@ -263,7 +290,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       const matchesKeyword = !keyword || name.includes(keyword)
         || (currentCategory === 'workers' && (location.includes(keyword) || jobTitle.includes(keyword)));
 
-      if (currentCategory === 'observers') return matchesKeyword;
+      if (currentCategory === 'guests') return matchesKeyword;
       if (checkedLocations.length === 0) return false;
       const matchesCheckbox = matchesLocationFilter(location, checkedLocations);
 
@@ -299,6 +326,26 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     if (currentView === 'table') {
+      if (currentCategory === 'guests') {
+        userListContainer.innerHTML = `
+          <table class="user-table">
+            <thead><tr>
+              <th scope="col">이름</th><th scope="col">권한</th><th scope="col">상태</th>
+              <th scope="col">연락처</th>${isAdmin ? '<th scope="col">관리</th>' : ''}
+            </tr></thead>
+            <tbody>${users.map(user => `
+              <tr>
+                <td class="user-table-name">${escapeHtml(user.name || user.username || '이름 없음')}</td>
+                <td>게스트</td>
+                <td>${escapeHtml(user.status || '재직')}</td>
+                <td>${escapeHtml(user.phone || '-')}</td>
+                ${isAdmin ? `<td><button type="button" class="btn-card-edit" data-id="${escapeHtml(user.id)}">수정</button></td>` : ''}
+              </tr>
+            `).join('')}</tbody>
+          </table>
+        `;
+        return;
+      }
       userListContainer.innerHTML = `
         <table class="user-table">
           <thead><tr>
@@ -310,7 +357,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             <tr>
               <td class="user-table-name">${escapeHtml(user.name || user.username || '이름 없음')}</td>
               <td class="user-table-title">${escapeHtml(user.job_title || '사원')}</td>
-              <td>${user.role === 'admin' ? '관리자' : user.role === 'monitor' ? '본사 모니터링' : '회원'}</td>
+              <td>${user.role === 'admin' ? '관리자' : '회원'}</td>
               <td>${escapeHtml(user.work_location || '-')}</td>
               <td>${escapeHtml(user.contract_type || '-')}</td>
               <td>${escapeHtml(user.status || '재직')}</td>
@@ -325,6 +372,23 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     userListContainer.innerHTML = users.map(user => {
+      if (currentCategory === 'guests') {
+        return `
+          <div class="user-card">
+            <div class="user-card-header">
+              <div class="user-name-box">
+                <span class="user-name">${escapeHtml(user.name || user.username || '이름 없음')}</span>
+                <span class="role-badge user">게스트</span>
+              </div>
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <span class="status-badge">${escapeHtml(user.status || '재직')}</span>
+                ${isAdmin ? `<button type="button" class="btn-card-edit" data-id="${escapeHtml(user.id)}">수정</button>` : ''}
+              </div>
+            </div>
+            <div class="user-details"><div>연락처: <span>${escapeHtml(user.phone || '-')}</span></div></div>
+          </div>
+        `;
+      }
       const userColor = safeUserColor(user.color);
       return `
         <div class="user-card" style="border-left: 4px solid ${userColor};">
@@ -332,7 +396,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             <div class="user-name-box">
               <span class="user-name">${escapeHtml(user.name || user.username || '이름 없음')}</span>
               <span class="role-badge ${user.role === 'admin' ? 'admin' : 'user'}">
-                ${user.role === 'admin' ? '관리자' : user.role === 'monitor' ? '본사 모니터링' : '회원'}
+                ${user.role === 'admin' ? '관리자' : '회원'}
               </span>
               <span class="role-badge user">${escapeHtml(user.job_title || '사원')}</span>
             </div>
@@ -435,18 +499,20 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       try {
         if (userId) {
-          const updateData = {
-            name: username,
-            role: role,
-            job_title: jobTitle,
-            contract_type: contractType,
-            status: status,
-            work_location: workLocation,
-            hire_date: hireDate || null,
-            annual_base_date: annualBaseDate || null,
-            phone: phone || '',
-            color: color
-          };
+              const updateData = role === 'guest'
+                ? { name: username, role, status, phone: phone || '' }
+                : {
+                  name: username,
+                  role,
+                  job_title: jobTitle,
+                  contract_type: contractType,
+                  status,
+                  work_location: workLocation,
+                  hire_date: hireDate || null,
+                  annual_base_date: annualBaseDate || null,
+                  phone: phone || '',
+                  color
+                };
 
           const response = await fetch(`${WORKER_UPDATE_USER_API}/${encodeURIComponent(userId)}`, {
             method: 'PATCH',
@@ -464,7 +530,13 @@ document.addEventListener('DOMContentLoaded', async () => {
           const response = await fetch(WORKER_CREATE_USER_API, {
             method: 'POST',
             headers: await workerHeaders(true),
-            body: JSON.stringify({
+            body: JSON.stringify(role === 'guest' ? {
+              username,
+              name: username,
+              password,
+              role: 'guest',
+              phone: phone || ''
+            } : {
               username: username,
               name: username,
               password: password,

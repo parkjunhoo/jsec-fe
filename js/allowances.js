@@ -27,7 +27,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   let profile = null;
   let isAdmin = false;
-  let isMonitor = false;
+  let isGuest = false;
   let canViewAll = false;
   let allowanceTypes = [];
   let teamMembers = [];
@@ -124,9 +124,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     const users = await requestUsers();
     profile = users?.find(user => user.id === session.user.id) || null;
     isAdmin = profile?.role === 'admin';
-    isMonitor = profile?.role === 'monitor';
-    canViewAll = isAdmin || isMonitor;
-    teamMembers = (users || []).filter(user => user.role !== 'monitor').map(user => ({
+    isGuest = profile?.role === 'guest' || profile?.role === 'monitor';
+    canViewAll = isAdmin || isGuest;
+    teamMembers = (users || []).filter(user => user.role !== 'guest' && user.role !== 'monitor').map(user => ({
       id: user.id,
       name: user.name || user.username || '이름 없음',
       color: user.color || '#38bdf8'
@@ -305,7 +305,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   function renderDetails(sourceEntries) {
     const body = sourceEntries.length
       ? sourceEntries.map(entry => {
-        const canManage = !isMonitor && (isAdmin || entry.user_id === session.user.id);
+        const canManage = !isGuest && (isAdmin || entry.user_id === session.user.id);
         return `<tr>
           <td class="date">${escapeHtml(entry.work_date)}</td>
           <td>${escapeHtml(entry.username)}</td>
@@ -531,7 +531,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       const type = allowanceTypes.find(item => item.code === slot.type);
       let status = '비어 있음';
       let statusColor = '';
-      let action = isMonitor ? '' : `<button class="allowance-slot-button claim" type="button" data-action="claim"
+      let action = isGuest ? '' : `<button class="allowance-slot-button claim" type="button" data-action="claim"
         data-type="${slot.type}" data-shift="${slot.shift || ''}" data-slot="${slot.slot || ''}">${isAdmin ? '선택 직원 등록' : '내가 하기'}</button>`;
       if (record) {
         const assignedMember = teamMembers.find(user => user.id === record.user_id);
@@ -539,7 +539,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const ordinal = ordinalBySlot.get(getAllowanceSlotKey(record));
         status = `${name} · ${ordinal || '-'}회`;
         statusColor = getMemberColor(record.user_id);
-        if (!isMonitor && (isAdmin || ownEntry)) {
+        if (!isGuest && (isAdmin || ownEntry)) {
           const entryId = isAdmin ? record.id : ownEntry.id;
           action = `<button class="allowance-slot-button delete" type="button" data-action="remove" data-id="${escapeHtml(entryId)}">취소</button>`;
         } else {
@@ -594,7 +594,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   async function changeEntry(actionButton) {
-    if (isMonitor) return;
+    if (isGuest) return;
     const action = actionButton.dataset.action;
     try {
       if (action === 'remove') {
@@ -1109,7 +1109,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const button = event.target.closest('[data-action="delete"]');
     if (!button) return;
     const entry = entries.find(item => item.id === button.dataset.id);
-    if (!isMonitor && entry && (isAdmin || entry.user_id === session.user.id)) deleteEntry(entry);
+    if (!isGuest && entry && (isAdmin || entry.user_id === session.user.id)) deleteEntry(entry);
   });
 
   async function initialize() {

@@ -90,7 +90,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const VACATIONS_API = 'https://jsec-serverless.adobephotoshop.workers.dev/api/vacations';
   const CALENDAR_NOTES_API = 'https://jsec-serverless.adobephotoshop.workers.dev/api/calendar-notes';
   const CALENDAR_NOTE_EMOJIS = ['📌', '📣', '🎉', '⚠️', '📅', '🎂', '🏖️', '🏥', '🚨', '✅', '⭐', '🎁', '🍀', '☕', '📝', '💡'];
-  if (userRole === 'monitor' && openModalBtn) openModalBtn.style.display = 'none';
+  if ((userRole === 'guest' || userRole === 'monitor') && openModalBtn) openModalBtn.style.display = 'none';
 
   async function mutateVacation(path, method, payload) {
     const { data: { session }, error: sessionError } = await supabaseClient.auth.getSession();
@@ -301,7 +301,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       const data = await listUsers();
 
       if (data) {
-        allTeamMembers = data.filter(user => user.role !== 'monitor');
+        allTeamMembers = data.filter(user => user.role !== 'guest' && user.role !== 'monitor');
         allTeamMembers.forEach(u => {
           const keyName = u.name || u.username;
           const userInfo = {
@@ -328,7 +328,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   function openAddModal(selectedDateStr = '') {
-    if (userRole === 'monitor') return;
+    if (userRole === 'guest' || userRole === 'monitor') return;
     if (modalTitle) modalTitle.textContent = '휴무 일정 등록';
     if (submitBtn) submitBtn.textContent = '등록 완료';
     if (vacationForm) vacationForm.reset();
@@ -375,7 +375,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   function openEditModal(vacation) {
-    if (userRole === 'monitor') return;
+    if (userRole === 'guest' || userRole === 'monitor') return;
     if (vacation.user_id !== userId && userRole !== 'admin') {
       Swal.fire({
         icon: 'warning',
@@ -431,7 +431,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     dateDetailsModal.dataset.date = date;
 
     const vacationItems = dayVacations.map(vacation => {
-      const canManage = userRole !== 'monitor'
+      const canManage = userRole !== 'guest' && userRole !== 'monitor'
         && (vacation.user_id === userId || userRole === 'admin');
       const detail = [vacation.leave_type, vacation.time_detail]
         .filter(Boolean)
@@ -495,7 +495,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   async function deleteVacationFromDetails(vacation) {
-    if (userRole === 'monitor') return;
+    if (userRole === 'guest' || userRole === 'monitor') return;
     if (vacation.user_id !== userId && userRole !== 'admin') return;
     const result = await Swal.fire({
       icon: 'warning',
@@ -827,7 +827,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
   if (vacationForm) {
     vacationForm.addEventListener('keydown', (e) => {
-      if (userRole === 'monitor') {
+      if (userRole === 'guest' || userRole === 'monitor') {
         e.preventDefault();
         return;
       }
@@ -1720,7 +1720,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (vacationForm) {
     vacationForm.addEventListener('submit', async (e) => {
       e.preventDefault();
-      if (userRole === 'monitor') return;
+      if (userRole === 'guest' || userRole === 'monitor') return;
       const vacId = editVacationId ? editVacationId.value : '';
       const date = vDate ? vDate.value : '';
       const leave_type = vLeaveType ? vLeaveType.value : '휴무';

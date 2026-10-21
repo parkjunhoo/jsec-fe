@@ -29,8 +29,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     .eq('id', session.user.id)
     .maybeSingle();
   if (profileError) throw profileError;
-  const isMonitor = profile?.role === 'monitor';
-  if (isMonitor && addVehicleBtn) addVehicleBtn.style.display = 'none';
+  const isGuest = profile?.role === 'guest' || profile?.role === 'monitor';
+  if (isGuest && addVehicleBtn) addVehicleBtn.style.display = 'none';
 
   // 폼 입력 필드
   const editCarId = document.getElementById('editCarId');
@@ -77,7 +77,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // --- 모달 제어 함수 ---
   function openAddModal() {
-    if (isMonitor) return;
+    if (isGuest) return;
     modalTitle.textContent = '신규 차량 등록';
     submitBtn.textContent = '등록 완료';
     deleteBtn.style.display = 'none';
@@ -87,7 +87,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   function openEditModal(car) {
-    if (isMonitor) return;
+    if (isGuest) return;
     modalTitle.textContent = '차량 정보 수정';
     submitBtn.textContent = '수정 완료';
     deleteBtn.style.display = 'block';
@@ -291,7 +291,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (vehicleForm) {
     vehicleForm.addEventListener('submit', async (e) => {
       e.preventDefault();
-      if (isMonitor) return;
+      if (isGuest) return;
 
       const carId = editCarId.value;
       const number = formNumber.value.trim();
@@ -348,7 +348,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   // 8. 차량 삭제 (D)
   if (deleteBtn) {
     deleteBtn.addEventListener('click', async () => {
-      if (isMonitor) return;
+      if (isGuest) return;
       const carId = editCarId.value;
       const fullNum = formFullNumber.value;
 
