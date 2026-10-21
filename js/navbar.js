@@ -138,7 +138,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       box-shadow: 0 8px 12px -10px rgba(0, 0, 0, 0.45);
     }
     .drawer-menu > div:first-child { flex: 0 0 auto; }
-    .drawer-menu > .btn-nav-logout { flex: 0 0 auto; margin-top: auto; }
+    .drawer-menu > .drawer-bottom { flex: 0 0 auto; margin-top: auto; padding-top: 12px; }
     
     /* 톱니바퀴 및 유저 정보 행 스타일 */
     .drawer-user-row {
@@ -213,6 +213,25 @@ document.addEventListener('DOMContentLoaded', async () => {
       width: 100%;
       text-align: center;
     }
+    .drawer-policy-link {
+      display: flex;
+      min-height: 40px;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+      margin-top: 12px;
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+      color: #94a3b8;
+      font-size: 12px;
+      font-weight: 550;
+      letter-spacing: 0.01em;
+      text-decoration: none;
+      transition: color 150ms ease;
+    }
+    .drawer-policy-link:hover,
+    .drawer-policy-link:focus-visible { color: #cbd5e1; }
+    .drawer-policy-link:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; border-radius: 5px; }
+    .drawer-policy-icon { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.6; }
     .notification-overlay {
       position: fixed;
       inset: 0;
@@ -414,7 +433,16 @@ document.addEventListener('DOMContentLoaded', async () => {
         </nav>
       </div>
 
-      <button class="btn-nav-logout" id="navLogoutBtn">로그아웃</button>
+      <div class="drawer-bottom">
+        <button class="btn-nav-logout" id="navLogoutBtn" type="button">로그아웃</button>
+        <a class="drawer-policy-link" href="/privacy-policy.html">
+          <svg class="drawer-policy-icon" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M12 3.5 19 6v5.2c0 4.2-2.8 7.5-7 9.3-4.2-1.8-7-5.1-7-9.3V6l7-2.5Z"/>
+            <path d="m9.2 12 1.8 1.8 3.8-4"/>
+          </svg>
+          <span>개인정보 처리방침</span>
+        </a>
+      </div>
     </div>
   `;
 
