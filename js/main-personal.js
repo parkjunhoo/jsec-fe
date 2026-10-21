@@ -15,10 +15,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   const nextMonthButton = document.getElementById('personalNextMonth');
   const welcomeMessage = document.getElementById('personalWelcome');
   const personalTitle = document.getElementById('personalTitle');
-  const personalTabs = document.getElementById('personalTabs');
   const guestDashboard = document.getElementById('guestDashboard');
-  const guestDashboardContent = document.getElementById('guestDashboardContent');
-  const guestDashboardError = document.getElementById('guestDashboardError');
+  const guestVacationPanel = document.getElementById('guestVacationPanel');
+  const guestAllowancePanel = document.getElementById('guestAllowancePanel');
+  const guestVacationContent = document.getElementById('guestVacationContent');
+  const guestAllowanceContent = document.getElementById('guestAllowanceContent');
 
   function getKstParts(date = new Date()) {
     const parts = new Intl.DateTimeFormat('en-US', {
@@ -34,8 +35,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   const today = `${todayParts.year}-${todayParts.month}-${todayParts.day}`;
   let selectedMonth = new Date(Number(todayParts.year), Number(todayParts.month) - 1, 1);
   let monthRequestId = 0;
-  let isGuest = true;
+  let isGuest = false;
   let allVacations = [];
+  let guestVacationState = 'loading';
+  let guestAllowanceState = 'loading';
 
   function getSelectedMonthRange() {
     const year = selectedMonth.getFullYear();
@@ -66,7 +69,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   function animateMonthChange(direction) {
-    const activePanel = vacationPanel.hidden ? allowancePanel : vacationPanel;
+    const activePanel = isGuest
+      ? guestVacationPanel.hidden ? guestAllowancePanel : guestVacationPanel
+      : vacationPanel.hidden ? allowancePanel : vacationPanel;
     activePanel.classList.remove('month-slide-next', 'month-slide-previous');
     void activePanel.offsetWidth;
     activePanel.classList.add(direction > 0 ? 'month-slide-next' : 'month-slide-previous');
@@ -105,8 +110,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     allowanceTab.setAttribute('aria-selected', String(!showVacation));
     vacationTab.tabIndex = showVacation ? 0 : -1;
     allowanceTab.tabIndex = showVacation ? -1 : 0;
-    vacationPanel.hidden = !showVacation;
-    allowancePanel.hidden = showVacation;
+    if (isGuest) {
+      guestVacationPanel.hidden = !showVacation;
+      guestAllowancePanel.hidden = showVacation;
+      vacationPanel.hidden = true;
+      allowancePanel.hidden = true;
+    } else {
+      vacationPanel.hidden = !showVacation;
+      allowancePanel.hidden = showVacation;
+    }
   }
 
   vacationTab.addEventListener('click', () => showTab(vacationTab));
@@ -114,7 +126,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   previousMonthButton.addEventListener('click', () => changeMonth(-1));
   nextMonthButton.addEventListener('click', () => changeMonth(1));
   let swipeStart = null;
-  [vacationPanel, allowancePanel].forEach(panel => {
+  [vacationPanel, allowancePanel, guestVacationPanel, guestAllowancePanel].forEach(panel => {
     panel.addEventListener('touchstart', event => {
       if (event.touches.length !== 1 || event.target.closest('button, a, input, select, textarea')) {
         swipeStart = null;
@@ -175,10 +187,15 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
   if (isGuest) {
     personalTitle.textContent = '팀 운영 대시보드';
-    personalTabs.hidden = true;
+    vacationTab.parentElement.setAttribute('aria-label', '팀 통계');
+    vacationTab.textContent = '휴무 통계';
+    allowanceTab.textContent = '수당 통계';
+    vacationTab.setAttribute('aria-controls', 'guestVacationPanel');
+    allowanceTab.setAttribute('aria-controls', 'guestAllowancePanel');
     vacationPanel.hidden = true;
     allowancePanel.hidden = true;
     guestDashboard.hidden = false;
+    showTab(vacationTab);
     dutyList.hidden = true;
     dutyList.style.display = 'none';
     dutyStatus.hidden = true;
@@ -201,13 +218,17 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   async function loadVacations(start, end, requestId) {
+    if (isGuest) {
+      guestVacationState = 'loading';
+      renderGuestDashboard();
+    }
     try {
       const params = new URLSearchParams({ start, end });
       const vacations = await request(`/vacations?${params.toString()}`);
       if (requestId !== monthRequestId) return;
       allVacations = vacations;
       if (isGuest) {
-        guestDashboardError.textContent = '';
+        guestVacationState = 'ready';
         renderGuestDashboard();
         return;
       }
@@ -252,7 +273,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (requestId !== monthRequestId) return;
       console.error('내 휴무 요약 조회 오류:', error);
       if (isGuest) {
-        guestDashboardError.textContent = '팀 휴무 현황을 불러오지 못했습니다.';
+        guestVacationState = 'error';
+        renderGuestDashboard();
       } else {
         vacationError.textContent = '휴무 일정을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.';
       }
@@ -378,21 +400,19 @@ document.addEventListener('DOMContentLoaded', async () => {
         <div class="guest-upcoming-type">${escapeHtml(vacation.leave_type || '휴무')} · ${escapeHtml(vacation.time_detail || '종일')}</div>
       </article>`).join('');
 
-    guestDashboardContent.innerHTML = `
+    guestVacationContent.innerHTML = guestVacationState === 'loading'
+      ? '<div class="personal-empty">이번 달 휴무 통계를 불러오는 중입니다.</div>'
+      : guestVacationState === 'error'
+        ? '<div class="personal-empty" role="alert">팀 휴무 통계를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.</div>'
+        : `
       <div class="guest-kpis">
         <article class="guest-kpi"><span class="guest-kpi-label">이번 달 휴무 등록</span><strong class="guest-kpi-value">${allVacations.length}건</strong></article>
         <article class="guest-kpi"><span class="guest-kpi-label">앞으로 예정된 휴무</span><strong class="guest-kpi-value">${upcoming.length}건</strong></article>
-        <article class="guest-kpi"><span class="guest-kpi-label">이번 달 수당 기록</span><strong class="guest-kpi-value">${allowanceEntries.length}건</strong></article>
-        <article class="guest-kpi"><span class="guest-kpi-label">이번 달 수당 합계</span><strong class="guest-kpi-value">${formatMoney(allowanceTotal)}</strong></article>
       </div>
       <div class="guest-dashboard-grid">
         <section class="guest-chart-card" aria-label="휴무 유형별 건수">
           <h3>휴무 유형별 현황</h3>
           ${renderBars(leaveRows, value => `${value}건`)}
-        </section>
-        <section class="guest-chart-card" aria-label="수당 종류별 금액">
-          <h3>수당 종류별 금액</h3>
-          ${renderBars(allowanceRows, formatMoney)}
         </section>
       </div>
       <section class="guest-upcoming">
@@ -403,24 +423,49 @@ document.addEventListener('DOMContentLoaded', async () => {
       </section>
       <nav class="guest-dashboard-links" aria-label="모니터링 바로가기">
         <a class="guest-dashboard-link" href="/pages/calendar.html">전체 휴무 일정 보기 ↗</a>
+      </nav>`;
+    guestAllowanceContent.innerHTML = guestAllowanceState === 'loading'
+      ? '<div class="personal-empty">이번 달 수당 통계를 불러오는 중입니다.</div>'
+      : guestAllowanceState === 'error'
+        ? '<div class="personal-empty" role="alert">팀 수당 통계를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.</div>'
+        : `
+      <div class="guest-kpis">
+        <article class="guest-kpi"><span class="guest-kpi-label">이번 달 수당 기록</span><strong class="guest-kpi-value">${allowanceEntries.length}건</strong></article>
+        <article class="guest-kpi"><span class="guest-kpi-label">이번 달 수당 합계</span><strong class="guest-kpi-value">${formatMoney(allowanceTotal)}</strong></article>
+      </div>
+      <div class="guest-dashboard-grid">
+        <section class="guest-chart-card" aria-label="수당 종류별 금액">
+          <h3>수당 종류별 금액</h3>
+          ${renderBars(allowanceRows, formatMoney)}
+        </section>
+      </div>
+      <nav class="guest-dashboard-links" aria-label="모니터링 바로가기">
         <a class="guest-dashboard-link" href="/pages/allowances.html">수당 상세 및 엑셀 ↗</a>
       </nav>`;
   }
 
   async function loadAllowanceData(start, end, requestId) {
+    if (isGuest) {
+      guestAllowanceState = 'loading';
+      renderGuestDashboard();
+    }
     try {
       const monthParams = new URLSearchParams({ start, end });
       const entries = await request(`/allowances?${monthParams.toString()}`);
       if (requestId !== monthRequestId) return;
       allowanceEntries = entries;
       allowanceError.textContent = '';
-      if (isGuest) renderGuestDashboard();
+      if (isGuest) {
+        guestAllowanceState = 'ready';
+        renderGuestDashboard();
+      }
       else renderAllowanceSummary();
     } catch (error) {
       if (requestId !== monthRequestId) return;
       console.error('내 수당 요약 조회 오류:', error);
       if (isGuest) {
-        guestDashboardError.textContent = '팀 수당 현황을 불러오지 못했습니다.';
+        guestAllowanceState = 'error';
+        renderGuestDashboard();
       } else {
         allowanceError.textContent = '수당 정보를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.';
       }
