@@ -289,6 +289,7 @@
       font-weight: 750;
       cursor: pointer;
     }
+    .add-contact[hidden] { display: none; }
     .add-contact:hover { background: rgba(56, 144, 199, 0.25); }
     .modal-overlay {
       position: fixed;
@@ -431,7 +432,7 @@
       <p class="result-count" id="resultCount" aria-live="polite">직원 정보를 불러오고 있습니다.</p>
       <div style="display: flex; align-items: center; gap: 12px;">
         <button class="reset-filters" id="resetFilters" type="button" hidden>초기화</button>
-        <button class="add-contact" id="addContactButton" type="button">＋ 연락처 등록</button>
+        <button class="add-contact" id="addContactButton" type="button" hidden>＋ 연락처 등록</button>
       </div>
     </div>
 
@@ -511,6 +512,7 @@
       let contacts = [];
       let selectedDepartment = '';
       let saving = false;
+      let isAdmin = false;
 
       function normalize(value) {
         return String(value || '').toLocaleLowerCase('ko-KR').replace(/[\s()-]/g, '');
@@ -595,28 +597,32 @@
         phone.textContent = contact.phone_number;
 
         info.append(nameRow, team, phone);
-        const actions = document.createElement('div');
-        actions.className = 'contact-actions';
-        const editButton = document.createElement('button');
-        editButton.className = 'contact-edit';
-        editButton.type = 'button';
-        editButton.dataset.contactAction = 'edit';
-        editButton.dataset.contactId = String(contact.id);
-        editButton.setAttribute('aria-label', `${contact.name} 연락처 수정`);
-        editButton.textContent = '✎';
-        const deleteButton = document.createElement('button');
-        deleteButton.className = 'contact-delete';
-        deleteButton.type = 'button';
-        deleteButton.dataset.contactAction = 'delete';
-        deleteButton.dataset.contactId = String(contact.id);
-        deleteButton.setAttribute('aria-label', `${contact.name} 연락처 삭제`);
-        deleteButton.textContent = '⌫';
-        actions.append(editButton, deleteButton);
-        card.append(avatar, info, actions);
+        card.append(avatar, info);
+        if (isAdmin) {
+          const actions = document.createElement('div');
+          actions.className = 'contact-actions';
+          const editButton = document.createElement('button');
+          editButton.className = 'contact-edit';
+          editButton.type = 'button';
+          editButton.dataset.contactAction = 'edit';
+          editButton.dataset.contactId = String(contact.id);
+          editButton.setAttribute('aria-label', `${contact.name} 연락처 수정`);
+          editButton.textContent = '✎';
+          const deleteButton = document.createElement('button');
+          deleteButton.className = 'contact-delete';
+          deleteButton.type = 'button';
+          deleteButton.dataset.contactAction = 'delete';
+          deleteButton.dataset.contactId = String(contact.id);
+          deleteButton.setAttribute('aria-label', `${contact.name} 연락처 삭제`);
+          deleteButton.textContent = '⌫';
+          actions.append(editButton, deleteButton);
+          card.append(actions);
+        }
         return card;
       }
 
       function openContactForm(contact) {
+        if (!isAdmin) return;
         contactForm.reset();
         contactIdInput.value = contact ? String(contact.id) : '';
         document.getElementById('contactName').value = contact ? contact.name : '';
@@ -715,6 +721,15 @@
             return;
           }
 
+          const { data: profile, error: profileError } = await supabaseClient
+            .from('users')
+            .select('role')
+            .eq('id', session.user.id)
+            .maybeSingle();
+          if (profileError) throw profileError;
+          isAdmin = profile?.role === 'admin';
+          addContactButton.hidden = !isAdmin;
+
           const { data, error } = await supabaseClient
             .from('phonebook')
             .select('id, department, sub_department, position, name, phone_number')
@@ -741,6 +756,7 @@
 
       async function saveContact(event) {
         event.preventDefault();
+        if (!isAdmin) return;
         if (saving) return;
 
         const name = document.getElementById('contactName').value.trim();
@@ -800,6 +816,7 @@
       }
 
       async function deleteContact(contact) {
+        if (!isAdmin) return;
         const confirmation = await Swal.fire({
           icon: 'warning',
           title: '연락처를 삭제할까요?',
@@ -867,7 +884,7 @@
       });
       contactList.addEventListener('click', event => {
         const button = event.target.closest('[data-contact-action]');
-        if (!button) return;
+        if (!button || !isAdmin) return;
         const contact = contacts.find(item => String(item.id) === button.dataset.contactId);
         if (!contact) return;
         if (button.dataset.contactAction === 'edit') openContactForm(contact);
