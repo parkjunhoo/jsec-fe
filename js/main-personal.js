@@ -450,17 +450,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         </div>
         <span class="guest-ranking-amount">${formatMoney(user.amount)}</span>
       </div>`).join('');
-    const mostCommonLeave = leaveRows[0];
 
     teamVacationContent.innerHTML = guestVacationState === 'loading'
       ? '<div class="personal-empty">이번 달 휴무 통계를 불러오는 중입니다.</div>'
       : guestVacationState === 'error'
         ? '<div class="personal-empty" role="alert">팀 휴무 통계를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.</div>'
         : `
-      <div class="guest-kpis triple">
+      <div class="guest-kpis single">
         <article class="guest-kpi"><span class="guest-kpi-label">이번 달 휴무 등록</span><strong class="guest-kpi-value">${allVacations.length}건</strong></article>
         <article class="guest-kpi"><span class="guest-kpi-label">휴무 등록 인원</span><strong class="guest-kpi-value">${leaveMembers.size}명</strong></article>
-        <article class="guest-kpi"><span class="guest-kpi-label">가장 많은 휴무 유형</span><strong class="guest-kpi-value">${mostCommonLeave ? `${escapeHtml(mostCommonLeave[0])} ${mostCommonLeave[1]}건` : '-'}</strong></article>
       </div>
       <div class="guest-dashboard-grid">
         <section class="guest-chart-card" aria-label="휴무 유형별 건수">
