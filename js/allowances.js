@@ -27,6 +27,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   let profile = null;
   let isAdmin = false;
+  let isMonitor = false;
+  let canViewAll = false;
   let allowanceTypes = [];
   let teamMembers = [];
   let entries = [];
@@ -103,24 +105,33 @@ document.addEventListener('DOMContentLoaded', async () => {
     return result;
   }
 
+  async function requestUsers() {
+    const response = await fetch('https://jsec-serverless.adobephotoshop.workers.dev/api/users/list', {
+      headers: {
+        Authorization: `Bearer ${session.access_token}`
+      }
+    });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(result.error || `HTTP ${response.status}`);
+    return result;
+  }
+
   async function loadTypes() {
     allowanceTypes = await request('/types');
   }
 
   async function loadProfileAndMembers() {
-    const { data: users, error } = await supabaseClient
-      .from('users')
-      .select('id, name, username, role, color')
-      .order('name', { ascending: true });
-    if (error) throw error;
+    const users = await requestUsers();
     profile = users?.find(user => user.id === session.user.id) || null;
     isAdmin = profile?.role === 'admin';
-    teamMembers = (users || []).map(user => ({
+    isMonitor = profile?.role === 'monitor';
+    canViewAll = isAdmin || isMonitor;
+    teamMembers = (users || []).filter(user => user.role !== 'monitor').map(user => ({
       id: user.id,
       name: user.name || user.username || '이름 없음',
       color: user.color || '#38bdf8'
     }));
-    if (!isAdmin) {
+    if (!canViewAll) {
       userFilter.hidden = true;
       targetControl.hidden = true;
       targetUser.innerHTML = `<option value="${escapeHtml(session.user.id)}">${escapeHtml(profile?.name || profile?.username || '내 수당')}</option>`;
@@ -129,7 +140,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     userFilter.hidden = false;
-    targetControl.hidden = false;
+    targetControl.hidden = !isAdmin;
     const options = teamMembers.map(user =>
       `<option value="${escapeHtml(user.id)}">${escapeHtml(user.name)}</option>`
     ).join('');
@@ -154,7 +165,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   function getVisibleEntries() {
     return entries.filter(entry => {
-      if (isAdmin && userFilter.value && entry.user_id !== userFilter.value) return false;
+      if (canViewAll && userFilter.value && entry.user_id !== userFilter.value) return false;
       if (activeTab === 'ball_pickup' || activeTab === 'caddie_shuttle') {
         return entry.type_code === activeTab;
       }
@@ -176,7 +187,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   function buildSummaries(sourceEntries) {
-    const visibleMembers = isAdmin
+    const visibleMembers = canViewAll
       ? teamMembers.filter(user => !userFilter.value || user.id === userFilter.value)
       : teamMembers;
     const summaryById = new Map(visibleMembers.map(user => [user.id, emptySummary(user)]));
@@ -294,7 +305,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   function renderDetails(sourceEntries) {
     const body = sourceEntries.length
       ? sourceEntries.map(entry => {
-        const canManage = isAdmin || entry.user_id === session.user.id;
+        const canManage = !isMonitor && (isAdmin || entry.user_id === session.user.id);
         return `<tr>
           <td class="date">${escapeHtml(entry.work_date)}</td>
           <td>${escapeHtml(entry.username)}</td>
@@ -334,9 +345,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   function getSelectedMembers() {
-    return (isAdmin && !userFilter.value
+    return (canViewAll && !userFilter.value
       ? teamMembers
-      : teamMembers.filter(user => !isAdmin || user.id === userFilter.value));
+      : teamMembers.filter(user => !canViewAll || user.id === userFilter.value));
   }
 
   function getWorkbookPreview() {
@@ -512,7 +523,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     daySlots.innerHTML = slots.map(slot => {
       const record = records.find(entry => entry.type_code === slot.type
         && (slot.shift ? entry.shift === slot.shift : Number(entry.slot_no) === slot.slot));
-      const ownEntry = !isAdmin && record
+      const ownEntry = !canViewAll && record
         ? entries.find(entry => entry.work_date === date
           && entry.type_code === slot.type
           && (slot.shift ? entry.shift === slot.shift : Number(entry.slot_no) === slot.slot))
@@ -520,7 +531,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       const type = allowanceTypes.find(item => item.code === slot.type);
       let status = '비어 있음';
       let statusColor = '';
-      let action = `<button class="allowance-slot-button claim" type="button" data-action="claim"
+      let action = isMonitor ? '' : `<button class="allowance-slot-button claim" type="button" data-action="claim"
         data-type="${slot.type}" data-shift="${slot.shift || ''}" data-slot="${slot.slot || ''}">${isAdmin ? '선택 직원 등록' : '내가 하기'}</button>`;
       if (record) {
         const assignedMember = teamMembers.find(user => user.id === record.user_id);
@@ -528,7 +539,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const ordinal = ordinalBySlot.get(getAllowanceSlotKey(record));
         status = `${name} · ${ordinal || '-'}회`;
         statusColor = getMemberColor(record.user_id);
-        if (isAdmin || ownEntry) {
+        if (!isMonitor && (isAdmin || ownEntry)) {
           const entryId = isAdmin ? record.id : ownEntry.id;
           action = `<button class="allowance-slot-button delete" type="button" data-action="remove" data-id="${escapeHtml(entryId)}">취소</button>`;
         } else {
@@ -583,6 +594,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   async function changeEntry(actionButton) {
+    if (isMonitor) return;
     const action = actionButton.dataset.action;
     try {
       if (action === 'remove') {
@@ -975,9 +987,9 @@ document.addEventListener('DOMContentLoaded', async () => {
       ]);
 
       const monthParts = getMonthRange(monthInput.value);
-      const selectedMembers = (isAdmin && !userFilter.value
+      const selectedMembers = (canViewAll && !userFilter.value
         ? teamMembers
-        : teamMembers.filter(user => !isAdmin || user.id === userFilter.value));
+        : teamMembers.filter(user => !canViewAll || user.id === userFilter.value));
       const golfMembers = selectedMembers.filter(user => entries.some(entry =>
         entry.user_id === user.id && entry.type_code === 'ball_pickup'));
       const shuttleMembers = selectedMembers.filter(user => entries.some(entry =>
@@ -1097,7 +1109,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const button = event.target.closest('[data-action="delete"]');
     if (!button) return;
     const entry = entries.find(item => item.id === button.dataset.id);
-    if (entry && (isAdmin || entry.user_id === session.user.id)) deleteEntry(entry);
+    if (!isMonitor && entry && (isAdmin || entry.user_id === session.user.id)) deleteEntry(entry);
   });
 
   async function initialize() {

@@ -841,7 +841,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         const userNameEl = document.getElementById('navUserName');
         const userRoleEl = document.getElementById('navUserRole');
         if (userNameEl) userNameEl.textContent = `${profile.name} 님`;
-        if (userRoleEl) userRoleEl.textContent = profile.role === 'admin' ? '관리자 (Admin)' : '일반 회원';
+        if (userRoleEl) {
+          userRoleEl.textContent = profile.role === 'admin'
+            ? '관리자 (Admin)'
+            : profile.role === 'monitor'
+              ? '본사 모니터링'
+              : '일반 회원';
+        }
       }
 
       window.setInterval(async () => {

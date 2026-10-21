@@ -23,6 +23,14 @@ document.addEventListener('DOMContentLoaded', async () => {
   const modalTitle = document.getElementById('modalTitle');
   const submitBtn = document.getElementById('submitBtn');
   const deleteBtn = document.getElementById('deleteBtn');
+  const { data: profile, error: profileError } = await supabaseClient
+    .from('users')
+    .select('role')
+    .eq('id', session.user.id)
+    .maybeSingle();
+  if (profileError) throw profileError;
+  const isMonitor = profile?.role === 'monitor';
+  if (isMonitor && addVehicleBtn) addVehicleBtn.style.display = 'none';
 
   // 폼 입력 필드
   const editCarId = document.getElementById('editCarId');
@@ -37,6 +45,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   let allVehicles = [];
   let currentPrefix = 'ALL';
   let currentView = 'table';
+  const VEHICLE_API = 'https://jsec-serverless.adobephotoshop.workers.dev/api/vehicles';
 
   function escapeHtml(value) {
     return String(value ?? '').replace(/[&<>"']/g, character => ({
@@ -48,8 +57,27 @@ document.addEventListener('DOMContentLoaded', async () => {
     })[character]);
   }
 
+  async function mutateVehicle(path, method, vehicle) {
+    const { data: { session: activeSession }, error } = await supabaseClient.auth.getSession();
+    if (error) throw error;
+    if (!activeSession) throw new Error('로그인이 필요합니다.');
+
+    const response = await fetch(`${VEHICLE_API}${path}`, {
+      method,
+      headers: {
+        Authorization: `Bearer ${activeSession.access_token}`,
+        ...(vehicle ? { 'Content-Type': 'application/json' } : {})
+      },
+      body: vehicle ? JSON.stringify(vehicle) : undefined
+    });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(result.error || `HTTP ${response.status}`);
+    return result;
+  }
+
   // --- 모달 제어 함수 ---
   function openAddModal() {
+    if (isMonitor) return;
     modalTitle.textContent = '신규 차량 등록';
     submitBtn.textContent = '등록 완료';
     deleteBtn.style.display = 'none';
@@ -59,6 +87,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   function openEditModal(car) {
+    if (isMonitor) return;
     modalTitle.textContent = '차량 정보 수정';
     submitBtn.textContent = '수정 완료';
     deleteBtn.style.display = 'block';
@@ -262,6 +291,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (vehicleForm) {
     vehicleForm.addEventListener('submit', async (e) => {
       e.preventDefault();
+      if (isMonitor) return;
 
       const carId = editCarId.value;
       const number = formNumber.value.trim();
@@ -285,32 +315,16 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       try {
         if (carId) {
-          // --- 수정 (UPDATE) ---
-          let query = supabaseClient.from('skicar_data').update({
+          await mutateVehicle(`/${encodeURIComponent(carId)}`, 'PATCH', {
             number, full_number, name, department, car_name, phone, notes
           });
-
-          // ID가 숫자인지 full_number인지 분기
-          if (!isNaN(carId)) {
-            query = query.eq('id', carId);
-          } else {
-            query = query.eq('full_number', carId);
-          }
-
-          const { error } = await query;
-          if (error) throw error;
           await Swal.fire({
             icon: 'success',
             text: '차량 정보가 수정되었습니다.'
           });
 
         } else {
-          // --- 추가 (INSERT) ---
-          const { error } = await supabaseClient
-            .from('skicar_data')
-            .insert([{ number, full_number, name, department, car_name, phone, notes }]);
-
-          if (error) throw error;
+          await mutateVehicle('', 'POST', { number, full_number, name, department, car_name, phone, notes });
           await Swal.fire({
             icon: 'success',
             text: '신규 차량이 성공적으로 등록되었습니다.'
@@ -334,6 +348,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   // 8. 차량 삭제 (D)
   if (deleteBtn) {
     deleteBtn.addEventListener('click', async () => {
+      if (isMonitor) return;
       const carId = editCarId.value;
       const fullNum = formFullNumber.value;
 
@@ -350,16 +365,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       deleteBtn.disabled = true;
 
       try {
-        let query = supabaseClient.from('skicar_data').delete();
-
-        if (!isNaN(carId)) {
-          query = query.eq('id', carId);
-        } else {
-          query = query.eq('full_number', carId);
-        }
-
-        const { error } = await query;
-        if (error) throw error;
+        await mutateVehicle(`/${encodeURIComponent(carId)}`, 'DELETE');
 
         await Swal.fire({
           icon: 'success',

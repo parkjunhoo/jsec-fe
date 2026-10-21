@@ -12,6 +12,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const linkUrl = document.getElementById('itemLinkUrl');
   let session = null;
   let isAdmin = false;
+  let canViewAll = false;
   let requests = [];
 
   function escapeHtml(value) {
@@ -96,10 +97,20 @@ document.addEventListener('DOMContentLoaded', async () => {
     return;
   }
   isAdmin = profile?.role === 'admin';
-  if (isAdmin) {
+  const isMonitor = profile?.role === 'monitor';
+  canViewAll = isAdmin || isMonitor;
+  if (isMonitor) {
+    form.hidden = true;
+    form.style.display = 'none';
+  }
+  if (canViewAll) {
     document.getElementById('requestListTitle').textContent = '전체 물품 신청';
-    document.getElementById('requestListDescription').textContent = '신청 내용을 확인하고 승인 또는 반려할 수 있습니다.';
-    document.getElementById('requestIntro').textContent = '필요한 물품을 신청하거나 팀원의 신청을 검토하세요.';
+    document.getElementById('requestListDescription').textContent = isAdmin
+      ? '신청 내용을 확인하고 승인 또는 반려할 수 있습니다.'
+      : '팀 전체의 물품 신청 내역을 조회합니다.';
+    document.getElementById('requestIntro').textContent = isAdmin
+      ? '필요한 물품을 신청하거나 팀원의 신청을 검토하세요.'
+      : '본사 모니터링 계정은 신청 내역을 조회할 수 있습니다.';
     statusFilter.hidden = false;
   }
 
@@ -132,7 +143,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         <header class="request-item-header">
           <div>
             <h3 class="request-item-title">${escapeHtml(item.item_name)}</h3>
-            <p class="request-item-meta">${isAdmin ? `${escapeHtml(item.username)} · ` : ''}${escapeHtml(formatDate(item.created_at))} · 수량 ${escapeHtml(item.quantity)}</p>
+            <p class="request-item-meta">${canViewAll ? `${escapeHtml(item.username)} · ` : ''}${escapeHtml(formatDate(item.created_at))} · 수량 ${escapeHtml(item.quantity)}</p>
           </div>
           <span class="request-status ${escapeHtml(item.status)}">${statusLabel(item.status)}</span>
         </header>

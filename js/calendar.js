@@ -90,6 +90,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const VACATIONS_API = 'https://jsec-serverless.adobephotoshop.workers.dev/api/vacations';
   const CALENDAR_NOTES_API = 'https://jsec-serverless.adobephotoshop.workers.dev/api/calendar-notes';
   const CALENDAR_NOTE_EMOJIS = ['📌', '📣', '🎉', '⚠️', '📅', '🎂', '🏖️', '🏥', '🚨', '✅', '⭐', '🎁', '🍀', '☕', '📝', '💡'];
+  if (userRole === 'monitor' && openModalBtn) openModalBtn.style.display = 'none';
 
   async function mutateVacation(path, method, payload) {
     const { data: { session }, error: sessionError } = await supabaseClient.auth.getSession();
@@ -103,6 +104,33 @@ document.addEventListener('DOMContentLoaded', async () => {
         Authorization: `Bearer ${session.access_token}`
       },
       body: payload ? JSON.stringify(payload) : undefined
+    });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(result.error || `HTTP ${response.status}`);
+    return result;
+  }
+
+  async function listVacations(start, end) {
+    const { data: { session }, error: sessionError } = await supabaseClient.auth.getSession();
+    if (sessionError) throw sessionError;
+    if (!session) throw new Error('로그인이 필요합니다.');
+
+    const params = new URLSearchParams({ start, end });
+    const response = await fetch(`${VACATIONS_API}?${params.toString()}`, {
+      headers: { Authorization: `Bearer ${session.access_token}` }
+    });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(result.error || `HTTP ${response.status}`);
+    return result;
+  }
+
+  async function listUsers() {
+    const { data: { session }, error: sessionError } = await supabaseClient.auth.getSession();
+    if (sessionError) throw sessionError;
+    if (!session) throw new Error('로그인이 필요합니다.');
+
+    const response = await fetch('https://jsec-serverless.adobephotoshop.workers.dev/api/users/list', {
+      headers: { Authorization: `Bearer ${session.access_token}` }
     });
     const result = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(result.error || `HTTP ${response.status}`);
@@ -270,14 +298,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   async function fetchUsersInfo() {
     try {
-      const { data, error } = await supabaseClient
-        .from('users')
-        .select('id, name, username, work_location, color')
-        .order('name', { ascending: true });
+      const data = await listUsers();
 
-      if (!error && data) {
-        allTeamMembers = data;
-        data.forEach(u => {
+      if (data) {
+        allTeamMembers = data.filter(user => user.role !== 'monitor');
+        allTeamMembers.forEach(u => {
           const keyName = u.name || u.username;
           const userInfo = {
             id: u.id,
@@ -291,7 +316,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         // 관리자용 모달 팀원 선택 드롭다운 생성
         if (vTargetUserId) {
-          vTargetUserId.innerHTML = data.map(u => {
+          vTargetUserId.innerHTML = allTeamMembers.map(u => {
             const memberName = u.name || u.username;
             return `<option value="${escapeHtml(u.id)}" data-name="${escapeHtml(memberName)}">${escapeHtml(memberName)}</option>`;
           }).join('');
@@ -303,6 +328,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   function openAddModal(selectedDateStr = '') {
+    if (userRole === 'monitor') return;
     if (modalTitle) modalTitle.textContent = '휴무 일정 등록';
     if (submitBtn) submitBtn.textContent = '등록 완료';
     if (vacationForm) vacationForm.reset();
@@ -330,6 +356,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   function openCalendarNoteModal(date) {
+    if (userRole !== 'admin') return;
     const note = allCalendarNotes.find(item => item.date === date);
     if (vacationForm) vacationForm.reset();
     if (editVacationId) editVacationId.value = '';
@@ -348,6 +375,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   function openEditModal(vacation) {
+    if (userRole === 'monitor') return;
     if (vacation.user_id !== userId && userRole !== 'admin') {
       Swal.fire({
         icon: 'warning',
@@ -403,7 +431,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     dateDetailsModal.dataset.date = date;
 
     const vacationItems = dayVacations.map(vacation => {
-      const canManage = vacation.user_id === userId || userRole === 'admin';
+      const canManage = userRole !== 'monitor'
+        && (vacation.user_id === userId || userRole === 'admin');
       const detail = [vacation.leave_type, vacation.time_detail]
         .filter(Boolean)
         .join(' · ');
@@ -466,6 +495,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   async function deleteVacationFromDetails(vacation) {
+    if (userRole === 'monitor') return;
     if (vacation.user_id !== userId && userRole !== 'admin') return;
     const result = await Swal.fire({
       icon: 'warning',
@@ -797,6 +827,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
   if (vacationForm) {
     vacationForm.addEventListener('keydown', (e) => {
+      if (userRole === 'monitor') {
+        e.preventDefault();
+        return;
+      }
       if (
         e.key !== 'Enter' ||
         e.isComposing ||
@@ -848,17 +882,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     const endDate = `${year}-${String(month + 1).padStart(2, '0')}-${String(lastDayNum).padStart(2, '0')}`;
 
     try {
-      const [{ data, error }, noteResult] = await Promise.all([
-        supabaseClient
-          .from('vacations')
-          .select('id, user_id, username, date, leave_type, time_detail, hours_used, memo')
-          .gte('date', startDate)
-          .lte('date', endDate)
-          .order('date', { ascending: true }),
+      const [data, noteResult] = await Promise.all([
+        listVacations(startDate, endDate),
         requestCalendarNotes(`?start=${startDate}&end=${endDate}`)
       ]);
 
-      if (error) throw error;
       allVacations = data || [];
       allCalendarNotes = noteResult || [];
       renderCalendarGrid();
@@ -1056,12 +1084,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
     const lastDay = new Date(year, month, 0).getDate();
     const endDate = `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
-    const { data: vacations, error } = await supabaseClient
-      .from('vacations')
-      .select('username, date, leave_type, time_detail, hours_used')
-      .gte('date', startDate)
-      .lte('date', endDate);
-    if (error) throw error;
+    const vacations = await listVacations(startDate, endDate);
 
     const templateResponse = await fetch(encodeURI('/templates/휴무일정표.xlsx'));
     if (!templateResponse.ok) {
@@ -1697,6 +1720,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (vacationForm) {
     vacationForm.addEventListener('submit', async (e) => {
       e.preventDefault();
+      if (userRole === 'monitor') return;
       const vacId = editVacationId ? editVacationId.value : '';
       const date = vDate ? vDate.value : '';
       const leave_type = vLeaveType ? vLeaveType.value : '휴무';

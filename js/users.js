@@ -10,6 +10,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   const userListContainer = document.getElementById('userList');
   const addUserBtn = document.getElementById('addUserBtn');
   const totalUserCountEl = document.getElementById('totalUserCount');
+  const userCountLabel = document.getElementById('userCountLabel');
+  const categoryTabs = document.getElementById('userCategoryTabs');
+  const categoryTabButtons = document.querySelectorAll('[data-user-category]');
   const sortSelect = document.getElementById('sortSelect');
   const viewButtons = document.querySelectorAll('[data-user-view]');
   const locationCheckboxes = document.querySelectorAll('input[name="locFilter"]');
@@ -19,6 +22,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     .map(checkbox => checkbox.value)
     .filter(value => value !== otherLocationFilter && !shiftFilterValues.includes(value));
   const selectAllBtn = document.getElementById('selectAllBtn');
+  const filterBox = document.querySelector('.filter-box');
 
   // 모달 관련 요소
   const userModal = document.getElementById('userModal');
@@ -54,6 +58,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   let allUsers = [];
   let isAdmin = false;
   let currentView = 'table';
+  let currentCategory = 'workers';
 
   function escapeHtml(value) {
     return String(value ?? '').replace(/[&<>"']/g, character => ({
@@ -129,6 +134,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (myProfile && myProfile.role === 'admin') {
         isAdmin = true;
         if (addUserBtn) addUserBtn.style.display = 'block';
+        if (categoryTabs) categoryTabs.hidden = false;
       }
     } catch (err) {
       console.error('권한 확인 에러:', err);
@@ -137,13 +143,15 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // 모달 제어 함수
   function openAddModal() {
-    modalTitle.textContent = '신규 회원 등록';
+    const isObserverCategory = currentCategory === 'observers';
+    modalTitle.textContent = isObserverCategory ? '옵저버 계정 등록' : '신규 회원 등록';
     submitUserBtn.textContent = '등록 완료';
     deleteUserBtn.style.display = 'none';
     passwordLabel.textContent = '비밀번호 *';
     newPassword.required = true;
     userForm.reset();
     editUserId.value = '';
+    newRole.value = isObserverCategory ? 'monitor' : 'user';
     if (employmentStatusGroup) employmentStatusGroup.style.display = 'none';
     if (newColor) newColor.value = '#38bdf8';
     if (colorHexText) colorHexText.textContent = '#38bdf8';
@@ -163,7 +171,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       return;
     }
 
-    modalTitle.textContent = '회원 정보 수정';
+    modalTitle.textContent = user.role === 'monitor' ? '옵저버 계정 수정' : '회원 정보 수정';
     submitUserBtn.textContent = '수정 완료';
     deleteUserBtn.style.display = 'block';
     passwordLabel.textContent = '새 비밀번호 (변경시에만 입력)';
@@ -221,8 +229,6 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
 
       allUsers = data || [];
-      if (totalUserCountEl) totalUserCountEl.textContent = allUsers.length;
-      
       filterAndRenderUsers();
     } catch (err) {
       console.error('회원 목록 조회 에러:', err);
@@ -238,13 +244,26 @@ document.addEventListener('DOMContentLoaded', async () => {
       .filter(cb => cb.checked)
       .map(cb => cb.value);
 
-    let result = allUsers.filter(u => {
+    const categoryUsers = allUsers.filter(user => currentCategory === 'observers'
+      ? user.role === 'monitor'
+      : user.role !== 'monitor');
+    if (totalUserCountEl) totalUserCountEl.textContent = categoryUsers.length;
+    if (userCountLabel) userCountLabel.textContent = currentCategory === 'observers' ? '옵저버 계정' : '근무자';
+    if (filterBox) {
+      filterBox.hidden = currentCategory === 'observers';
+      filterBox.style.display = currentCategory === 'observers' ? 'none' : '';
+    }
+    if (addUserBtn) addUserBtn.textContent = currentCategory === 'observers' ? '+ 옵저버 등록' : '+ 회원 등록';
+
+    let result = categoryUsers.filter(u => {
       const name = (u.name || u.username || '').toLowerCase();
       const location = (u.work_location || '').toLowerCase();
       const jobTitle = (u.job_title || '').toLowerCase();
 
-      const matchesKeyword = !keyword || name.includes(keyword) || location.includes(keyword) || jobTitle.includes(keyword);
+      const matchesKeyword = !keyword || name.includes(keyword)
+        || (currentCategory === 'workers' && (location.includes(keyword) || jobTitle.includes(keyword)));
 
+      if (currentCategory === 'observers') return matchesKeyword;
       if (checkedLocations.length === 0) return false;
       const matchesCheckbox = matchesLocationFilter(location, checkedLocations);
 
@@ -291,7 +310,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             <tr>
               <td class="user-table-name">${escapeHtml(user.name || user.username || '이름 없음')}</td>
               <td class="user-table-title">${escapeHtml(user.job_title || '사원')}</td>
-              <td>${user.role === 'admin' ? '관리자' : '회원'}</td>
+              <td>${user.role === 'admin' ? '관리자' : user.role === 'monitor' ? '본사 모니터링' : '회원'}</td>
               <td>${escapeHtml(user.work_location || '-')}</td>
               <td>${escapeHtml(user.contract_type || '-')}</td>
               <td>${escapeHtml(user.status || '재직')}</td>
@@ -313,7 +332,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             <div class="user-name-box">
               <span class="user-name">${escapeHtml(user.name || user.username || '이름 없음')}</span>
               <span class="role-badge ${user.role === 'admin' ? 'admin' : 'user'}">
-                ${user.role === 'admin' ? '관리자' : '회원'}
+                ${user.role === 'admin' ? '관리자' : user.role === 'monitor' ? '본사 모니터링' : '회원'}
               </span>
               <span class="role-badge user">${escapeHtml(user.job_title || '사원')}</span>
             </div>
@@ -338,6 +357,16 @@ document.addEventListener('DOMContentLoaded', async () => {
   viewButtons.forEach(button => {
     button.addEventListener('click', () => {
       setView(button.dataset.userView);
+      filterAndRenderUsers();
+    });
+  });
+
+  categoryTabButtons.forEach(button => {
+    button.addEventListener('click', () => {
+      currentCategory = button.dataset.userCategory;
+      categoryTabButtons.forEach(tab => {
+        tab.setAttribute('aria-selected', String(tab === button));
+      });
       filterAndRenderUsers();
     });
   });
