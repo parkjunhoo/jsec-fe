@@ -487,10 +487,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   else if (currentPath.includes('allowances.html')) pageTitle = '수당 관리';
   else if (currentPath.includes('item-requests.html')) pageTitle = '물품 신청';
   else if (currentPath.includes('users.html')) pageTitle = '회원 조회 및 관리';
-  else if (currentPath.includes('vehicle.html')) pageTitle = '차량 조회';
+  else if (currentPath.includes('vehicle.html')) pageTitle = '지산 차량조회';
   else if (currentPath.includes('calendar.html')) pageTitle = '휴무 캘린더';
   else if (currentPath.includes('manuals.html')) pageTitle = '업무 매뉴얼';
-  else if (currentPath.includes('phonebook.html')) pageTitle = '직원 전화번호부';
+  else if (currentPath.includes('phonebook.html')) pageTitle = '지산 연락망';
 
   // Inject shared navigation and modal markup.
   navContainer.innerHTML = `
@@ -583,9 +583,6 @@ document.addEventListener('DOMContentLoaded', async () => {
               <a href="/pages/users.html" class="drawer-item ${currentPath.includes('users.html') ? 'active' : ''}" ${currentPath.includes('users.html') ? 'aria-current="page"' : ''}>
                 <span class="drawer-item-icon" aria-hidden="true">👥</span><span class="drawer-item-label">회원 명부</span>
               </a>
-              <a href="/pages/vehicle.html" class="drawer-item ${currentPath.includes('vehicle.html') ? 'active' : ''}" ${currentPath.includes('vehicle.html') ? 'aria-current="page"' : ''}>
-                <span class="drawer-item-icon" aria-hidden="true">🚗</span><span class="drawer-item-label">차량 조회</span>
-              </a>
               <a href="/pages/item-requests.html" class="drawer-item ${currentPath.includes('item-requests.html') ? 'active' : ''}" ${currentPath.includes('item-requests.html') ? 'aria-current="page"' : ''}>
                 <span class="drawer-item-icon" aria-hidden="true">📦</span><span class="drawer-item-label">물품 신청</span>
               </a>
@@ -594,11 +591,14 @@ document.addEventListener('DOMContentLoaded', async () => {
           <section class="drawer-group" aria-labelledby="drawerInfoGroup">
             <h2 class="drawer-group-title" id="drawerInfoGroup">자료 · 연락처</h2>
             <div class="drawer-group-items">
+              <a href="/pages/vehicle.html" class="drawer-item ${currentPath.includes('vehicle.html') ? 'active' : ''}" ${currentPath.includes('vehicle.html') ? 'aria-current="page"' : ''}>
+                <span class="drawer-item-icon" aria-hidden="true">🚗</span><span class="drawer-item-label">지산 차량조회</span>
+              </a>
               <a href="/pages/manuals.html" class="drawer-item ${currentPath.includes('manuals.html') ? 'active' : ''}" ${currentPath.includes('manuals.html') ? 'aria-current="page"' : ''}>
                 <span class="drawer-item-icon" aria-hidden="true">📘</span><span class="drawer-item-label">업무 매뉴얼</span>
               </a>
               <a href="/pages/phonebook.html" class="drawer-item ${currentPath.includes('phonebook.html') ? 'active' : ''}" ${currentPath.includes('phonebook.html') ? 'aria-current="page"' : ''}>
-                <span class="drawer-item-icon" aria-hidden="true">☎️</span><span class="drawer-item-label">직원 전화번호부</span>
+                <span class="drawer-item-icon" aria-hidden="true">☎️</span><span class="drawer-item-label">지산 연락망</span>
               </a>
               <a href="#" class="drawer-item" id="openResortNoticesFromDrawer">
                 <span class="drawer-item-icon" aria-hidden="true">📢</span><span class="drawer-item-label">지산 공지사항</span>
