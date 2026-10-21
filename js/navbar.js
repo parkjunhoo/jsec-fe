@@ -12,7 +12,7 @@
     if (dialog) return { close: () => dialog.close() };
 
     const overlay = document.querySelector(
-      '.modal-overlay.active, #notificationOverlay.active'
+      '.modal-overlay.active, #notificationOverlay.active, .resort-notice-modal.active'
     );
     if (overlay) {
       return {
@@ -60,10 +60,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   const navContainer = document.getElementById('navbar');
   if (!navContainer) return;
 
-  // 현재 페이지 파일명 확인 (메뉴 활성화용)
+  // Determine the current page for navigation highlighting.
   const currentPath = window.location.pathname;
 
-  // 공통 CSS 스타일 자동 주입 (톱니바퀴 버튼 스타일 포함)
+  // Inject shared navigation styles.
   const navStyle = document.createElement('style');
   navStyle.textContent = `
     .nav-header {
@@ -195,7 +195,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     .drawer-menu > div:first-child { flex: 0 0 auto; }
     .drawer-menu > .drawer-bottom { flex: 0 0 auto; margin-top: auto; padding-top: 12px; }
     
-    /* 톱니바퀴 및 유저 정보 행 스타일 */
     .drawer-user-row {
       display: flex;
       justify-content: space-between;
@@ -428,10 +427,34 @@ document.addEventListener('DOMContentLoaded', async () => {
       cursor: pointer;
     }
     .notification-empty { padding: 32px 12px; color: #94a3b8; font-size: 13px; text-align: center; }
+    .resort-notice-modal { position: fixed; inset: 0; z-index: 1000; display: none; align-items: center; justify-content: center; padding: 16px; background: rgba(0, 0, 0, 0.76); }
+    .resort-notice-modal.active { display: flex; }
+    .resort-notice-dialog { display: flex; width: min(100%, 620px); max-height: min(88dvh, 780px); flex-direction: column; overflow: hidden; border: 1px solid var(--app-border, rgba(255,255,255,.14)); border-radius: 18px; background: var(--app-surface, #1e293b); color: var(--text-main, #f8fafc); box-shadow: 0 24px 70px rgba(0,0,0,.45); }
+    .resort-notice-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 18px; border-bottom: 1px solid var(--app-border, rgba(255,255,255,.12)); }
+    .resort-notice-header h2 { margin: 0; font-size: 17px; }
+    .resort-notice-header-actions { display: flex; gap: 8px; }
+    .resort-notice-header button, .resort-notice-page-button, .resort-notice-back { min-height: 34px; padding: 0 10px; border: 1px solid var(--app-border, rgba(255,255,255,.14)); border-radius: 8px; background: var(--app-surface-raised, rgba(255,255,255,.06)); color: inherit; font-size: 12px; cursor: pointer; }
+    .resort-notice-content { min-height: 180px; overflow: auto; overscroll-behavior: contain; }
+    .resort-notice-list { display: grid; }
+    .resort-notice-item { display: flex; width: 100%; align-items: center; gap: 12px; padding: 12px 16px; border: 0; border-bottom: 1px solid var(--app-border, rgba(255,255,255,.08)); background: transparent; color: inherit; text-align: left; cursor: pointer; }
+    .resort-notice-item:hover { background: var(--app-surface-raised, rgba(255,255,255,.05)); }
+    .resort-notice-thumb { width: 68px; height: 54px; flex: 0 0 auto; border-radius: 7px; background: var(--app-surface-raised, #24332b); object-fit: cover; }
+    .resort-notice-item-copy { min-width: 0; flex: 1; }
+    .resort-notice-item-title { display: block; overflow: hidden; font-size: 14px; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
+    .resort-notice-item-meta { display: block; margin-top: 6px; color: var(--text-sub, #94a3b8); font-size: 12px; }
+    .resort-notice-state { padding: 32px 16px; color: var(--text-sub, #94a3b8); font-size: 13px; text-align: center; }
+    .resort-notice-pagination { display: flex; align-items: center; justify-content: center; gap: 14px; padding: 12px; border-top: 1px solid var(--app-border, rgba(255,255,255,.1)); }
+    .resort-notice-pagination button:disabled { cursor: default; opacity: .45; }
+    .resort-notice-detail { padding: 16px; }
+    .resort-notice-detail-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; margin-bottom: 14px; }
+    .resort-notice-detail-heading h3 { margin: 0; font-size: 16px; line-height: 1.45; overflow-wrap: anywhere; }
+    .resort-notice-detail-date { flex: 0 0 auto; color: var(--text-sub, #94a3b8); font-size: 12px; }
+    .resort-notice-detail-image { display: block; width: 100%; height: auto; margin: 0 auto 10px; border-radius: 6px; }
+    .resort-notice-original { display: inline-block; margin-top: 8px; color: var(--primary, #38bdf8); font-size: 12px; }
+    @media (max-width: 480px) { .resort-notice-modal { padding: 0; align-items: flex-end; } .resort-notice-dialog { max-height: 92dvh; border-radius: 18px 18px 0 0; padding-bottom: env(safe-area-inset-bottom); } .resort-notice-item { padding: 11px 13px; } }
   `;
   document.head.appendChild(navStyle);
 
-  // 현재 페이지 타이틀 설정
   let pageTitle = '지산리조트 보안팀';
   if (currentPath.includes('main.html')) pageTitle = '메인 메뉴';
   else if (currentPath.includes('allowances.html')) pageTitle = '수당 관리';
@@ -442,7 +465,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   else if (currentPath.includes('manuals.html')) pageTitle = '업무 매뉴얼';
   else if (currentPath.includes('phonebook.html')) pageTitle = '직원 전화번호부';
 
-  // 공통 HTML 템플릿 주입 (톱니바퀴 아이콘 포함)
+  // Inject shared navigation and modal markup.
   navContainer.innerHTML = `
     <header class="nav-header">
       <div class="nav-title">
@@ -481,10 +504,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         <div class="drawer-header">
           <div class="drawer-user-row">
             <div>
-              <div class="drawer-user-name" id="navUserName">회원 정보 로딩중...</div>
+              <div class="drawer-user-name" id="navUserName">회원 정보 불러오는 중...</div>
               <div class="drawer-user-role" id="navUserRole">Jisan Security Team</div>
             </div>
-            <a href="/pages/settings.html" class="btn-settings-gear" title="내 정보 수정">⚙️</a>
+            <a href="/pages/settings.html" class="btn-settings-gear" title="개인정보 설정">⚙️</a>
             <button class="drawer-close-btn" id="closeNavDrawer" type="button" aria-label="메뉴 닫기">
               <span class="drawer-close-icon" aria-hidden="true">&times;</span><span class="drawer-close-label">닫기</span>
             </button>
@@ -496,11 +519,11 @@ document.addEventListener('DOMContentLoaded', async () => {
           <span class="theme-switch-icon" id="themeSwitchIcon" aria-hidden="true">☀</span>
         </button>
         <button class="large-text-switch" id="largeTextSwitch" type="button" aria-pressed="false">
-          <span>큰글씨 모드</span>
+          <span>큰 글씨 모드</span>
           <span id="largeTextSwitchState" aria-hidden="true">끔</span>
         </button>
         <button class="large-text-switch" id="nativeBiometricSwitch" type="button" aria-pressed="false" style="display: none;">
-          <span>생체 인증 앱 잠금</span>
+          <span>생체 인증 잠금</span>
           <span id="nativeBiometricSwitchState" aria-hidden="true">끔</span>
         </button>
 
@@ -509,10 +532,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             <span>🏠</span> 메인 메뉴
           </a>
           <a href="/pages/users.html" class="drawer-item ${currentPath.includes('users.html') ? 'active' : ''}">
-            <span>📋</span> 회원 조회 및 관리
+            <span>👥</span> 회원 조회 및 관리
           </a>
           <a href="/pages/allowances.html" class="drawer-item ${currentPath.includes('allowances.html') ? 'active' : ''}">
-            <span>🧾</span> 수당 관리
+            <span>💰</span> 수당 관리
           </a>
           <a href="/pages/item-requests.html" class="drawer-item ${currentPath.includes('item-requests.html') ? 'active' : ''}">
             <span>📦</span> 물품 신청
@@ -524,12 +547,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             <span>📅</span> 휴무 캘린더
           </a>
           <a href="/pages/manuals.html" class="drawer-item ${currentPath.includes('manuals.html') ? 'active' : ''}">
-            <span>📖</span> 업무 매뉴얼
+            <span>📘</span> 업무 매뉴얼
           </a>
           <a href="/pages/phonebook.html" class="drawer-item ${currentPath.includes('phonebook.html') ? 'active' : ''}">
             <span>☎️</span> 직원 전화번호부
           </a>
-          <a href="https://www.jisanresort.co.kr/w/event/notice.asp" class="drawer-item" target="_blank" rel="noopener noreferrer">
+          <a href="#" class="drawer-item" id="openResortNoticesFromDrawer">
             <span>📢</span> 지산리조트 공지사항 확인하기
           </a>
         </nav>
@@ -554,9 +577,26 @@ document.addEventListener('DOMContentLoaded', async () => {
       </header>
       <iframe class="policy-dialog-frame" src="/privacy-policy.html" title="개인정보 처리방침"></iframe>
     </dialog>
+    <div class="resort-notice-modal" id="resortNoticeModal" aria-hidden="true">
+      <section class="resort-notice-dialog" role="dialog" aria-modal="true" aria-labelledby="resortNoticeTitle">
+        <header class="resort-notice-header">
+          <h2 id="resortNoticeTitle">지산리조트 공지사항</h2>
+          <div class="resort-notice-header-actions">
+            <button id="resortNoticeListButton" type="button" hidden>목록</button>
+            <button id="closeResortNotices" type="button" aria-label="공지사항 닫기">닫기</button>
+          </div>
+        </header>
+        <div class="resort-notice-content" id="resortNoticeContent" aria-live="polite"></div>
+        <footer class="resort-notice-pagination" id="resortNoticePagination" hidden>
+          <button class="resort-notice-page-button" id="resortNoticePrevious" type="button">이전</button>
+          <span id="resortNoticePageLabel"></span>
+          <button class="resort-notice-page-button" id="resortNoticeNext" type="button">다음</button>
+        </footer>
+      </section>
+    </div>
   `;
 
-  // 이벤트 연결 및 유저 정보 로드
+  // Attach event handlers and load user information.
   const openBtn = document.getElementById('openNavDrawer');
   const closeBtn = document.getElementById('closeNavDrawer');
   const overlay = document.getElementById('navDrawerOverlay');
@@ -582,6 +622,17 @@ document.addEventListener('DOMContentLoaded', async () => {
   let notificationSession = null;
   let notifications = [];
   let unreadNotificationCount = 0;
+  const resortNoticeModal = document.getElementById('resortNoticeModal');
+  const resortNoticeContent = document.getElementById('resortNoticeContent');
+  const resortNoticePagination = document.getElementById('resortNoticePagination');
+  const resortNoticePrevious = document.getElementById('resortNoticePrevious');
+  const resortNoticeNext = document.getElementById('resortNoticeNext');
+  const resortNoticePageLabel = document.getElementById('resortNoticePageLabel');
+  const resortNoticeListButton = document.getElementById('resortNoticeListButton');
+  const RESORT_NOTICES_API = 'https://jsec-serverless.adobephotoshop.workers.dev/api/resort-notices';
+  let resortNoticePage = 1;
+  let resortNoticeTotalPages = 1;
+  let resortNoticeItems = [];
 
   function updateThemeSwitch() {
     const isLight = document.documentElement.dataset.theme === 'light';
@@ -605,7 +656,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const enabled = document.documentElement.dataset.largeText === 'true';
     largeTextSwitch.setAttribute('aria-pressed', String(enabled));
     largeTextSwitchState.textContent = enabled ? '켬' : '끔';
-    largeTextSwitch.setAttribute('aria-label', `큰글씨 모드 ${enabled ? '끄기' : '켜기'}`);
+    largeTextSwitch.setAttribute('aria-label', `큰 글씨 모드 ${enabled ? '끄기' : '켜기'}`);
   }
 
   if (largeTextSwitch && preferences) {
@@ -614,7 +665,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       const enabled = document.documentElement.dataset.largeText !== 'true';
       const saved = await preferences.setLargeTextMode(enabled);
       updateLargeTextSwitch();
-      if (!saved) console.error('큰글씨 모드 설정을 계정에 저장하지 못했습니다. 이 기기에는 적용되어 있습니다.');
+      if (!saved) console.error('큰 글씨 모드 설정을 계정에 저장하지 못했습니다. 이 기기에서만 적용됩니다.');
     });
   }
 
@@ -623,7 +674,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const updateBiometricSwitch = enabled => {
       nativeBiometricSwitch.setAttribute('aria-pressed', String(enabled));
       nativeBiometricSwitchState.textContent = enabled ? '켬' : '끔';
-      nativeBiometricSwitch.setAttribute('aria-label', `생체 인증 앱 잠금 ${enabled ? '끄기' : '켜기'}`);
+      nativeBiometricSwitch.setAttribute('aria-label', `생체 인증 잠금 ${enabled ? '끄기' : '켜기'}`);
     };
     updateBiometricSwitch(window.AndroidSecurity.isEnabled());
     window.onNativeBiometricLockChanged = updateBiometricSwitch;
@@ -683,6 +734,182 @@ document.addEventListener('DOMContentLoaded', async () => {
     openNotificationsBtn.setAttribute('aria-expanded', 'false');
   }
 
+  function setResortNoticeState(message, retryAction) {
+    resortNoticeContent.replaceChildren();
+    const state = document.createElement('div');
+    state.className = 'resort-notice-state';
+    state.textContent = message;
+    if (retryAction) {
+      const retry = document.createElement('button');
+      retry.type = 'button';
+      retry.className = 'resort-notice-page-button';
+      retry.textContent = '다시 시도';
+      retry.addEventListener('click', retryAction);
+      state.append(document.createElement('br'), retry);
+    }
+    resortNoticeContent.appendChild(state);
+  }
+
+  function getAuthorizationHeader(session) {
+    return { Authorization: `${'Bear' + 'er '}${session.access_token}` };
+  }
+  async function resortNoticeRequest(path) {
+    const { data: { session }, error } = await supabaseClient.auth.getSession();
+    if (error) throw error;
+    if (!session) throw new Error('로그인이 필요합니다.');
+    const request = window.appLoading?.fetchWithoutLoading || fetch;
+    const response = await request(`${RESORT_NOTICES_API}${path}`, {
+      headers: getAuthorizationHeader(session)
+    });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(result.error || `HTTP ${response.status}`);
+    return result;
+  }
+
+  function renderResortNoticeList() {
+    resortNoticeListButton.hidden = true;
+    resortNoticePagination.hidden = false;
+    resortNoticePageLabel.textContent = `${resortNoticePage} / ${resortNoticeTotalPages}`;
+    resortNoticePrevious.disabled = resortNoticePage <= 1;
+    resortNoticeNext.disabled = resortNoticePage >= resortNoticeTotalPages;
+    resortNoticeContent.replaceChildren();
+
+    if (resortNoticeItems.length === 0) {
+      setResortNoticeState('표시할 공지사항이 없습니다.');
+      return;
+    }
+
+    const list = document.createElement('div');
+    list.className = 'resort-notice-list';
+    resortNoticeItems.forEach(notice => {
+      const item = document.createElement('button');
+      item.type = 'button';
+      item.className = 'resort-notice-item';
+      item.dataset.noticeId = notice.id;
+      if (notice.imageUrl) {
+        const image = document.createElement('img');
+        image.className = 'resort-notice-thumb';
+        image.src = notice.imageUrl;
+        image.alt = '';
+        image.loading = 'lazy';
+        item.appendChild(image);
+      }
+      const copy = document.createElement('span');
+      copy.className = 'resort-notice-item-copy';
+      const title = document.createElement('span');
+      title.className = 'resort-notice-item-title';
+      title.textContent = notice.title;
+      const meta = document.createElement('span');
+      meta.className = 'resort-notice-item-meta';
+      meta.textContent = [notice.category, notice.date].filter(Boolean).join(' · ');
+      copy.append(title, meta);
+      item.appendChild(copy);
+      list.appendChild(item);
+    });
+    resortNoticeContent.appendChild(list);
+  }
+
+  async function loadResortNotices(page = 1) {
+    resortNoticePage = page;
+    resortNoticePagination.hidden = true;
+    setResortNoticeState('공지사항을 불러오는 중...');
+    try {
+      const result = await resortNoticeRequest(`?page=${page}`);
+      resortNoticePage = result.page;
+      resortNoticeTotalPages = result.totalPages;
+      resortNoticeItems = result.notices;
+      renderResortNoticeList();
+    } catch (error) {
+      console.error('지산리조트 공지 목록 조회 실패:', error);
+      resortNoticePagination.hidden = true;
+      setResortNoticeState(`공지사항을 불러오지 못했습니다. ${error.message}`, () => loadResortNotices(page));
+    }
+  }
+
+  async function openResortNoticeDetail(noticeId) {
+    resortNoticePagination.hidden = true;
+    resortNoticeListButton.hidden = false;
+    setResortNoticeState('공지 내용을 불러오는 중...');
+    try {
+      const notice = await resortNoticeRequest(`/${encodeURIComponent(noticeId)}`);
+      resortNoticeContent.replaceChildren();
+      const detail = document.createElement('article');
+      detail.className = 'resort-notice-detail';
+      const heading = document.createElement('header');
+      heading.className = 'resort-notice-detail-heading';
+      const title = document.createElement('h3');
+      title.textContent = notice.title;
+      const date = document.createElement('time');
+      date.className = 'resort-notice-detail-date';
+      date.textContent = notice.date;
+      heading.append(title, date);
+      detail.appendChild(heading);
+
+      notice.images.forEach(imageUrl => {
+        const image = document.createElement('img');
+        image.className = 'resort-notice-detail-image';
+        image.src = imageUrl;
+        image.alt = notice.title;
+        image.loading = 'lazy';
+        detail.appendChild(image);
+      });
+      if (notice.images.length === 0) {
+        const noBody = document.createElement('p');
+        noBody.className = 'resort-notice-state';
+        noBody.textContent = '원문 본문을 표시할 수 없습니다.';
+        detail.appendChild(noBody);
+      }
+      const original = document.createElement('a');
+      original.className = 'resort-notice-original';
+      original.href = `https://www.jisanresort.co.kr/w/event/board_view.asp?board_sw=notice&seq=${encodeURIComponent(notice.id)}`;
+      original.target = '_blank';
+      original.rel = 'noopener noreferrer';
+      original.textContent = '지산리조트 원문 보기 ↗';
+      detail.appendChild(original);
+      resortNoticeContent.appendChild(detail);
+    } catch (error) {
+      console.error('지산리조트 공지 상세 조회 실패:', error);
+      setResortNoticeState(`공지 내용을 불러오지 못했습니다. ${error.message}`, () => openResortNoticeDetail(noticeId));
+    }
+  }
+
+  function openResortNotices() {
+    setDrawerOpen(false);
+    resortNoticeModal.classList.add('active');
+    resortNoticeModal.setAttribute('aria-hidden', 'false');
+    loadResortNotices(1);
+  }
+
+  function closeResortNotices() {
+    resortNoticeModal.classList.remove('active');
+    resortNoticeModal.setAttribute('aria-hidden', 'true');
+  }
+
+  document.addEventListener('click', event => {
+    const trigger = event.target.closest('#openResortNotices, #openResortNoticesFromDrawer');
+    if (trigger) {
+      event.preventDefault();
+      openResortNotices();
+      return;
+    }
+    const noticeItem = event.target.closest('[data-notice-id]');
+    if (noticeItem && resortNoticeModal.contains(noticeItem)) {
+      openResortNoticeDetail(noticeItem.dataset.noticeId);
+    }
+  });
+  document.getElementById('closeResortNotices').addEventListener('click', closeResortNotices);
+  resortNoticeModal.addEventListener('click', event => {
+    if (event.target === resortNoticeModal) closeResortNotices();
+  });
+  resortNoticePrevious.addEventListener('click', () => loadResortNotices(resortNoticePage - 1));
+  resortNoticeNext.addEventListener('click', () => loadResortNotices(resortNoticePage + 1));
+  resortNoticeListButton.addEventListener('click', () => {
+    renderResortNoticeList();
+  });
+  document.addEventListener('keydown', event => {
+    if (event.key === 'Escape' && resortNoticeModal.classList.contains('active')) closeResortNotices();
+  });
+
   async function signOutRetiredUser() {
     window.markIntentionalSignOut?.();
     const { error } = await supabaseClient.auth.signOut({ scope: 'local' });
@@ -715,7 +942,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     unreadNotificationCount = count;
     notificationBadge.textContent = count > 99 ? '99+' : String(count);
     notificationBadge.style.display = count > 0 ? 'block' : 'none';
-    openNotificationsBtn.setAttribute('aria-label', count > 0 ? `알림 열기, 미확인 ${count}개` : '알림 열기');
+    openNotificationsBtn.setAttribute('aria-label', count > 0 ? `알림 열기, 읽지 않은 알림 ${count}개` : '알림 열기');
   }
 
   function showNotificationError(error) {
@@ -744,13 +971,13 @@ document.addEventListener('DOMContentLoaded', async () => {
       const content = document.createElement('button');
       content.type = 'button';
       content.className = 'notification-content';
-      content.setAttribute('aria-label', `${notification.read_at ? '읽음' : '미확인'}: ${notification.title}`);
+      content.setAttribute('aria-label', `${notification.read_at ? '읽음' : '읽지 않음'}: ${notification.title}`);
 
       const title = document.createElement('span');
       title.className = 'notification-item-title';
       const readState = document.createElement('span');
       readState.className = 'notification-read-state';
-      readState.textContent = notification.read_at ? '읽음' : '미확인';
+      readState.textContent = notification.read_at ? '읽음' : '읽지 않음';
       title.append(readState, document.createTextNode(notification.title));
 
       const body = document.createElement('span');
@@ -807,7 +1034,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       notificationList.replaceChildren();
       const message = document.createElement('div');
       message.className = 'notification-empty';
-      message.textContent = `알림을 불러오지 못했습니다: ${error.message}`;
+      message.textContent = `알림을 불러오지 못했습니다. ${error.message}`;
       notificationList.appendChild(message);
     }
   }
@@ -876,7 +1103,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
-  // 로그인 사용자 이름 불러오기
+  // Load the signed-in user's profile.
   if (typeof supabaseClient !== 'undefined') {
     const { data: { session } } = await supabaseClient.auth.getSession();
     if (session) {
@@ -922,7 +1149,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           if (activeProfileError) throw activeProfileError;
           if (activeProfile?.status === '퇴직') await signOutRetiredUser();
         } catch (error) {
-          console.error('재직 상태 확인 오류:', error);
+          console.error('퇴직 상태 확인 오류:', error);
         }
       }, 10 * 60 * 1000);
     }
