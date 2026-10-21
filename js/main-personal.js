@@ -2,6 +2,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   const API_URL = 'https://jsec-serverless.adobephotoshop.workers.dev/api';
   const vacationTab = document.getElementById('personalVacationTab');
   const allowanceTab = document.getElementById('personalAllowanceTab');
+  const teamVacationTab = document.getElementById('teamVacationTab');
+  const teamAllowanceTab = document.getElementById('teamAllowanceTab');
   const vacationPanel = document.getElementById('personalVacationPanel');
   const allowancePanel = document.getElementById('personalAllowancePanel');
   const vacationSummary = document.getElementById('personalVacationSummary');
@@ -15,11 +17,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   const nextMonthButton = document.getElementById('personalNextMonth');
   const welcomeMessage = document.getElementById('personalWelcome');
   const personalTitle = document.getElementById('personalTitle');
-  const guestDashboard = document.getElementById('guestDashboard');
-  const guestVacationPanel = document.getElementById('guestVacationPanel');
-  const guestAllowancePanel = document.getElementById('guestAllowancePanel');
-  const guestVacationContent = document.getElementById('guestVacationContent');
-  const guestAllowanceContent = document.getElementById('guestAllowanceContent');
+  const teamDashboard = document.getElementById('teamDashboard');
+  const teamVacationPanel = document.getElementById('teamVacationPanel');
+  const teamAllowancePanel = document.getElementById('teamAllowancePanel');
+  const teamVacationContent = document.getElementById('teamVacationContent');
+  const teamAllowanceContent = document.getElementById('teamAllowanceContent');
 
   function getKstParts(date = new Date()) {
     const parts = new Intl.DateTimeFormat('en-US', {
@@ -36,6 +38,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   let selectedMonth = new Date(Number(todayParts.year), Number(todayParts.month) - 1, 1);
   let monthRequestId = 0;
   let isGuest = false;
+  let isAdmin = false;
+  let activeTab = vacationTab;
   let allVacations = [];
   let guestVacationState = 'loading';
   let guestAllowanceState = 'loading';
@@ -69,9 +73,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   function animateMonthChange(direction) {
-    const activePanel = isGuest
-      ? guestVacationPanel.hidden ? guestAllowancePanel : guestVacationPanel
-      : vacationPanel.hidden ? allowancePanel : vacationPanel;
+    const panelByTab = new Map([
+      [vacationTab, vacationPanel],
+      [allowanceTab, allowancePanel],
+      [teamVacationTab, teamVacationPanel],
+      [teamAllowanceTab, teamAllowancePanel]
+    ]);
+    const activePanel = panelByTab.get(activeTab);
     activePanel.classList.remove('month-slide-next', 'month-slide-previous');
     void activePanel.offsetWidth;
     activePanel.classList.add(direction > 0 ? 'month-slide-next' : 'month-slide-previous');
@@ -105,28 +113,29 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   function showTab(selectedTab) {
-    const showVacation = selectedTab === vacationTab;
-    vacationTab.setAttribute('aria-selected', String(showVacation));
-    allowanceTab.setAttribute('aria-selected', String(!showVacation));
-    vacationTab.tabIndex = showVacation ? 0 : -1;
-    allowanceTab.tabIndex = showVacation ? -1 : 0;
-    if (isGuest) {
-      guestVacationPanel.hidden = !showVacation;
-      guestAllowancePanel.hidden = showVacation;
-      vacationPanel.hidden = true;
-      allowancePanel.hidden = true;
-    } else {
-      vacationPanel.hidden = !showVacation;
-      allowancePanel.hidden = showVacation;
-    }
+    activeTab = selectedTab;
+    const panelByTab = new Map([
+      [vacationTab, vacationPanel],
+      [allowanceTab, allowancePanel],
+      [teamVacationTab, teamVacationPanel],
+      [teamAllowanceTab, teamAllowancePanel]
+    ]);
+    [vacationTab, allowanceTab, teamVacationTab, teamAllowanceTab].forEach(tab => {
+      const selected = tab === selectedTab;
+      tab.setAttribute('aria-selected', String(selected));
+      tab.tabIndex = selected ? 0 : -1;
+      panelByTab.get(tab).hidden = !selected;
+    });
   }
 
   vacationTab.addEventListener('click', () => showTab(vacationTab));
   allowanceTab.addEventListener('click', () => showTab(allowanceTab));
+  teamVacationTab.addEventListener('click', () => showTab(teamVacationTab));
+  teamAllowanceTab.addEventListener('click', () => showTab(teamAllowanceTab));
   previousMonthButton.addEventListener('click', () => changeMonth(-1));
   nextMonthButton.addEventListener('click', () => changeMonth(1));
   let swipeStart = null;
-  [vacationPanel, allowancePanel, guestVacationPanel, guestAllowancePanel].forEach(panel => {
+  [vacationPanel, allowancePanel, teamVacationPanel, teamAllowancePanel].forEach(panel => {
     panel.addEventListener('touchstart', event => {
       if (event.touches.length !== 1 || event.target.closest('button, a, input, select, textarea')) {
         swipeStart = null;
@@ -144,17 +153,19 @@ document.addEventListener('DOMContentLoaded', async () => {
     }, { passive: true });
     panel.addEventListener('touchcancel', () => { swipeStart = null; }, { passive: true });
   });
-  [vacationTab, allowanceTab].forEach(tab => {
+  [vacationTab, allowanceTab, teamVacationTab, teamAllowanceTab].forEach(tab => {
     tab.addEventListener('keydown', event => {
       if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
       event.preventDefault();
-      const nextTab = event.key === 'Home'
-        ? vacationTab
+      const availableTabs = [vacationTab, allowanceTab, teamVacationTab, teamAllowanceTab]
+        .filter(availableTab => !availableTab.hidden);
+      const currentIndex = availableTabs.indexOf(tab);
+      const nextIndex = event.key === 'Home'
+        ? 0
         : event.key === 'End'
-          ? allowanceTab
-          : tab === vacationTab
-            ? allowanceTab
-            : vacationTab;
+          ? availableTabs.length - 1
+          : (currentIndex + (event.key === 'ArrowRight' ? 1 : -1) + availableTabs.length) % availableTabs.length;
+      const nextTab = availableTabs[nextIndex];
       showTab(nextTab);
       nextTab.focus();
     });
@@ -182,25 +193,37 @@ document.addEventListener('DOMContentLoaded', async () => {
     console.error('개인 메뉴 사용자 정보 조회 오류:', profileError);
   } else if (profile) {
     isGuest = profile.role === 'guest' || profile.role === 'monitor';
+    isAdmin = profile.role === 'admin';
     const name = profile.name || profile.username;
-    if (name) welcomeMessage.textContent = `${name}님, ${getSelectedMonthRange().label} 내 일정과 수당을 확인하세요.`;
+    if (name) welcomeMessage.textContent = isGuest
+      ? `${name}님, ${getSelectedMonthRange().label} 팀 현황입니다.`
+      : `${name}님, ${getSelectedMonthRange().label} 내 일정과 수당을 확인하세요.`;
   }
   if (isGuest) {
     personalTitle.textContent = '팀 운영 대시보드';
-    vacationTab.parentElement.setAttribute('aria-label', '팀 통계');
-    vacationTab.textContent = '휴무 통계';
-    allowanceTab.textContent = '수당 통계';
-    vacationTab.setAttribute('aria-controls', 'guestVacationPanel');
-    allowanceTab.setAttribute('aria-controls', 'guestAllowancePanel');
+    vacationTab.hidden = true;
+    allowanceTab.hidden = true;
+    teamVacationTab.hidden = false;
+    teamAllowanceTab.hidden = false;
+    teamVacationTab.setAttribute('aria-label', '휴무 통계');
+    teamAllowanceTab.setAttribute('aria-label', '수당 통계');
     vacationPanel.hidden = true;
     allowancePanel.hidden = true;
-    guestDashboard.hidden = false;
-    showTab(vacationTab);
+    teamDashboard.hidden = false;
+    showTab(teamVacationTab);
     dutyList.hidden = true;
     dutyList.style.display = 'none';
     dutyStatus.hidden = true;
     dutyStatus.style.display = 'none';
     welcomeMessage.textContent = `${getSelectedMonthRange().label} 팀 휴무와 수당 현황입니다.`;
+  } else if (isAdmin) {
+    teamVacationTab.hidden = false;
+    teamAllowanceTab.hidden = false;
+    teamDashboard.hidden = false;
+    showTab(vacationTab);
+  } else {
+    teamDashboard.hidden = true;
+    showTab(vacationTab);
   }
 
   async function request(path, options = {}) {
@@ -218,7 +241,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   async function loadVacations(start, end, requestId) {
-    if (isGuest) {
+    if (isGuest || isAdmin) {
       guestVacationState = 'loading';
       renderGuestDashboard();
     }
@@ -227,11 +250,11 @@ document.addEventListener('DOMContentLoaded', async () => {
       const vacations = await request(`/vacations?${params.toString()}`);
       if (requestId !== monthRequestId) return;
       allVacations = vacations;
-      if (isGuest) {
+      if (isGuest || isAdmin) {
         guestVacationState = 'ready';
         renderGuestDashboard();
-        return;
       }
+      if (isGuest) return;
       const mine = vacations.filter(vacation => vacation.user_id === session.user.id);
       const typeCounts = mine.reduce((counts, vacation) => {
         counts[vacation.leave_type] = (counts[vacation.leave_type] || 0) + 1;
@@ -272,10 +295,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     } catch (error) {
       if (requestId !== monthRequestId) return;
       console.error('내 휴무 요약 조회 오류:', error);
-      if (isGuest) {
+      if (isGuest || isAdmin) {
         guestVacationState = 'error';
         renderGuestDashboard();
-      } else {
+      }
+      if (!isGuest) {
         vacationError.textContent = '휴무 일정을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.';
       }
     }
@@ -364,20 +388,26 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   function renderGuestDashboard() {
-    if (!isGuest) return;
     const allowanceTotal = allowanceEntries.reduce((sum, entry) => sum + (Number(entry.unit_amount) || 0), 0);
-    const upcoming = allVacations
-      .filter(vacation => vacation.date >= today)
-      .sort((a, b) => a.date.localeCompare(b.date));
     const leaveCounts = new Map();
     allVacations.forEach(vacation => {
       const type = vacation.leave_type || '기타';
       leaveCounts.set(type, (leaveCounts.get(type) || 0) + 1);
     });
     const allowanceTotals = new Map();
+    const allowanceByUser = new Map();
     allowanceEntries.forEach(entry => {
       const label = entry.type_label || '기타 수당';
       allowanceTotals.set(label, (allowanceTotals.get(label) || 0) + (Number(entry.unit_amount) || 0));
+      const userId = entry.user_id || entry.username || 'unknown';
+      const userSummary = allowanceByUser.get(userId) || {
+        name: entry.username || '이름 없음',
+        count: 0,
+        amount: 0
+      };
+      userSummary.count += 1;
+      userSummary.amount += Number(entry.unit_amount) || 0;
+      allowanceByUser.set(userId, userSummary);
     });
 
     const renderBars = (items, formatter) => {
@@ -393,21 +423,25 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const leaveRows = [...leaveCounts.entries()].sort((a, b) => b[1] - a[1]);
     const allowanceRows = [...allowanceTotals.entries()].sort((a, b) => b[1] - a[1]);
-    const upcomingRows = upcoming.slice(0, 6).map(vacation => `
-      <article class="guest-upcoming-item">
-        <div class="guest-upcoming-date">${escapeHtml(formatVacationDate(vacation.date))}</div>
-        <div class="guest-upcoming-name">${escapeHtml(vacation.username || '직원')}</div>
-        <div class="guest-upcoming-type">${escapeHtml(vacation.leave_type || '휴무')} · ${escapeHtml(vacation.time_detail || '종일')}</div>
-      </article>`).join('');
+    const rankedUsers = [...allowanceByUser.values()]
+      .sort((a, b) => b.amount - a.amount || b.count - a.count || a.name.localeCompare(b.name));
+    const rankingRows = rankedUsers.map((user, index) => `
+      <div class="guest-ranking-row">
+        <span class="guest-ranking-place">${index + 1}</span>
+        <div>
+          <div class="guest-ranking-name">${escapeHtml(user.name)}</div>
+          <div class="guest-ranking-count">${user.count}건</div>
+        </div>
+        <span class="guest-ranking-amount">${formatMoney(user.amount)}</span>
+      </div>`).join('');
 
-    guestVacationContent.innerHTML = guestVacationState === 'loading'
+    teamVacationContent.innerHTML = guestVacationState === 'loading'
       ? '<div class="personal-empty">이번 달 휴무 통계를 불러오는 중입니다.</div>'
       : guestVacationState === 'error'
         ? '<div class="personal-empty" role="alert">팀 휴무 통계를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.</div>'
         : `
-      <div class="guest-kpis">
+      <div class="guest-kpis single">
         <article class="guest-kpi"><span class="guest-kpi-label">이번 달 휴무 등록</span><strong class="guest-kpi-value">${allVacations.length}건</strong></article>
-        <article class="guest-kpi"><span class="guest-kpi-label">앞으로 예정된 휴무</span><strong class="guest-kpi-value">${upcoming.length}건</strong></article>
       </div>
       <div class="guest-dashboard-grid">
         <section class="guest-chart-card" aria-label="휴무 유형별 건수">
@@ -415,16 +449,10 @@ document.addEventListener('DOMContentLoaded', async () => {
           ${renderBars(leaveRows, value => `${value}건`)}
         </section>
       </div>
-      <section class="guest-upcoming">
-        <h3>다가오는 휴무 일정</h3>
-        ${upcomingRows
-          ? `<div class="guest-upcoming-list">${upcomingRows}</div>`
-          : '<div class="personal-empty">남은 휴무 일정이 없습니다.</div>'}
-      </section>
       <nav class="guest-dashboard-links" aria-label="모니터링 바로가기">
         <a class="guest-dashboard-link" href="/pages/calendar.html">전체 휴무 일정 보기 ↗</a>
       </nav>`;
-    guestAllowanceContent.innerHTML = guestAllowanceState === 'loading'
+    teamAllowanceContent.innerHTML = guestAllowanceState === 'loading'
       ? '<div class="personal-empty">이번 달 수당 통계를 불러오는 중입니다.</div>'
       : guestAllowanceState === 'error'
         ? '<div class="personal-empty" role="alert">팀 수당 통계를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.</div>'
@@ -438,6 +466,12 @@ document.addEventListener('DOMContentLoaded', async () => {
           <h3>수당 종류별 금액</h3>
           ${renderBars(allowanceRows, formatMoney)}
         </section>
+        <section class="guest-chart-card" aria-label="개인별 수당 랭킹">
+          <h3>개인별 수당 랭킹</h3>
+          ${rankingRows
+            ? `<div class="guest-ranking-list">${rankingRows}</div>`
+            : '<div class="personal-empty">해당 기간의 수당 기록이 없습니다.</div>'}
+        </section>
       </div>
       <nav class="guest-dashboard-links" aria-label="모니터링 바로가기">
         <a class="guest-dashboard-link" href="/pages/allowances.html">수당 상세 및 엑셀 ↗</a>
@@ -445,7 +479,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   async function loadAllowanceData(start, end, requestId) {
-    if (isGuest) {
+    if (isGuest || isAdmin) {
       guestAllowanceState = 'loading';
       renderGuestDashboard();
     }
@@ -455,7 +489,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (requestId !== monthRequestId) return;
       allowanceEntries = entries;
       allowanceError.textContent = '';
-      if (isGuest) {
+      if (isGuest || isAdmin) {
         guestAllowanceState = 'ready';
         renderGuestDashboard();
       }
@@ -463,10 +497,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     } catch (error) {
       if (requestId !== monthRequestId) return;
       console.error('내 수당 요약 조회 오류:', error);
-      if (isGuest) {
+      if (isGuest || isAdmin) {
         guestAllowanceState = 'error';
         renderGuestDashboard();
-      } else {
+      }
+      if (!isGuest) {
         allowanceError.textContent = '수당 정보를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.';
       }
     }
