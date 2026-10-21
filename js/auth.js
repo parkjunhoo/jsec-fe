@@ -43,7 +43,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       try {
         // 백엔드 로그인 API 호출 (RLS 우회 및 이름 기반 이메일 매핑 처리)
-        const response = await fetch(WORKER_LOGIN_API, {
+        const request = window.appLoading?.fetchWithoutLoading || fetch;
+        const response = await request(WORKER_LOGIN_API, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ username, password })

@@ -12,7 +12,7 @@
     if (dialog) return { close: () => dialog.close() };
 
     const overlay = document.querySelector(
-      '.modal-overlay.active, #notificationOverlay.active, .drawer-overlay.active'
+      '.modal-overlay.active, #notificationOverlay.active'
     );
     if (overlay) {
       return {
@@ -921,7 +921,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         } catch (error) {
           console.error('재직 상태 확인 오류:', error);
         }
-      }, 60000);
+      }, 10 * 60 * 1000);
     }
     supabaseClient.auth.onAuthStateChange((_event, updatedSession) => {
       notificationSession = updatedSession;

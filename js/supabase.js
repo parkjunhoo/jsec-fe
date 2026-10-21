@@ -3,6 +3,9 @@ const SUPABASE_URL = 'https://nihsmjfcriqeuflujrrh.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_hM0gN_gaG4d86oT9k-laRg_KOmfqrn8';                
 
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+  global: {
+    fetch: window.appLoading?.fetchWithoutLoading || window.fetch
+  },
   auth: {
     autoRefreshToken: true,
     persistSession: true,
@@ -56,7 +59,8 @@ async function syncNativePushToken(session) {
   if (!nativePushToken || !session) return;
 
   try {
-    const response = await fetch(PUSH_TOKEN_API, {
+    const request = window.appLoading?.fetchWithoutLoading || fetch;
+    const response = await request(PUSH_TOKEN_API, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
