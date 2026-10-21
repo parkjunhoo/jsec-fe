@@ -465,8 +465,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       const shuttleEntries = renderEntries('caddie_shuttle', entry => entry.shift === 'afternoon' ? '🚘' : '🚗');
       const ballEntries = renderEntries('ball_pickup', () => '⛳');
       const status = [
-        shuttleEntries.length ? `<span>${shuttleEntries.join(', ')}</span>` : '',
-        ballEntries.length ? `<span>${ballEntries.join(', ')}</span>` : ''
+        shuttleEntries.length ? `<span>${shuttleEntries.join('<br>')}</span>` : '',
+        ballEntries.length ? `<span>${ballEntries.join('<br>')}</span>` : ''
       ].filter(Boolean).join('');
       const classes = [
         'allowance-day-cell',
