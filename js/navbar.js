@@ -434,7 +434,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     .resort-notice-header h2 { margin: 0; font-size: 17px; }
     .resort-notice-header-actions { display: flex; gap: 8px; }
     .resort-notice-header button, .resort-notice-page-button, .resort-notice-back { min-height: 34px; padding: 0 10px; border: 1px solid var(--app-border, rgba(255,255,255,.14)); border-radius: 8px; background: var(--app-surface-raised, rgba(255,255,255,.06)); color: inherit; font-size: 12px; cursor: pointer; }
-    .resort-notice-content { min-height: 180px; overflow: auto; overscroll-behavior: contain; }
+    .resort-notice-content { position: relative; min-height: 180px; overflow: auto; overscroll-behavior: contain; }
+    .resort-notice-content[aria-busy="true"] { pointer-events: none; }
+    .resort-notice-loading { position: absolute; inset: 0; z-index: 2; display: grid; align-content: center; justify-items: center; gap: 10px; min-height: 180px; background: rgba(15, 23, 42, 0.64); background: color-mix(in srgb, var(--app-surface, #1e293b) 72%, transparent); color: var(--text-sub, #94a3b8); font-size: 13px; pointer-events: none; }
+    .resort-notice-spinner { width: 28px; height: 28px; border: 3px solid var(--app-border, rgba(255,255,255,.16)); border-top-color: var(--primary, #38bdf8); border-radius: 50%; animation: resort-notice-spin .75s linear infinite; }
+    @keyframes resort-notice-spin { to { transform: rotate(360deg); } }
     .resort-notice-list { display: grid; }
     .resort-notice-item { display: flex; width: 100%; align-items: center; gap: 12px; padding: 12px 16px; border: 0; border-bottom: 1px solid var(--app-border, rgba(255,255,255,.08)); background: transparent; color: inherit; text-align: left; cursor: pointer; }
     .resort-notice-item:hover { background: var(--app-surface-raised, rgba(255,255,255,.05)); }
@@ -633,6 +637,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   let resortNoticePage = 1;
   let resortNoticeTotalPages = 1;
   let resortNoticeItems = [];
+  let resortNoticeRequestId = 0;
 
   function updateThemeSwitch() {
     const isLight = document.documentElement.dataset.theme === 'light';
@@ -735,6 +740,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   function setResortNoticeState(message, retryAction) {
+    resortNoticeContent.setAttribute('aria-busy', 'false');
     resortNoticeContent.replaceChildren();
     const state = document.createElement('div');
     state.className = 'resort-notice-state';
@@ -748,6 +754,20 @@ document.addEventListener('DOMContentLoaded', async () => {
       state.append(document.createElement('br'), retry);
     }
     resortNoticeContent.appendChild(state);
+  }
+
+  function setResortNoticeLoading(message) {
+    resortNoticeContent.setAttribute('aria-busy', 'true');
+    const loading = document.createElement('div');
+    loading.className = 'resort-notice-loading';
+    loading.setAttribute('role', 'status');
+    const spinner = document.createElement('span');
+    spinner.className = 'resort-notice-spinner';
+    spinner.setAttribute('aria-hidden', 'true');
+    const label = document.createElement('span');
+    label.textContent = message;
+    loading.append(spinner, label);
+    resortNoticeContent.appendChild(loading);
   }
 
   function getAuthorizationHeader(session) {
@@ -767,6 +787,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   function renderResortNoticeList() {
+    resortNoticeContent.setAttribute('aria-busy', 'false');
     resortNoticeListButton.hidden = true;
     resortNoticePagination.hidden = false;
     resortNoticePageLabel.textContent = `${resortNoticePage} / ${resortNoticeTotalPages}`;
@@ -810,29 +831,40 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   async function loadResortNotices(page = 1) {
-    resortNoticePage = page;
-    resortNoticePagination.hidden = true;
-    setResortNoticeState('공지사항을 불러오는 중...');
+    const requestId = ++resortNoticeRequestId;
+    resortNoticePrevious.disabled = true;
+    resortNoticeNext.disabled = true;
+    setResortNoticeLoading('공지사항을 불러오는 중...');
     try {
       const result = await resortNoticeRequest(`?page=${page}`);
+      if (requestId !== resortNoticeRequestId) return;
       resortNoticePage = result.page;
       resortNoticeTotalPages = result.totalPages;
       resortNoticeItems = result.notices;
       renderResortNoticeList();
     } catch (error) {
+      if (requestId !== resortNoticeRequestId) return;
       console.error('지산리조트 공지 목록 조회 실패:', error);
-      resortNoticePagination.hidden = true;
+      resortNoticePrevious.disabled = resortNoticePage <= 1;
+      resortNoticeNext.disabled = resortNoticePage >= resortNoticeTotalPages;
       setResortNoticeState(`공지사항을 불러오지 못했습니다. ${error.message}`, () => loadResortNotices(page));
     }
   }
 
   async function openResortNoticeDetail(noticeId) {
-    resortNoticePagination.hidden = true;
-    resortNoticeListButton.hidden = false;
-    setResortNoticeState('공지 내용을 불러오는 중...');
+    const requestId = ++resortNoticeRequestId;
+    resortNoticePrevious.disabled = true;
+    resortNoticeNext.disabled = true;
+    resortNoticeListButton.disabled = true;
+    setResortNoticeLoading('공지 내용을 불러오는 중...');
     try {
       const notice = await resortNoticeRequest(`/${encodeURIComponent(noticeId)}`);
+      if (requestId !== resortNoticeRequestId) return;
       resortNoticeContent.replaceChildren();
+      resortNoticeContent.setAttribute('aria-busy', 'false');
+      resortNoticePagination.hidden = true;
+      resortNoticeListButton.hidden = false;
+      resortNoticeListButton.disabled = false;
       const detail = document.createElement('article');
       detail.className = 'resort-notice-detail';
       const heading = document.createElement('header');
@@ -868,7 +900,11 @@ document.addEventListener('DOMContentLoaded', async () => {
       detail.appendChild(original);
       resortNoticeContent.appendChild(detail);
     } catch (error) {
+      if (requestId !== resortNoticeRequestId) return;
       console.error('지산리조트 공지 상세 조회 실패:', error);
+      resortNoticeListButton.disabled = false;
+      resortNoticePrevious.disabled = resortNoticePage <= 1;
+      resortNoticeNext.disabled = resortNoticePage >= resortNoticeTotalPages;
       setResortNoticeState(`공지 내용을 불러오지 못했습니다. ${error.message}`, () => openResortNoticeDetail(noticeId));
     }
   }
@@ -881,6 +917,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   function closeResortNotices() {
+    resortNoticeRequestId++;
+    resortNoticeContent.setAttribute('aria-busy', 'false');
     resortNoticeModal.classList.remove('active');
     resortNoticeModal.setAttribute('aria-hidden', 'true');
   }
@@ -904,6 +942,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   resortNoticePrevious.addEventListener('click', () => loadResortNotices(resortNoticePage - 1));
   resortNoticeNext.addEventListener('click', () => loadResortNotices(resortNoticePage + 1));
   resortNoticeListButton.addEventListener('click', () => {
+    resortNoticeRequestId++;
     renderResortNoticeList();
   });
   document.addEventListener('keydown', event => {
