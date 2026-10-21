@@ -1,3 +1,58 @@
+(() => {
+  const historyStateKey = 'jsecModalBackGuard';
+  let hasModalHistoryEntry = false;
+
+  function getActiveModal() {
+    const swal = window.Swal || window.Sweetalert2;
+    if (swal?.isVisible?.()) {
+      return { close: () => swal.close() };
+    }
+
+    const dialog = document.querySelector('dialog[open]');
+    if (dialog) return { close: () => dialog.close() };
+
+    const overlay = document.querySelector(
+      '.modal-overlay.active, #notificationOverlay.active, .drawer-overlay.active'
+    );
+    if (overlay) {
+      return {
+        close: () => overlay.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+      };
+    }
+
+    return null;
+  }
+
+  function syncModalHistory() {
+    const modalIsOpen = Boolean(getActiveModal());
+    if (modalIsOpen && !hasModalHistoryEntry) {
+      const currentState = window.history.state;
+      const state = currentState && typeof currentState === 'object' ? currentState : {};
+      window.history.pushState({ ...state, [historyStateKey]: true }, '', window.location.href);
+      hasModalHistoryEntry = true;
+    } else if (!modalIsOpen && hasModalHistoryEntry) {
+      hasModalHistoryEntry = false;
+      window.history.back();
+    }
+  }
+
+  window.addEventListener('popstate', () => {
+    if (!hasModalHistoryEntry && window.history.state?.[historyStateKey] !== true) return;
+
+    hasModalHistoryEntry = false;
+    getActiveModal()?.close();
+  });
+
+  const modalObserver = new MutationObserver(syncModalHistory);
+  modalObserver.observe(document.documentElement, {
+    attributes: true,
+    childList: true,
+    subtree: true,
+    attributeFilter: ['class', 'open']
+  });
+  syncModalHistory();
+})();
+
 document.addEventListener('DOMContentLoaded', async () => {
   const preferences = window.userPreferences;
   if (preferences) await preferences.load();
