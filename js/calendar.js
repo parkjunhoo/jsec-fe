@@ -85,12 +85,26 @@ document.addEventListener('DOMContentLoaded', async () => {
   const vHoursUsed = document.getElementById('vHoursUsed');
   const vMemo = document.getElementById('vMemo');
   const exportExcelBtn = document.getElementById('exportExcelBtn');
+  const openBulkVacationBtn = document.getElementById('openBulkVacationBtn');
+  const bulkVacationModal = document.getElementById('bulkVacationModal');
+  const bulkVacationForm = document.getElementById('bulkVacationForm');
+  const bulkDaysInput = document.getElementById('bulkDaysInput');
+  const bulkCalendarGrid = document.getElementById('bulkCalendarGrid');
+  const bulkMonthLabel = document.getElementById('bulkMonthLabel');
+  const bulkSelectedCount = document.getElementById('bulkSelectedCount');
+  const bulkMemoInput = document.getElementById('bulkMemo');
+  const bulkTargetUserGroup = document.getElementById('bulkTargetUserGroup');
+  const bulkTargetUserId = document.getElementById('bulkTargetUserId');
+  const submitBulkVacationBtn = document.getElementById('submitBulkVacationBtn');
   const targetUserFormGroup = document.getElementById('targetUserFormGroup');
   const vTargetUserId = document.getElementById('vTargetUserId');
   const VACATIONS_API = 'https://jsec-serverless.adobephotoshop.workers.dev/api/vacations';
   const CALENDAR_NOTES_API = 'https://jsec-serverless.adobephotoshop.workers.dev/api/calendar-notes';
   const CALENDAR_NOTE_EMOJIS = ['📌', '📣', '🎉', '⚠️', '📅', '🎂', '🏖️', '🏥', '🚨', '✅', '⭐', '🎁', '🍀', '☕', '📝', '💡'];
-  if ((userRole === 'guest' || userRole === 'monitor') && openModalBtn) openModalBtn.style.display = 'none';
+  if (userRole === 'guest' || userRole === 'monitor') {
+    if (openModalBtn) openModalBtn.style.display = 'none';
+    if (openBulkVacationBtn) openBulkVacationBtn.hidden = true;
+  }
 
   async function mutateVacation(path, method, payload) {
     const { data: { session }, error: sessionError } = await supabaseClient.auth.getSession();
@@ -325,6 +339,103 @@ document.addEventListener('DOMContentLoaded', async () => {
     } catch (err) {
       console.error('유저 정보 로드 오류:', err);
     }
+  }
+
+  const bulkSelectedDays = new Set();
+
+  function updateBulkCalendarSelection() {
+    bulkSelectedCount.textContent = `${bulkSelectedDays.size}일 선택`;
+    bulkCalendarGrid.querySelectorAll('[data-bulk-day]').forEach(button => {
+      const selected = bulkSelectedDays.has(Number(button.dataset.bulkDay));
+      button.classList.toggle('selected', selected);
+      button.setAttribute('aria-pressed', String(selected));
+    });
+  }
+
+  function renderBulkCalendar() {
+    if (!bulkCalendarGrid) return;
+    const year = currentDate.getFullYear();
+    const month = currentDate.getMonth();
+    const firstDay = new Date(year, month, 1).getDay();
+    const lastDay = new Date(year, month + 1, 0).getDate();
+    bulkMonthLabel.textContent = new Intl.DateTimeFormat('ko-KR', {
+      year: 'numeric',
+      month: 'long'
+    }).format(currentDate);
+    bulkCalendarGrid.replaceChildren();
+
+    ['일', '월', '화', '수', '목', '금', '토'].forEach(dayName => {
+      const heading = document.createElement('span');
+      heading.className = 'bulk-calendar-day-name';
+      heading.textContent = dayName;
+      bulkCalendarGrid.appendChild(heading);
+    });
+    for (let index = 0; index < firstDay; index += 1) {
+      const blank = document.createElement('button');
+      blank.type = 'button';
+      blank.className = 'bulk-calendar-day';
+      blank.disabled = true;
+      blank.tabIndex = -1;
+      blank.setAttribute('aria-hidden', 'true');
+      bulkCalendarGrid.appendChild(blank);
+    }
+    for (let day = 1; day <= lastDay; day += 1) {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'bulk-calendar-day';
+      button.dataset.bulkDay = String(day);
+      button.textContent = String(day);
+      button.setAttribute('aria-label', `${month + 1}월 ${day}일`);
+      button.addEventListener('click', () => {
+        if (bulkSelectedDays.has(day)) bulkSelectedDays.delete(day);
+        else bulkSelectedDays.add(day);
+        bulkDaysInput.value = [...bulkSelectedDays].sort((a, b) => a - b).join(', ');
+        bulkDaysInput.setCustomValidity('');
+        updateBulkCalendarSelection();
+      });
+      bulkCalendarGrid.appendChild(button);
+    }
+    updateBulkCalendarSelection();
+  }
+
+  if (bulkDaysInput) {
+    bulkDaysInput.addEventListener('input', () => {
+      const rawDays = bulkDaysInput.value.trim();
+      const tokens = rawDays ? rawDays.split(/[,\s]+/).filter(Boolean) : [];
+      const days = tokens.map(token => /^\d+$/.test(token) ? Number(token) : NaN);
+      const lastDay = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).getDate();
+      const isValid = (!rawDays || tokens.length > 0)
+        && days.every(day => Number.isInteger(day) && day >= 1 && day <= lastDay);
+      bulkDaysInput.setCustomValidity(isValid ? '' : `1부터 ${lastDay} 사이의 날짜만 입력해 주세요.`);
+      bulkSelectedDays.clear();
+      if (isValid) days.forEach(day => bulkSelectedDays.add(day));
+      updateBulkCalendarSelection();
+    });
+  }
+
+  function openBulkVacationModal() {
+    if (userRole === 'guest' || userRole === 'monitor') return;
+    bulkSelectedDays.clear();
+    bulkDaysInput.value = '';
+    bulkDaysInput.setCustomValidity('');
+    bulkMemoInput.value = '';
+    if (userRole === 'admin') {
+      bulkTargetUserGroup.style.display = 'block';
+      bulkTargetUserId.innerHTML = vTargetUserId.innerHTML;
+      bulkTargetUserId.value = userId;
+      bulkTargetUserId.required = true;
+    } else {
+      bulkTargetUserGroup.style.display = 'none';
+      bulkTargetUserId.required = false;
+    }
+    renderBulkCalendar();
+    bulkVacationModal.classList.add('active');
+    bulkVacationModal.setAttribute('aria-hidden', 'false');
+  }
+
+  function closeBulkVacationModal() {
+    bulkVacationModal.classList.remove('active');
+    bulkVacationModal.setAttribute('aria-hidden', 'true');
   }
 
   function openAddModal(selectedDateStr = '') {
@@ -820,6 +931,14 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   if (openModalBtn) openModalBtn.addEventListener('click', () => openAddModal());
   if (closeModalBtn) closeModalBtn.addEventListener('click', closeModal);
+  if (openBulkVacationBtn) openBulkVacationBtn.addEventListener('click', openBulkVacationModal);
+  document.getElementById('closeBulkVacationBtn')?.addEventListener('click', closeBulkVacationModal);
+  document.getElementById('cancelBulkVacationBtn')?.addEventListener('click', closeBulkVacationModal);
+  if (bulkVacationModal) {
+    bulkVacationModal.addEventListener('click', event => {
+      if (event.target === bulkVacationModal) closeBulkVacationModal();
+    });
+  }
   if (vacationModal) {
     vacationModal.addEventListener('click', (e) => {
       if (e.target === vacationModal) closeModal();
@@ -1813,6 +1932,48 @@ document.addEventListener('DOMContentLoaded', async () => {
           submitBtn.disabled = false;
           submitBtn.textContent = originalSubmitText;
         }
+      }
+    });
+  }
+
+  if (bulkVacationForm) {
+    bulkVacationForm.addEventListener('submit', async event => {
+      event.preventDefault();
+      if (userRole === 'guest' || userRole === 'monitor') return;
+      if (bulkDaysInput.validationMessage || bulkSelectedDays.size === 0) {
+        bulkDaysInput.reportValidity();
+        return;
+      }
+
+      const year = currentDate.getFullYear();
+      const month = currentDate.getMonth() + 1;
+      const dates = [...bulkSelectedDays]
+        .sort((a, b) => a - b)
+        .map(day => `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`);
+      const payload = {
+        dates,
+        memo: bulkMemoInput.value.trim()
+      };
+      if (userRole === 'admin') payload.user_id = bulkTargetUserId.value;
+
+      submitBulkVacationBtn.disabled = true;
+      submitBulkVacationBtn.textContent = '등록 중...';
+      try {
+        const result = await mutateVacation('bulk', 'POST', payload);
+        closeBulkVacationModal();
+        await Swal.fire({
+          icon: 'success',
+          text: `휴무 ${result.count}건을 등록했습니다.`
+        });
+        await fetchMonthData();
+      } catch (error) {
+        await Swal.fire({
+          icon: 'error',
+          text: `휴무 일괄 등록 실패: ${error.message}`
+        });
+      } finally {
+        submitBulkVacationBtn.disabled = false;
+        submitBulkVacationBtn.textContent = '휴무 등록';
       }
     });
   }
