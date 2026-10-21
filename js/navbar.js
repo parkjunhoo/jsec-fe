@@ -541,6 +541,9 @@ document.addEventListener('DOMContentLoaded', async () => {
           <a href="/pages/allowances.html" class="drawer-item ${currentPath.includes('allowances.html') ? 'active' : ''}">
             <span>💰</span> 수당 관리
           </a>
+          <a href="https://www.ibro.co.kr/PayRoll/JOBWITH/index.asp" class="drawer-item" target="_blank" rel="noopener noreferrer">
+            <span>💳</span> 급여 조회
+          </a>
           <a href="/pages/item-requests.html" class="drawer-item ${currentPath.includes('item-requests.html') ? 'active' : ''}">
             <span>📦</span> 물품 신청
           </a>
