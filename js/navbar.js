@@ -276,7 +276,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       background: rgba(56, 189, 248, 0.15);
       color: var(--primary, #91d2b3);
     }
-    .drawer-item-icon { display: grid; width: 31px; height: 31px; place-items: center; border: 1px solid rgba(145, 210, 179, 0.16); border-radius: 9px; background: rgba(145, 210, 179, 0.08); font-size: 16px; }
+    .drawer-item-icon { display: grid; width: 31px; height: 31px; place-items: center; border: 1px solid rgba(145, 210, 179, 0.22); border-radius: 9px; background: rgba(145, 210, 179, 0.11); color: #a6dfbf; }
+    .drawer-item-icon svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.7; }
     .drawer-item-label { overflow-wrap: anywhere; }
     .btn-nav-logout {
       background: rgba(239, 68, 68, 0.15);
@@ -559,7 +560,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             <h2 class="drawer-group-title" id="drawerHomeGroup">홈</h2>
             <div class="drawer-group-items">
               <a href="/pages/main.html" class="drawer-item ${currentPath.includes('main.html') ? 'active' : ''}" ${currentPath.includes('main.html') ? 'aria-current="page"' : ''}>
-                <span class="drawer-item-icon" aria-hidden="true">🏠</span><span class="drawer-item-label">메인 메뉴</span>
+                <span class="drawer-item-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m3 10 9-7 9 7"/><path d="M5 9v12h14V9M9 21v-7h6v7"/></svg></span><span class="drawer-item-label">메인 메뉴</span>
               </a>
             </div>
           </section>
@@ -567,13 +568,13 @@ document.addEventListener('DOMContentLoaded', async () => {
             <h2 class="drawer-group-title" id="drawerWorkGroup">근무 · 급여</h2>
             <div class="drawer-group-items">
               <a href="/pages/calendar.html" class="drawer-item ${currentPath.includes('calendar.html') ? 'active' : ''}" ${currentPath.includes('calendar.html') ? 'aria-current="page"' : ''}>
-                <span class="drawer-item-icon" aria-hidden="true">📅</span><span class="drawer-item-label">휴무 일정</span>
+                <span class="drawer-item-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 11h18"/><path d="m9 16 2 2 4-4"/></svg></span><span class="drawer-item-label">휴무 일정</span>
               </a>
               <a href="/pages/allowances.html" class="drawer-item ${currentPath.includes('allowances.html') ? 'active' : ''}" ${currentPath.includes('allowances.html') ? 'aria-current="page"' : ''}>
-                <span class="drawer-item-icon" aria-hidden="true">💰</span><span class="drawer-item-label">수당 관리</span>
+                <span class="drawer-item-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18M7 15h3m5 0h2"/><path d="M8 3h8"/></svg></span><span class="drawer-item-label">수당 관리</span>
               </a>
               <a href="https://www.ibro.co.kr/PayRoll/JOBWITH/index.asp" class="drawer-item" target="_blank" rel="noopener noreferrer">
-                <span class="drawer-item-icon" aria-hidden="true">💳</span><span class="drawer-item-label">급여 조회 ↗</span>
+                <span class="drawer-item-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18M7 15h4m4 0h2M8 2v3m8-3v3"/></svg></span><span class="drawer-item-label">급여 조회 ↗</span>
               </a>
             </div>
           </section>
@@ -581,10 +582,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             <h2 class="drawer-group-title" id="drawerTeamGroup">팀 운영</h2>
             <div class="drawer-group-items">
               <a href="/pages/users.html" class="drawer-item ${currentPath.includes('users.html') ? 'active' : ''}" ${currentPath.includes('users.html') ? 'aria-current="page"' : ''}>
-                <span class="drawer-item-icon" aria-hidden="true">👥</span><span class="drawer-item-label">회원 명부</span>
+                <span class="drawer-item-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="10" cy="7" r="4"/><path d="M20 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg></span><span class="drawer-item-label">회원 명부</span>
               </a>
               <a href="/pages/item-requests.html" class="drawer-item ${currentPath.includes('item-requests.html') ? 'active' : ''}" ${currentPath.includes('item-requests.html') ? 'aria-current="page"' : ''}>
-                <span class="drawer-item-icon" aria-hidden="true">📦</span><span class="drawer-item-label">물품 신청</span>
+                <span class="drawer-item-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m3 8 9-5 9 5v9l-9 5-9-5V8Z"/><path d="m3.5 8.5 8.5 5 8.5-5M12 13.5V22M7.5 5.5l9 5"/></svg></span><span class="drawer-item-label">물품 신청</span>
               </a>
             </div>
           </section>
@@ -592,16 +593,16 @@ document.addEventListener('DOMContentLoaded', async () => {
             <h2 class="drawer-group-title" id="drawerInfoGroup">자료 · 연락처</h2>
             <div class="drawer-group-items">
               <a href="/pages/vehicle.html" class="drawer-item ${currentPath.includes('vehicle.html') ? 'active' : ''}" ${currentPath.includes('vehicle.html') ? 'aria-current="page"' : ''}>
-                <span class="drawer-item-icon" aria-hidden="true">🚗</span><span class="drawer-item-label">지산 차량조회</span>
+                <span class="drawer-item-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m5 11 1.5-4.5A2 2 0 0 1 8.4 5h7.2a2 2 0 0 1 1.9 1.5L19 11"/><path d="M3 11h18v8H3z"/><path d="M6 19v2m12-2v2M6 15h.01M18 15h.01M3 13l-1-2m19 2 1-2"/></svg></span><span class="drawer-item-label">지산 차량조회</span>
               </a>
               <a href="/pages/manuals.html" class="drawer-item ${currentPath.includes('manuals.html') ? 'active' : ''}" ${currentPath.includes('manuals.html') ? 'aria-current="page"' : ''}>
-                <span class="drawer-item-icon" aria-hidden="true">📘</span><span class="drawer-item-label">업무 매뉴얼</span>
+                <span class="drawer-item-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-11V5l-8-3-8 3v6c0 7 8 11 8 11Z"/><path d="m9 12 2 2 4-4"/></svg></span><span class="drawer-item-label">업무 매뉴얼</span>
               </a>
               <a href="/pages/phonebook.html" class="drawer-item ${currentPath.includes('phonebook.html') ? 'active' : ''}" ${currentPath.includes('phonebook.html') ? 'aria-current="page"' : ''}>
-                <span class="drawer-item-icon" aria-hidden="true">☎️</span><span class="drawer-item-label">지산 연락망</span>
+                <span class="drawer-item-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2A19.8 19.8 0 0 1 11.19 18a19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.09 3.18 2 2 0 0 1 4.08 1h3a2 2 0 0 1 2 1.72c.12.96.36 1.9.7 2.8a2 2 0 0 1-.45 2.11L8.06 8.94a16 16 0 0 0 6 6l1.31-1.27a2 2 0 0 1 2.11-.45c.9.34 1.84.58 2.8.7A2 2 0 0 1 22 16.92Z"/></svg></span><span class="drawer-item-label">지산 연락망</span>
               </a>
               <a href="#" class="drawer-item" id="openResortNoticesFromDrawer">
-                <span class="drawer-item-icon" aria-hidden="true">📢</span><span class="drawer-item-label">지산 공지사항</span>
+                <span class="drawer-item-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 4h16v16H4z"/><path d="M8 8h8M8 12h8M8 16h5"/></svg></span><span class="drawer-item-label">지산 공지사항</span>
               </a>
             </div>
           </section>

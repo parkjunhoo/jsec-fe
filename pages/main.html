@@ -273,21 +273,35 @@
     .admin-actions { margin-top: 18px; }
     .admin-push {
       display: inline-flex;
-      min-height: 42px;
+      min-height: 58px;
       align-items: center;
-      gap: 9px;
-      padding: 0 15px;
+      gap: 12px;
+      padding: 8px 14px 8px 9px;
       border: 1px solid var(--line);
-      border-radius: 11px;
-      background: #142236;
-      color: #c6d3e2;
-      font-size: 13px;
+      border-radius: 15px;
+      background: linear-gradient(145deg, rgba(19, 31, 48, 0.96), rgba(15, 25, 40, 0.98));
+      color: var(--ink);
+      font-size: 12px;
       font-weight: 700;
       cursor: pointer;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+      box-shadow: 0 6px 19px rgba(0, 0, 0, 0.07);
+      transition: border-color 160ms ease, background 160ms ease, box-shadow 160ms ease, transform 160ms ease;
     }
-    .admin-push:hover { border-color: rgba(114, 199, 255, 0.32); color: var(--blue); }
-    .admin-push svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.8; }
+    .admin-push:hover { border-color: rgba(114, 199, 255, 0.32); box-shadow: var(--shadow); transform: translateY(-2px); }
+    .admin-push:focus-visible { outline: 3px solid rgba(39, 120, 168, 0.35); outline-offset: 2px; }
+    .admin-push:active { transform: scale(0.985); }
+    .admin-push-icon {
+      display: grid;
+      width: 40px;
+      height: 40px;
+      flex: 0 0 auto;
+      place-items: center;
+      border: 1px solid rgba(114, 199, 255, 0.13);
+      border-radius: 12px;
+      background: var(--blue-soft);
+      color: var(--blue);
+    }
+    .admin-push-icon svg { width: 19px; height: 19px; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.8; }
     .personal-panel {
       margin-top: 20px;
       padding: 21px;
@@ -514,7 +528,7 @@
       .menu-title { font-size: 13px; }
       .menu-desc { max-width: 100%; margin-top: 5px; font-size: 10px; }
       .menu-arrow { top: 14px; right: 12px; font-size: 15px; }
-      .admin-push { width: 100%; justify-content: center; }
+      .admin-push { width: 100%; }
       .personal-panel { margin-top: 15px; padding: 15px; border-radius: 14px; }
       .personal-heading h2 { font-size: 17px; }
       .personal-heading p, .personal-month { font-size: 11px; }
@@ -728,8 +742,8 @@
 
     <div class="admin-actions">
       <button class="admin-push" id="broadcastPushBtn" type="button" style="display: none;">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/></svg>
-        전체 푸시 알림 보내기
+        <span class="admin-push-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/></svg></span>
+        <span>전체 푸시 알림 보내기</span>
       </button>
     </div>
   </main>
