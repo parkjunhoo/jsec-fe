@@ -38,6 +38,10 @@
   let isBusy = false;
   let imageZoom = 1;
   let viewerBaseScale = 1;
+  let viewerPanX = 0;
+  let viewerPanY = 0;
+  const activePointers = new Map();
+  let viewerGesture = null;
 
   function localDateString(date) {
     const year = date.getFullYear();
@@ -135,25 +139,90 @@
       availableHeight / mealViewerImage.naturalHeight,
       1
     );
-    const width = Math.max(1, Math.round(mealViewerImage.naturalWidth * viewerBaseScale * imageZoom));
+    const width = Math.max(1, Math.round(mealViewerImage.naturalWidth * viewerBaseScale));
     mealViewerImage.style.width = `${width}px`;
     mealViewerImage.style.height = 'auto';
+    updateViewerTransform();
+  }
+
+  function updateViewerTransform() {
+    clampViewerPan();
+    mealViewerImage.style.transform = `translate3d(${viewerPanX}px, ${viewerPanY}px, 0) scale(${imageZoom})`;
     mealZoomLabel.textContent = imageZoom === 1 ? '맞춤' : `${Math.round(imageZoom * 100)}%`;
+  }
+
+  function clampViewerPan() {
+    const stageWidth = mealViewerStage.clientWidth;
+    const stageHeight = mealViewerStage.clientHeight;
+    const imageWidth = mealViewerImage.naturalWidth * viewerBaseScale * imageZoom;
+    const imageHeight = mealViewerImage.naturalHeight * viewerBaseScale * imageZoom;
+    const maxX = Math.max(0, (imageWidth - stageWidth) / 2);
+    const maxY = Math.max(0, (imageHeight - stageHeight) / 2);
+    viewerPanX = Math.max(-maxX, Math.min(maxX, viewerPanX));
+    viewerPanY = Math.max(-maxY, Math.min(maxY, viewerPanY));
   }
 
   function setImageZoom(zoom) {
     imageZoom = Math.max(0.5, Math.min(4, Math.round(zoom * 100) / 100));
-    updateViewerImageSize();
+    updateViewerTransform();
+  }
+
+  function zoomAroundPoint(zoom, focalX, focalY, startZoom = imageZoom, startPanX = viewerPanX, startPanY = viewerPanY) {
+    const nextZoom = Math.max(0.5, Math.min(4, zoom));
+    const ratio = nextZoom / startZoom;
+    viewerPanX = focalX - (focalX - startPanX) * ratio;
+    viewerPanY = focalY - (focalY - startPanY) * ratio;
+    imageZoom = nextZoom;
+    updateViewerTransform();
+  }
+
+  function getStagePoint(clientX, clientY) {
+    const bounds = mealViewerStage.getBoundingClientRect();
+    return {
+      x: clientX - bounds.left - bounds.width / 2,
+      y: clientY - bounds.top - bounds.height / 2
+    };
+  }
+
+  function getPointerDistance(first, second) {
+    return Math.hypot(second.x - first.x, second.y - first.y);
+  }
+
+  function beginViewerGesture() {
+    const pointers = [...activePointers.values()];
+    if (pointers.length >= 2) {
+      const [first, second] = pointers;
+      viewerGesture = {
+        type: 'pinch',
+        distance: Math.max(1, getPointerDistance(first, second)),
+        zoom: imageZoom,
+        panX: viewerPanX,
+        panY: viewerPanY,
+        focal: { x: (first.x + second.x) / 2, y: (first.y + second.y) / 2 }
+      };
+    } else if (pointers.length === 1) {
+      const [pointer] = pointers;
+      viewerGesture = {
+        type: imageZoom > 1 ? 'pan' : 'idle',
+        pointerId: pointer.id,
+        x: pointer.x,
+        y: pointer.y,
+        panX: viewerPanX,
+        panY: viewerPanY
+      };
+    } else {
+      viewerGesture = null;
+    }
   }
 
   function openImageViewer() {
     if (!displayedImageUrl) return;
     imageZoom = 1;
+    viewerPanX = 0;
+    viewerPanY = 0;
     mealViewerTitle.textContent = `식단표 · ${selectedWeek}`;
     mealViewerImage.src = displayedImageUrl;
     mealViewer.showModal();
-    mealViewerStage.scrollTop = 0;
-    mealViewerStage.scrollLeft = 0;
     requestAnimationFrame(updateViewerImageSize);
   }
 
@@ -366,18 +435,60 @@
   mealZoomInButton.addEventListener('click', () => setImageZoom(imageZoom + 0.25));
   mealZoomFitButton.addEventListener('click', () => {
     setImageZoom(1);
-    mealViewerStage.scrollTop = 0;
-    mealViewerStage.scrollLeft = 0;
+    viewerPanX = 0;
+    viewerPanY = 0;
+    updateViewerTransform();
   });
   mealDownloadLink.addEventListener('click', downloadMealPlanImage);
   document.getElementById('closeMealViewer').addEventListener('click', () => mealViewer.close());
+  mealViewerStage.addEventListener('pointerdown', event => {
+    if (event.target.closest('.meal-viewer-zoom-tools')) return;
+    if (event.pointerType === 'mouse' && event.button !== 0) return;
+    event.preventDefault();
+    mealViewerStage.setPointerCapture(event.pointerId);
+    const point = getStagePoint(event.clientX, event.clientY);
+    activePointers.set(event.pointerId, { id: event.pointerId, ...point });
+    beginViewerGesture();
+  });
+  mealViewerStage.addEventListener('pointermove', event => {
+    const pointer = activePointers.get(event.pointerId);
+    if (!pointer || !viewerGesture) return;
+    event.preventDefault();
+    const point = getStagePoint(event.clientX, event.clientY);
+    activePointers.set(event.pointerId, { id: event.pointerId, ...point });
+
+    if (viewerGesture.type === 'pinch' && activePointers.size >= 2) {
+      const [first, second] = [...activePointers.values()];
+      const focalX = (first.x + second.x) / 2;
+      const focalY = (first.y + second.y) / 2;
+      const zoom = viewerGesture.zoom *
+        getPointerDistance(first, second) / viewerGesture.distance;
+      const ratio = zoom / viewerGesture.zoom;
+      viewerPanX = focalX - (viewerGesture.focal.x - viewerGesture.panX) * ratio;
+      viewerPanY = focalY - (viewerGesture.focal.y - viewerGesture.panY) * ratio;
+      imageZoom = Math.max(0.5, Math.min(4, zoom));
+      updateViewerTransform();
+    } else if (viewerGesture.type === 'pan' && pointer.id === viewerGesture.pointerId) {
+      viewerPanX = viewerGesture.panX + point.x - viewerGesture.x;
+      viewerPanY = viewerGesture.panY + point.y - viewerGesture.y;
+      updateViewerTransform();
+    }
+  });
+  const endViewerPointer = event => {
+    if (!activePointers.has(event.pointerId)) return;
+    activePointers.delete(event.pointerId);
+    beginViewerGesture();
+  };
+  mealViewerStage.addEventListener('pointerup', endViewerPointer);
+  mealViewerStage.addEventListener('pointercancel', endViewerPointer);
+  mealViewerStage.addEventListener('lostpointercapture', endViewerPointer);
   mealViewer.addEventListener('click', event => {
     if (event.target === mealViewer) mealViewer.close();
   });
   mealViewerStage.addEventListener('wheel', event => {
-    if (!event.ctrlKey) return;
     event.preventDefault();
-    setImageZoom(imageZoom + (event.deltaY < 0 ? 0.1 : -0.1));
+    const focal = getStagePoint(event.clientX, event.clientY);
+    zoomAroundPoint(imageZoom * (event.deltaY < 0 ? 1.1 : 0.9), focal.x, focal.y);
   }, { passive: false });
   window.addEventListener('resize', () => {
     if (mealViewer.open) updateViewerImageSize();

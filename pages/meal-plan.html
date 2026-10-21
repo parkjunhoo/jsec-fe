@@ -54,23 +54,23 @@
     .meal-action[hidden] { display: none; }
     .meal-help { margin: 13px 0 0; color: var(--text-sub); font-size: 11px; line-height: 1.6; }
     .meal-viewer {
-      width: min(1100px, calc(100% - 24px));
+      width: min(1000px, calc(100% - 32px));
       max-width: none;
-      height: min(94dvh, 1000px);
+      height: min(90dvh, 900px);
       max-height: none;
       padding: 0;
       overflow: hidden;
       border: 1px solid var(--app-border);
-      border-radius: 16px;
-      background: var(--app-surface);
-      color: var(--text-main);
+      border-radius: 18px;
+      background: #080d14;
+      color: #f3f7fc;
       box-shadow: 0 24px 80px rgba(0, 0, 0, 0.45);
     }
-    .meal-viewer::backdrop { background: rgba(2, 8, 16, 0.82); }
+    .meal-viewer::backdrop { background: rgba(2, 8, 16, 0.86); }
     .meal-viewer-layout { display: flex; width: 100%; height: 100%; flex-direction: column; }
-    .meal-viewer-toolbar { display: flex; min-height: 58px; flex: 0 0 auto; align-items: center; justify-content: space-between; gap: 8px; padding: 9px 12px; border-bottom: 1px solid var(--app-border); }
-    .meal-viewer-tools { display: flex; min-width: 0; align-items: center; gap: 7px; }
-    .meal-viewer-title { min-width: 0; overflow: hidden; color: var(--text-main); font-size: 13px; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
+    .meal-viewer-toolbar { display: flex; min-height: 58px; flex: 0 0 auto; align-items: center; justify-content: space-between; gap: 12px; padding: 9px 16px; border-bottom: 1px solid rgba(255, 255, 255, 0.1); background: #111923; }
+    .meal-viewer-tools { display: flex; min-width: 0; align-items: center; gap: 8px; }
+    .meal-viewer-title { min-width: 0; overflow: hidden; color: #f3f7fc; font-size: 14px; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
     .meal-viewer-button {
       display: inline-flex;
       min-width: 38px;
@@ -79,19 +79,21 @@
       align-items: center;
       justify-content: center;
       padding: 0 10px;
-      border: 1px solid var(--app-border);
+      border: 1px solid rgba(255, 255, 255, 0.14);
       border-radius: 9px;
-      background: var(--app-surface-raised);
-      color: var(--text-main);
+      background: rgba(255, 255, 255, 0.08);
+      color: #f3f7fc;
       font-size: 13px;
       font-weight: 700;
       text-decoration: none;
       cursor: pointer;
     }
-    .meal-viewer-button:hover { border-color: var(--primary); }
-    .meal-viewer-zoom { min-width: 44px; color: var(--text-sub); font-size: 11px; text-align: center; }
-    .meal-viewer-stage { min-height: 0; flex: 1; overflow: auto; overscroll-behavior: contain; touch-action: pan-x pan-y; background: #080d14; }
-    .meal-viewer-image { display: block; max-width: none; max-height: none; margin: 0 auto; }
+    .meal-viewer-button:hover { border-color: var(--primary); background: rgba(255, 255, 255, 0.14); }
+    .meal-viewer-zoom { min-width: 44px; color: rgba(255, 255, 255, 0.72); font-size: 11px; text-align: center; }
+    .meal-viewer-stage { position: relative; display: flex; min-height: 0; flex: 1; align-items: center; justify-content: center; overflow: hidden; overscroll-behavior: contain; touch-action: none; background: #080d14; }
+    .meal-viewer-image { display: block; flex: 0 0 auto; max-width: none; max-height: none; object-fit: contain; transform-origin: center; touch-action: none; user-select: none; -webkit-user-drag: none; }
+    .meal-viewer-hint { position: absolute; top: 14px; left: 50%; max-width: calc(100% - 28px); padding: 7px 11px; transform: translateX(-50%); border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 999px; background: rgba(15, 23, 34, 0.7); color: rgba(255, 255, 255, 0.76); font-size: 11px; text-align: center; pointer-events: none; }
+    .meal-viewer-zoom-tools { position: absolute; bottom: 18px; left: 50%; display: flex; align-items: center; gap: 6px; padding: 6px; transform: translateX(-50%); border: 1px solid rgba(255, 255, 255, 0.14); border-radius: 13px; background: rgba(17, 25, 35, 0.92); box-shadow: 0 8px 26px rgba(0, 0, 0, 0.3); }
     @media (max-width: 540px) {
       .meal-shell { padding: 22px 14px 0; }
       .week-nav { padding: 12px; }
@@ -99,10 +101,11 @@
       .meal-photo-frame { min-height: 180px; }
       .meal-actions .meal-action { flex: 1; }
       .meal-viewer { width: 100%; height: 100dvh; border: 0; border-radius: 0; }
-      .meal-viewer-toolbar { gap: 5px; padding: 8px; }
-      .meal-viewer-tools { gap: 5px; }
-      .meal-viewer-title { max-width: 85px; font-size: 11px; }
-      .meal-viewer-button { min-width: 34px; min-height: 36px; padding: 0 8px; }
+      .meal-viewer-toolbar { min-height: 54px; padding: 8px 12px; }
+      .meal-viewer-title { font-size: 13px; }
+      .meal-viewer-button { min-width: 36px; min-height: 36px; padding: 0 9px; }
+      .meal-viewer-hint { top: 12px; font-size: 10px; }
+      .meal-viewer-zoom-tools { bottom: max(18px, env(safe-area-inset-bottom)); }
     }
     html[data-theme="light"] .meal-action-primary { color: #fff; }
   </style>
@@ -149,16 +152,19 @@
       <div class="meal-viewer-toolbar">
         <span class="meal-viewer-title" id="mealViewerTitle">식단표 사진</span>
         <div class="meal-viewer-tools" aria-label="사진 보기 도구">
-          <button class="meal-viewer-button" id="mealZoomOut" type="button" aria-label="축소">−</button>
-          <span class="meal-viewer-zoom" id="mealZoomLabel" aria-live="polite">맞춤</span>
-          <button class="meal-viewer-button" id="mealZoomIn" type="button" aria-label="확대">+</button>
-          <button class="meal-viewer-button" id="mealZoomFit" type="button">맞춤</button>
           <a class="meal-viewer-button" id="mealDownload" href="#" download>↓ 저장</a>
           <button class="meal-viewer-button" id="closeMealViewer" type="button" aria-label="닫기">×</button>
         </div>
       </div>
       <div class="meal-viewer-stage" id="mealViewerStage">
         <img class="meal-viewer-image" id="mealViewerImage" alt="확대된 식단표 사진">
+        <span class="meal-viewer-hint">두 손가락으로 확대 · 축소 · 확대 후 드래그로 이동</span>
+        <div class="meal-viewer-zoom-tools" aria-label="사진 확대 조절">
+          <button class="meal-viewer-button" id="mealZoomOut" type="button" aria-label="축소">−</button>
+          <span class="meal-viewer-zoom" id="mealZoomLabel" aria-live="polite">맞춤</span>
+          <button class="meal-viewer-button" id="mealZoomIn" type="button" aria-label="확대">+</button>
+          <button class="meal-viewer-button" id="mealZoomFit" type="button">맞춤</button>
+        </div>
       </div>
     </div>
   </dialog>
