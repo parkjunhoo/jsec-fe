@@ -23,6 +23,7 @@
     .allowance-control { padding: 0 11px; }
     .allowance-primary-button, .allowance-export-button { padding: 0 13px; font-weight: 700; cursor: pointer; white-space: nowrap; }
     .allowance-primary-button { border-color: transparent; background: linear-gradient(135deg, #65b58b, #367b59); color: #fff; }
+    .allowance-export-button[hidden] { display: none; }
     .allowance-export-button {
       display: inline-flex; align-items: center; justify-content: center; gap: 8px;
       border-color: rgba(80, 170, 112, 0.38);
@@ -163,7 +164,7 @@
         <select class="allowance-control" id="allowanceUserFilter" aria-label="직원 선택" hidden>
           <option value="">전체 직원</option>
         </select>
-        <button class="allowance-export-button" id="allowanceExportBtn" type="button">
+        <button class="allowance-export-button" id="allowanceExportBtn" type="button" hidden>
           <svg class="allowance-export-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
             <path d="M13.5 3.5H6.75A1.75 1.75 0 0 0 5 5.25v13.5c0 .97.78 1.75 1.75 1.75h11.5c.97 0 1.75-.78 1.75-1.75V10l-6.5-6.5Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/>
             <path d="M13 4v6h6M8.25 13l3.5 5m0-5-3.5 5m6.5-5v5m0-5h2.5m-2.5 2.5h2.1m-2.1 2.5h2.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
@@ -214,6 +215,6 @@
   <script src="/js/supabase.js"></script>
   <script src="/js/user-preferences.js"></script>
   <script src="/js/navbar.js"></script>
-  <script src="/js/allowances.js?v=2026102010"></script>
+  <script src="/js/allowances.js?v=2026102101"></script>
 </body>
 </html>

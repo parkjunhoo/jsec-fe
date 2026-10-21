@@ -33,8 +33,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   let teamMembers = [];
   let entries = [];
   let availability = [];
+  let availabilityReady = false;
+  let availabilityLoading = false;
   let activeTab = 'journal';
   let selectedDate = '';
+  let availabilityRequestId = 0;
 
   function getKstParts(date = new Date()) {
     const parts = new Intl.DateTimeFormat('en-US', {
@@ -127,6 +130,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     isGuest = profile?.role === 'guest' || profile?.role === 'monitor';
     document.getElementById('tab-entry').hidden = isGuest;
     canViewAll = isAdmin || isGuest;
+    exportButton.hidden = !canViewAll;
     teamMembers = (users || []).filter(user => user.role !== 'guest' && user.role !== 'monitor').map(user => ({
       id: user.id,
       name: user.name || user.username || '이름 없음',
@@ -154,14 +158,28 @@ document.addEventListener('DOMContentLoaded', async () => {
     setError();
     const { start, end } = getMonthRange(monthInput.value);
     const params = new URLSearchParams({ start, end });
-    const availabilityParams = new URLSearchParams({ start, end });
-    const [loadedEntries, loadedAvailability] = await Promise.all([
+    const [loadedEntries] = await Promise.all([
       request(`?${params.toString()}`),
-      request(`/availability?${availabilityParams.toString()}`)
+      loadAvailability(canViewAll ? start : selectedDate, canViewAll ? end : selectedDate)
     ]);
     entries = loadedEntries;
-    availability = loadedAvailability;
     render();
+  }
+
+  async function loadAvailability(start, end) {
+    const requestId = ++availabilityRequestId;
+    availabilityReady = false;
+    availabilityLoading = true;
+    try {
+      const params = new URLSearchParams({ start, end });
+      const loadedAvailability = await request(`/availability?${params.toString()}`);
+      if (requestId !== availabilityRequestId) return null;
+      availability = loadedAvailability;
+      availabilityReady = true;
+      return loadedAvailability;
+    } finally {
+      if (requestId === availabilityRequestId) availabilityLoading = false;
+    }
   }
 
   function getVisibleEntries() {
@@ -339,7 +357,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   function getEntriesForCalendarTab(date) {
-    return getEntriesForDate(date).filter(entry =>
+    const sourceEntries = canViewAll ? availability : entries;
+    return sourceEntries.filter(entry => entry.work_date === date).filter(entry =>
       activeTab !== 'ball_pickup' && activeTab !== 'caddie_shuttle'
       || entry.type_code === activeTab
     );
@@ -424,7 +443,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   function getAllowanceOrdinals() {
     const ordinalBySlot = new Map();
-    const ordinalEntries = availability.filter(entry =>
+    const ordinalEntries = (canViewAll ? availability : entries).filter(entry =>
       activeTab !== 'ball_pickup' && activeTab !== 'caddie_shuttle'
       || entry.type_code === activeTab
     ).slice()
@@ -532,18 +551,22 @@ document.addEventListener('DOMContentLoaded', async () => {
       const type = allowanceTypes.find(item => item.code === slot.type);
       let status = '비어 있음';
       let statusColor = '';
-      let action = isGuest ? '' : `<button class="allowance-slot-button claim" type="button" data-action="claim"
+      let action = !availabilityReady
+        ? `<button class="allowance-slot-button" type="button" disabled>${availabilityLoading ? '등록 현황 확인 중' : '등록 현황 확인 불가'}</button>`
+        : isGuest ? '' : `<button class="allowance-slot-button claim" type="button" data-action="claim"
         data-type="${slot.type}" data-shift="${slot.shift || ''}" data-slot="${slot.slot || ''}">${isAdmin ? '선택 직원 등록' : '내가 하기'}</button>`;
       if (record) {
         const assignedMember = teamMembers.find(user => user.id === record.user_id);
         const name = assignedMember?.name || record.username || '직원';
         const ordinal = ordinalBySlot.get(getAllowanceSlotKey(record));
-        status = `${name} · ${ordinal || '-'}회`;
+        status = `${name}${ordinal ? ` · ${ordinal}회` : ''}`;
         statusColor = getMemberColor(record.user_id);
-        if (!isGuest && (isAdmin || ownEntry)) {
+        if (availabilityReady && !isGuest && (isAdmin || ownEntry)) {
           const entryId = isAdmin ? record.id : ownEntry.id;
           action = `<button class="allowance-slot-button delete" type="button" data-action="remove" data-id="${escapeHtml(entryId)}">취소</button>`;
-        } else {
+        } else if (availabilityReady && !canViewAll) {
+          action = `<button class="allowance-slot-button" type="button" disabled aria-label="${escapeHtml(name)} 님이 등록하여 선택할 수 없습니다." title="${escapeHtml(name)} 님이 등록했습니다.">${escapeHtml(name)} 등록됨</button>`;
+        } else if (availabilityReady) {
           action = '';
         }
       }
@@ -596,7 +619,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   async function changeEntry(actionButton) {
-    if (isGuest) return;
+    if (isGuest || !availabilityReady) return;
     const action = actionButton.dataset.action;
     try {
       if (action === 'remove') {
@@ -980,6 +1003,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   async function exportWorkbook() {
+    if (!canViewAll) return;
     exportButton.disabled = true;
     setError();
     try {
@@ -1097,10 +1121,18 @@ document.addEventListener('DOMContentLoaded', async () => {
     render();
   }));
   exportButton.addEventListener('click', exportWorkbook);
-  calendar.addEventListener('click', event => {
+  calendar.addEventListener('click', async event => {
     const dayButton = event.target.closest('[data-date]');
     if (!dayButton) return;
     selectedDate = dayButton.dataset.date;
+    if (!canViewAll) {
+      availability = [];
+      try {
+        await loadAvailability(selectedDate, selectedDate);
+      } catch (error) {
+        setError(`해당 날짜의 등록 현황을 불러오지 못했습니다: ${error.message}`);
+      }
+    }
     renderCalendar();
   });
   daySlots.addEventListener('click', event => {
