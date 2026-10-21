@@ -320,36 +320,76 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
-  function setAnnualLeaveCell(sheet, address, value) {
-    if (!sheet[address]) sheet[address] = { t: 's', v: '' };
-    sheet[address].t = 's';
-    sheet[address].v = value;
-  }
-
   async function downloadAnnualLeaveForm(item) {
-    if (!window.XLSX) throw new Error('엑셀 라이브러리를 불러오지 못했습니다. 페이지를 새로고침해 주세요.');
+    await window.appLoading.loadScript('/lib/jszip/jszip.min.js');
+    if (!window.JSZip) throw new Error('엑셀 양식 처리 라이브러리를 불러오지 못했습니다.');
     const response = await fetch(encodeURI('/templates/연차신청서.xlsx'));
     if (!response.ok) throw new Error(`연차 신청서 양식을 불러오지 못했습니다. (HTTP ${response.status})`);
 
-    const workbook = XLSX.read(await response.arrayBuffer(), { type: 'array' });
-    const sheet = workbook.Sheets[workbook.SheetNames[0]];
-    if (!sheet) throw new Error('연차 신청서 양식의 시트를 찾을 수 없습니다.');
+    const zip = await JSZip.loadAsync(await response.arrayBuffer());
+    const worksheetPath = 'xl/worksheets/sheet1.xml';
+    const worksheetFile = zip.file(worksheetPath);
+    if (!worksheetFile) throw new Error('연차 신청서 양식의 시트를 찾을 수 없습니다.');
 
     const formatDateTime = (date, time) => `${formatAnnualLeaveDate(date)} ${time.slice(0, 5).replace(':', '시 ')}분`;
+    const formatDateRange = () => item.leave_type === '시간차'
+      ? `${formatDateTime(item.start_date, item.start_time)}부터\n${formatDateTime(item.end_date, item.end_time)}까지 (총 ${item.hours_used}시간)`
+      : `${formatAnnualLeaveDate(item.start_date)}부터\n${formatAnnualLeaveDate(item.end_date)}까지 (총 ${item.total_days}일)`;
     const applicationDate = new Intl.DateTimeFormat('ko-KR', {
       year: 'numeric', month: 'long', day: 'numeric', timeZone: 'Asia/Seoul'
     }).format(new Date(item.created_at));
-    setAnnualLeaveCell(sheet, 'C7', item.department || '');
-    setAnnualLeaveCell(sheet, 'H7', item.username);
-    setAnnualLeaveCell(sheet, 'C8', item.leave_type);
-    setAnnualLeaveCell(sheet, 'C9', item.leave_type === '시간차'
-      ? `${formatDateTime(item.start_date, item.start_time)}부터\n${formatDateTime(item.end_date, item.end_time)}까지 (총 ${item.hours_used}시간)`
-      : `${formatDateTime(item.start_date, item.start_time)}부터\n${formatDateTime(item.end_date, item.end_time)}까지 (총 ${item.total_days}일)`);
-    setAnnualLeaveCell(sheet, 'C10', item.details || '');
-    setAnnualLeaveCell(sheet, 'B17', `위와 같이 휴가를 신청하오니 허락하여 주시기 바랍니다.\n\n\n${applicationDate}\n\n\n신청자 : ${item.username} (인)`);
+    const spreadsheetNamespace = 'http://schemas.openxmlformats.org/spreadsheetml/2006/main';
+    const worksheetXml = new DOMParser().parseFromString(await worksheetFile.async('text'), 'application/xml');
+    if (worksheetXml.querySelector('parsererror')) throw new Error('연차 신청서 양식의 시트 XML을 읽지 못했습니다.');
+
+    const cellValues = {
+      C7: item.department || '',
+      H7: item.username,
+      C8: item.leave_type,
+      C9: formatDateRange(),
+      C10: item.details || '',
+      B17: `위와 같이 휴가를 신청하오니 허락하여 주시기 바랍니다.\n\n\n${applicationDate}\n\n\n신청자 : ${item.username} (인)`
+    };
+    for (const [address, value] of Object.entries(cellValues)) {
+      const cell = Array.from(worksheetXml.getElementsByTagNameNS(spreadsheetNamespace, 'c'))
+        .find(candidate => candidate.getAttribute('r') === address);
+      if (!cell) throw new Error(`연차 신청서 양식에서 ${address} 셀을 찾을 수 없습니다.`);
+
+      cell.setAttribute('t', 'inlineStr');
+      for (const child of Array.from(cell.childNodes)) {
+        if (child.nodeType === 1 && ['f', 'v', 'is'].includes(child.localName)) {
+          cell.removeChild(child);
+        }
+      }
+      const inlineString = worksheetXml.createElementNS(spreadsheetNamespace, 'is');
+      const text = worksheetXml.createElementNS(spreadsheetNamespace, 't');
+      text.setAttributeNS('http://www.w3.org/XML/1998/namespace', 'xml:space', 'preserve');
+      text.textContent = value;
+      inlineString.appendChild(text);
+      cell.appendChild(inlineString);
+    }
+    zip.file(worksheetPath, new XMLSerializer().serializeToString(worksheetXml));
 
     const safeName = String(item.username || '신청자').replace(/[\\\\/:*?\"<>|]/g, '_');
-    XLSX.writeFile(workbook, `연차신청서_${safeName}_${item.start_date}.xlsx`);
+    const fileName = `연차신청서_${safeName}_${item.start_date}.xlsx`;
+    const fileData = await zip.generateAsync({ type: 'arraybuffer', compression: 'DEFLATE' });
+    if (window.AndroidExcelExporter) {
+      const bytes = new Uint8Array(fileData);
+      let binary = '';
+      for (let offset = 0; offset < bytes.length; offset += 0x8000) {
+        binary += String.fromCharCode(...bytes.subarray(offset, offset + 0x8000));
+      }
+      window.AndroidExcelExporter.saveExcel(btoa(binary), fileName);
+      return;
+    }
+
+    const blob = new Blob([fileData], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    const downloadUrl = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = downloadUrl;
+    link.download = fileName;
+    link.click();
+    URL.revokeObjectURL(downloadUrl);
   }
 
   function openAnnualLeaveModal() {
