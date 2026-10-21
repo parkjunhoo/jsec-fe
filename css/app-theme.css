@@ -604,6 +604,7 @@ html[data-large-text="true"] :is(
   font-size: max(1.1em, 16px);
   line-height: 1.5;
 }
+html[data-large-text="true"] .calendar-cell .cell-date { line-height: 1; }
 html[data-large-text="true"] :is(h1, h2, h3, .welcome-panel h1, .allowance-heading h1) {
   line-height: 1.3;
 }
