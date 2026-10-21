@@ -756,6 +756,36 @@ html[data-large-text="true"] .request-details { grid-template-columns: repeat(au
 html[data-large-text="true"] .contact-name { overflow: visible; text-overflow: clip; white-space: normal; }
 html[data-large-text="true"] .request-item-link,
 html[data-large-text="true"] .link-preview-url { overflow-wrap: anywhere; }
+html[data-large-text="true"] .guest-kpi-label,
+html[data-large-text="true"] .guest-bar-label,
+html[data-large-text="true"] .guest-bar-value,
+html[data-large-text="true"] .guest-ranking-place,
+html[data-large-text="true"] .guest-ranking-name,
+html[data-large-text="true"] .guest-ranking-count,
+html[data-large-text="true"] .guest-ranking-amount {
+  font-size: max(1.1em, 16px);
+  line-height: 1.5;
+}
+html[data-large-text="true"] .guest-kpi-value {
+  font-size: max(1.2em, 24px);
+  line-height: 1.35;
+}
+html[data-large-text="true"] .guest-chart-card h3 {
+  font-size: max(1.15em, 18px);
+  line-height: 1.4;
+}
+html[data-large-text="true"] .guest-bar-row {
+  grid-template-columns: minmax(0, 1fr) auto;
+  row-gap: 6px;
+}
+html[data-large-text="true"] .guest-bar-track { grid-column: 1 / -1; }
+html[data-large-text="true"] .guest-ranking-row {
+  grid-template-columns: 36px minmax(0, 1fr) auto;
+  gap: 10px;
+  padding: 12px;
+}
+html[data-large-text="true"] .guest-dashboard-grid { grid-template-columns: minmax(0, 1fr); }
+html[data-large-text="true"] .personal-tabs { flex-wrap: wrap; }
 html[data-large-text="true"] .pdf-toolbar,
 html[data-large-text="true"] .viewer-head,
 html[data-large-text="true"] .viewer-actions,
@@ -782,6 +812,8 @@ html[data-large-text="true"] .view-mode-toggle { min-width: 48px; min-height: 48
   html[data-large-text="true"] .allowance-slot { align-items: flex-start; flex-direction: column; }
   html[data-large-text="true"] .allowance-slot-actions { flex-wrap: wrap; }
   html[data-large-text="true"] .stats-grid { grid-template-columns: minmax(0, 1fr); }
+  html[data-large-text="true"] .guest-kpis,
+  html[data-large-text="true"] .guest-kpis.triple { grid-template-columns: minmax(0, 1fr); }
 }
 
 @media (max-width: 600px) {
