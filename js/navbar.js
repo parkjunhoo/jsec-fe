@@ -529,6 +529,9 @@ document.addEventListener('DOMContentLoaded', async () => {
           <a href="/pages/phonebook.html" class="drawer-item ${currentPath.includes('phonebook.html') ? 'active' : ''}">
             <span>☎️</span> 직원 전화번호부
           </a>
+          <a href="https://www.jisanresort.co.kr/w/event/notice.asp" class="drawer-item" target="_blank" rel="noopener noreferrer">
+            <span>📢</span> 지산리조트 공지사항 확인하기
+          </a>
         </nav>
       </div>
 
