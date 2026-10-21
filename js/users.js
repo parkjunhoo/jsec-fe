@@ -16,6 +16,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const sortSelect = document.getElementById('sortSelect');
   const viewButtons = document.querySelectorAll('[data-user-view]');
   const locationCheckboxes = document.querySelectorAll('input[name="locFilter"]');
+  const statusCheckboxes = document.querySelectorAll('input[name="statusFilter"]');
   const shiftFilterValues = ['주간', '야간'];
   const otherLocationFilter = 'other';
   const locationFilterValues = Array.from(locationCheckboxes)
@@ -45,6 +46,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   const contractTypeGroup = document.getElementById('contractTypeGroup');
   const employmentStatusGroup = document.getElementById('employmentStatusGroup');
   const newStatus = document.getElementById('newStatus');
+  const exitReasonGroup = document.getElementById('exitReasonGroup');
+  const newExitReason = document.getElementById('newExitReason');
   const newWorkLocation = document.getElementById('newWorkLocation');
   const workLocationGroup = document.getElementById('workLocationGroup');
   const newHireDate = document.getElementById('newHireDate');
@@ -90,6 +93,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     return role === 'guest' || role === 'monitor';
   }
 
+  function statusLabel(status) {
+    return status === '퇴직' ? '퇴사' : status || '재직';
+  }
+
   function setGuestFields(guest) {
     [contractTypeGroup, jobTitleGroup, workLocationGroup, employmentDatesGroup, memberColorGroup]
       .forEach(group => {
@@ -102,6 +109,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     newRole.disabled = guest;
     if (newContractType) newContractType.required = !guest;
     if (newWorkLocation) newWorkLocation.required = !guest;
+  }
+
+  function updateExitReasonVisibility() {
+    const isLeaving = newStatus?.value === '퇴직';
+    if (exitReasonGroup) exitReasonGroup.hidden = !isLeaving;
+    if (newExitReason) newExitReason.required = Boolean(isLeaving);
   }
 
   async function workerHeaders(json = false) {
@@ -177,6 +190,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     editUserId.value = '';
     newRole.value = isGuestCategory ? 'guest' : 'user';
     setGuestFields(isGuestCategory);
+    updateExitReasonVisibility();
     if (employmentStatusGroup) employmentStatusGroup.style.display = 'none';
     if (newColor) newColor.value = '#38bdf8';
     if (colorHexText) colorHexText.textContent = '#38bdf8';
@@ -214,6 +228,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     newContractType.value = user.contract_type || '정규직';
     if (employmentStatusGroup) employmentStatusGroup.style.display = '';
     if (newStatus) newStatus.value = user.status || '재직';
+    if (newExitReason) newExitReason.value = user.resignation_reason || '';
+    updateExitReasonVisibility();
     newWorkLocation.value = user.work_location || '';
     newHireDate.value = user.hire_date ? user.hire_date.split('T')[0] : '';
     newAnnualBaseDate.value = user.annual_base_date ? user.annual_base_date.split('T')[0] : '';
@@ -270,6 +286,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     const checkedLocations = Array.from(locationCheckboxes)
       .filter(cb => cb.checked)
       .map(cb => cb.value);
+    const checkedStatuses = Array.from(statusCheckboxes)
+      .filter(cb => cb.checked)
+      .map(cb => cb.value);
 
     const categoryUsers = allUsers.filter(user => currentCategory === 'guests'
       ? isGuestRole(user.role)
@@ -286,9 +305,11 @@ document.addEventListener('DOMContentLoaded', async () => {
       const name = (u.name || u.username || '').toLowerCase();
       const location = (u.work_location || '').toLowerCase();
       const jobTitle = (u.job_title || '').toLowerCase();
+      const status = u.status || '재직';
 
       const matchesKeyword = !keyword || name.includes(keyword)
         || (currentCategory === 'workers' && (location.includes(keyword) || jobTitle.includes(keyword)));
+      if (!checkedStatuses.includes(status)) return false;
 
       if (currentCategory === 'guests') return matchesKeyword;
       if (checkedLocations.length === 0) return false;
@@ -337,7 +358,7 @@ document.addEventListener('DOMContentLoaded', async () => {
               <tr>
                 <td class="user-table-name">${escapeHtml(user.name || user.username || '이름 없음')}</td>
                 <td>게스트</td>
-                <td>${escapeHtml(user.status || '재직')}</td>
+                <td>${escapeHtml(statusLabel(user.status))}</td>
                 <td>${escapeHtml(user.phone || '-')}</td>
                 ${isAdmin ? `<td><button type="button" class="btn-card-edit" data-id="${escapeHtml(user.id)}">수정</button></td>` : ''}
               </tr>
@@ -360,7 +381,7 @@ document.addEventListener('DOMContentLoaded', async () => {
               <td>${user.role === 'admin' ? '관리자' : '회원'}</td>
               <td>${escapeHtml(user.work_location || '-')}</td>
               <td>${escapeHtml(user.contract_type || '-')}</td>
-              <td>${escapeHtml(user.status || '재직')}</td>
+              <td>${escapeHtml(statusLabel(user.status))}</td>
               <td>${escapeHtml(user.phone || '-')}</td>
               <td>${escapeHtml(user.hire_date ? user.hire_date.split('T')[0] : '-')}</td>
               ${isAdmin ? `<td><button type="button" class="btn-card-edit" data-id="${escapeHtml(user.id)}">수정</button></td>` : ''}
@@ -381,7 +402,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 <span class="role-badge user">게스트</span>
               </div>
               <div style="display: flex; align-items: center; gap: 8px;">
-                <span class="status-badge">${escapeHtml(user.status || '재직')}</span>
+                <span class="status-badge">${escapeHtml(statusLabel(user.status))}</span>
                 ${isAdmin ? `<button type="button" class="btn-card-edit" data-id="${escapeHtml(user.id)}">수정</button>` : ''}
               </div>
             </div>
@@ -401,7 +422,7 @@ document.addEventListener('DOMContentLoaded', async () => {
               <span class="role-badge user">${escapeHtml(user.job_title || '사원')}</span>
             </div>
             <div style="display: flex; align-items: center; gap: 8px;">
-              <span class="status-badge">${escapeHtml(user.status || '재직')}</span>
+              <span class="status-badge">${escapeHtml(statusLabel(user.status))}</span>
               ${isAdmin ? `<button type="button" class="btn-card-edit" data-id="${escapeHtml(user.id)}">수정</button>` : ''}
             </div>
           </div>
@@ -445,6 +466,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   // 이벤트 리스너 연결
   if (searchInput) searchInput.addEventListener('input', filterAndRenderUsers);
   if (sortSelect) sortSelect.addEventListener('change', filterAndRenderUsers);
+  statusCheckboxes.forEach(cb => cb.addEventListener('change', filterAndRenderUsers));
+  if (newStatus) newStatus.addEventListener('change', updateExitReasonVisibility);
   locationCheckboxes.forEach(cb => {
     cb.addEventListener('change', filterAndRenderUsers);
   });
@@ -488,6 +511,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       const jobTitle = newJobTitle ? newJobTitle.value : '사원';
       const contractType = newContractType.value;
       const status = newStatus ? newStatus.value : '재직';
+      const exitReason = newExitReason ? newExitReason.value.trim() : '';
       const workLocation = newWorkLocation.value.trim();
       const hireDate = newHireDate.value;
       const annualBaseDate = newAnnualBaseDate.value;
@@ -499,14 +523,18 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       try {
         if (userId) {
+              if (status === '퇴직' && !exitReason) {
+                throw new Error('퇴사 사유를 입력해 주세요.');
+              }
               const updateData = role === 'guest'
-                ? { name: username, role, status, phone: phone || '' }
-                : {
-                  name: username,
-                  role,
+                    ? { name: username, role, status, resignation_reason: status === '퇴직' ? exitReason : null, phone: phone || '' }
+                    : {
+                      name: username,
+                      role,
                   job_title: jobTitle,
                   contract_type: contractType,
                   status,
+                  resignation_reason: status === '퇴직' ? exitReason : null,
                   work_location: workLocation,
                   hire_date: hireDate || null,
                   annual_base_date: annualBaseDate || null,

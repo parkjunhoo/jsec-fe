@@ -152,6 +152,18 @@
       flex-wrap: wrap;
       gap: 6px;
     }
+    .employment-filter {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 12px;
+      padding: 12px 15px;
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      background: var(--card-bg);
+    }
+    .employment-filter .filter-chips { align-items: center; }
+    .form-group[hidden] { display: none; }
 
     .filter-chip {
       position: relative;
@@ -427,10 +439,10 @@
       margin-bottom: 6px;
     }
 
-    .form-group input, .form-group select {
+    .form-group input, .form-group select, .form-group textarea {
       width: 100%;
-      height: 44px;
-      padding: 0 14px;
+      min-height: 44px;
+      padding: 10px 14px;
       background: var(--input-bg);
       border: 1px solid var(--border-color);
       border-radius: 10px;
@@ -438,8 +450,9 @@
       font-size: 14px;
       outline: none;
     }
+    .form-group textarea { resize: vertical; }
 
-    .form-group input:focus, .form-group select:focus {
+    .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
       border-color: var(--primary);
     }
 
@@ -506,6 +519,20 @@
     <div class="top-actions">
       <input type="text" id="searchInput" class="search-input" placeholder="회원 이름 또는 근무지 검색...">
       <button class="btn-add-user" id="addUserBtn">+ 회원 등록</button>
+    </div>
+
+    <div class="employment-filter" role="group" aria-label="재직 상태 필터">
+      <span class="filter-title">재직 상태</span>
+      <div class="filter-chips">
+        <label class="filter-chip">
+          <input type="checkbox" name="statusFilter" value="재직" checked>
+          <span class="chip-label">재직</span>
+        </label>
+        <label class="filter-chip">
+          <input type="checkbox" name="statusFilter" value="퇴직">
+          <span class="chip-label">퇴사</span>
+        </label>
+      </div>
     </div>
 
     <!-- 필터 및 정렬 박스 (전체 선택 버튼 추가) -->
@@ -627,8 +654,12 @@
           <label>재직 여부</label>
           <select id="newStatus">
             <option value="재직">재직</option>
-            <option value="퇴직">퇴직</option>
+            <option value="퇴직">퇴사</option>
           </select>
+        </div>
+        <div class="form-group" id="exitReasonGroup" hidden>
+          <label for="newExitReason">퇴사 사유 *</label>
+          <textarea id="newExitReason" maxlength="500" rows="3" placeholder="퇴사 사유를 입력해 주세요."></textarea>
         </div>
 
         <div class="form-group" id="workLocationGroup">
