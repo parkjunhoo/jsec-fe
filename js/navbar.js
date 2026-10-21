@@ -625,6 +625,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     openNotificationsBtn.setAttribute('aria-expanded', 'false');
   }
 
+  async function signOutRetiredUser() {
+    window.markIntentionalSignOut?.();
+    const { error } = await supabaseClient.auth.signOut({ scope: 'local' });
+    if (error) {
+      window.markIntentionalSignOut?.(false);
+      throw error;
+    }
+    window.location.replace('/index.html?session=retired');
+  }
+
   async function notificationRequest(path = '', options = {}) {
     if (!notificationSession) throw new Error('로그인이 필요합니다.');
     const request = window.appLoading?.fetchWithoutLoading || fetch;
@@ -812,14 +822,20 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (typeof supabaseClient !== 'undefined') {
     const { data: { session } } = await supabaseClient.auth.getSession();
     if (session) {
+      const { data: profile, error: profileError } = await supabaseClient
+        .from('users')
+        .select('name, role, status')
+        .eq('id', session.user.id)
+        .maybeSingle();
+      if (profileError) throw profileError;
+      if (profile?.status === '퇴직') {
+        await signOutRetiredUser();
+        return;
+      }
+
       notificationSession = session;
       await refreshNotifications();
       window.setInterval(refreshNotifications, 60000);
-      const { data: profile } = await supabaseClient
-        .from('users')
-        .select('name, role')
-        .eq('id', session.user.id)
-        .maybeSingle();
 
       if (profile) {
         const userNameEl = document.getElementById('navUserName');
@@ -827,6 +843,24 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (userNameEl) userNameEl.textContent = `${profile.name} 님`;
         if (userRoleEl) userRoleEl.textContent = profile.role === 'admin' ? '관리자 (Admin)' : '일반 회원';
       }
+
+      window.setInterval(async () => {
+        try {
+          const { data: { session: activeSession }, error: sessionError } = await supabaseClient.auth.getSession();
+          if (sessionError) throw sessionError;
+          if (!activeSession) return;
+
+          const { data: activeProfile, error: activeProfileError } = await supabaseClient
+            .from('users')
+            .select('status')
+            .eq('id', activeSession.user.id)
+            .maybeSingle();
+          if (activeProfileError) throw activeProfileError;
+          if (activeProfile?.status === '퇴직') await signOutRetiredUser();
+        } catch (error) {
+          console.error('재직 상태 확인 오류:', error);
+        }
+      }, 60000);
     }
     supabaseClient.auth.onAuthStateChange((_event, updatedSession) => {
       notificationSession = updatedSession;

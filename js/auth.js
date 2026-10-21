@@ -1,8 +1,11 @@
 document.addEventListener('DOMContentLoaded', async () => {
+  const sessionReason = new URLSearchParams(window.location.search).get('session');
   try {
     const { data: { session }, error } = await supabaseClient.auth.getSession();
     if (error) throw error;
-    if (session) {
+    if (session && sessionReason === 'retired') {
+      await supabaseClient.auth.signOut({ scope: 'local' });
+    } else if (session) {
       const destination = window.consumeNativePushDestination?.();
       window.location.replace(destination || '/pages/main.html');
       return;
@@ -14,8 +17,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   const loginForm = document.getElementById('loginForm');
   const loginBtn = document.getElementById('loginBtn');
   const errorMessage = document.getElementById('errorMessage');
-  if (new URLSearchParams(window.location.search).get('session') === 'expired') {
+  if (sessionReason === 'expired') {
     showError('로그인 세션이 만료되었습니다. 다시 로그인해 주세요.');
+  } else if (sessionReason === 'retired') {
+    showError('퇴직 처리되어 로그아웃되었습니다. 관리자에게 문의해 주세요.');
   }
 
   const WORKER_LOGIN_API = 'https://jsec-serverless.adobephotoshop.workers.dev/api/login';
