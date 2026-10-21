@@ -300,7 +300,10 @@ document.addEventListener('DOMContentLoaded', async () => {
               <button type="button" data-annual-review="approved">승인</button>
             </div>
           </div>` : ''}
-        <button type="button" class="annual-leave-download" data-annual-download>연차 신청서 엑셀 다운로드</button>
+        <div class="annual-leave-item-actions">
+          <button type="button" class="annual-leave-download" data-annual-download>연차 신청서 엑셀 다운로드</button>
+          <button type="button" class="annual-leave-download annual-leave-delete" data-annual-delete>신청 내역 삭제</button>
+        </div>
       </article>
     `).join('');
   }
@@ -471,6 +474,40 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
   annualLeaveRequestList.addEventListener('click', async event => {
+    const deleteButton = event.target.closest('[data-annual-delete]');
+    if (deleteButton) {
+      const card = deleteButton.closest('[data-annual-request-id]');
+      const item = annualLeaveRequests.find(requestItem => requestItem.id === card?.dataset.annualRequestId);
+      if (!item) return;
+      const approvedNote = item.status === 'approved'
+        ? '\n\n이미 승인된 휴무 일정은 캘린더에 유지됩니다.'
+        : '';
+      const confirmation = await Swal.fire({
+        icon: 'warning',
+        title: '연차 신청 내역 삭제',
+        text: `${item.username} 님의 연차 신청 내역을 삭제하시겠습니까? 삭제 후에는 복구할 수 없습니다.${approvedNote}`,
+        showCancelButton: true,
+        confirmButtonText: '삭제',
+        cancelButtonText: '취소',
+        confirmButtonColor: '#c74444'
+      });
+      if (!confirmation.isConfirmed) return;
+
+      deleteButton.disabled = true;
+      annualLeaveListError.hidden = true;
+      try {
+        await requestAnnualLeave(`/${encodeURIComponent(item.id)}`, { method: 'DELETE' });
+        annualLeaveRequests = annualLeaveRequests.filter(requestItem => requestItem.id !== item.id);
+        renderAnnualLeaveRequests();
+      } catch (error) {
+        console.error('연차 신청 내역 삭제 오류:', error);
+        annualLeaveListError.textContent = error.message || '연차 신청 내역을 삭제하지 못했습니다.';
+        annualLeaveListError.hidden = false;
+        deleteButton.disabled = false;
+      }
+      return;
+    }
+
     const downloadButton = event.target.closest('[data-annual-download]');
     if (downloadButton) {
       const card = downloadButton.closest('[data-annual-request-id]');
