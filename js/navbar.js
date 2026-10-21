@@ -233,7 +233,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     .drawer-policy-link:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; border-radius: 5px; }
     .drawer-policy-icon { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.6; }
     .policy-dialog {
-      display: flex;
       flex-direction: column;
       width: min(900px, calc(100vw - 32px));
       height: min(780px, calc(100dvh - 32px));
@@ -247,6 +246,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       color: var(--text-main, #f8fafc);
       box-shadow: 0 24px 70px rgba(0, 0, 0, 0.42);
     }
+    .policy-dialog:not([open]) { display: none; }
+    .policy-dialog[open] { display: flex; }
     .policy-dialog::backdrop { background: rgba(4, 12, 20, 0.72); backdrop-filter: blur(5px); }
     .policy-dialog-header {
       display: flex;
