@@ -520,7 +520,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         guestAllowanceState = 'ready';
         renderGuestDashboard();
       }
-      else renderAllowanceSummary();
+      if (!isGuest) renderAllowanceSummary();
     } catch (error) {
       if (requestId !== monthRequestId) return;
       console.error('내 수당 요약 조회 오류:', error);
