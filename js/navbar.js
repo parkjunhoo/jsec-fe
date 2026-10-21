@@ -559,9 +559,6 @@ document.addEventListener('DOMContentLoaded', async () => {
           <a href="#" class="drawer-item" id="openResortNoticesFromDrawer">
             <span>📢</span> 지산 공지사항
           </a>
-          <a href="https://www.ibro.co.kr/PayRoll/JOBWITH/index.asp" class="drawer-item" id="openPayrollFromDrawer">
-            <span>💳</span> 급여 조회
-          </a>
         </nav>
       </div>
 
@@ -637,7 +634,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   const resortNoticePageLabel = document.getElementById('resortNoticePageLabel');
   const resortNoticeListButton = document.getElementById('resortNoticeListButton');
   const isAndroidApp = Boolean(window.AndroidSecurity);
-  const payrollUrl = 'https://www.ibro.co.kr/PayRoll/JOBWITH/index.asp';
   const RESORT_NOTICES_API = 'https://jsec-serverless.adobephotoshop.workers.dev/api/resort-notices';
   let resortNoticePage = 1;
   let resortNoticeTotalPages = 1;
@@ -941,24 +937,17 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.addEventListener('keydown', event => {
     if (event.key === 'Escape' && resortNoticeModal.classList.contains('active')) closeResortNotices();
   });
-  function openPayroll() {
-    setDrawerOpen(false);
-    if (isAndroidApp) window.location.assign(payrollUrl);
-    else window.open(payrollUrl, '_blank', 'noopener,noreferrer');
-  }
   document.addEventListener('click', event => {
     const target = event.target instanceof Element ? event.target : null;
     if (!target) return;
 
     const noticeTrigger = target.closest('#openResortNotices, #openResortNoticesFromDrawer');
-    const payrollTrigger = target.closest('#openPayroll, #openPayrollFromDrawer');
     const noticeItem = target.closest('[data-notice-id]');
-    if (!noticeTrigger && !payrollTrigger && !noticeItem) return;
+    if (!noticeTrigger && !noticeItem) return;
 
     event.preventDefault();
     event.stopImmediatePropagation();
     if (noticeTrigger) openResortNotices();
-    else if (payrollTrigger) openPayroll();
     else if (resortNoticeModal.contains(noticeItem)) {
       openResortNoticeDetail(noticeItem.dataset.noticeId);
     }

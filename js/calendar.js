@@ -343,6 +343,29 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   const bulkSelectedDays = new Set();
 
+  function getBulkTargetUserId() {
+    return userRole === 'admin' ? bulkTargetUserId.value : userId;
+  }
+
+  function getExistingBulkVacations(targetId = getBulkTargetUserId()) {
+    return allVacations.filter(vacation =>
+      vacation.user_id === targetId
+      && vacation.leave_type === '휴무'
+      && vacation.time_detail !== '시간지정'
+    );
+  }
+
+  function selectExistingBulkVacationDays() {
+    bulkSelectedDays.clear();
+    getExistingBulkVacations().forEach(vacation => {
+      const day = Number(vacation.date.slice(-2));
+      if (Number.isInteger(day)) bulkSelectedDays.add(day);
+    });
+    bulkDaysInput.value = [...bulkSelectedDays].sort((a, b) => a - b).join(', ');
+    bulkDaysInput.setCustomValidity('');
+    updateBulkCalendarSelection();
+  }
+
   function updateBulkCalendarSelection() {
     bulkSelectedCount.textContent = `${bulkSelectedDays.size}일 선택`;
     bulkCalendarGrid.querySelectorAll('[data-bulk-day]').forEach(button => {
@@ -415,9 +438,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   function openBulkVacationModal() {
     if (userRole === 'guest' || userRole === 'monitor') return;
-    bulkSelectedDays.clear();
-    bulkDaysInput.value = '';
-    bulkDaysInput.setCustomValidity('');
     bulkMemoInput.value = '';
     if (userRole === 'admin') {
       bulkTargetUserGroup.style.display = 'block';
@@ -428,9 +448,17 @@ document.addEventListener('DOMContentLoaded', async () => {
       bulkTargetUserGroup.style.display = 'none';
       bulkTargetUserId.required = false;
     }
+    bulkSelectedDays.clear();
+    bulkDaysInput.value = '';
+    bulkDaysInput.setCustomValidity('');
     renderBulkCalendar();
+    selectExistingBulkVacationDays();
     bulkVacationModal.classList.add('active');
     bulkVacationModal.setAttribute('aria-hidden', 'false');
+  }
+
+  if (bulkTargetUserId) {
+    bulkTargetUserId.addEventListener('change', selectExistingBulkVacationDays);
   }
 
   function closeBulkVacationModal() {
@@ -1940,40 +1968,64 @@ document.addEventListener('DOMContentLoaded', async () => {
     bulkVacationForm.addEventListener('submit', async event => {
       event.preventDefault();
       if (userRole === 'guest' || userRole === 'monitor') return;
-      if (bulkDaysInput.validationMessage || bulkSelectedDays.size === 0) {
+      if (bulkDaysInput.validationMessage) {
         bulkDaysInput.reportValidity();
         return;
       }
 
       const year = currentDate.getFullYear();
       const month = currentDate.getMonth() + 1;
-      const dates = [...bulkSelectedDays]
+      const selectedDates = [...bulkSelectedDays]
         .sort((a, b) => a - b)
         .map(day => `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`);
-      const payload = {
-        dates,
-        memo: bulkMemoInput.value.trim()
-      };
-      if (userRole === 'admin') payload.user_id = bulkTargetUserId.value;
+      const targetId = getBulkTargetUserId();
+      const existingVacations = getExistingBulkVacations(targetId);
+      const selectedDateSet = new Set(selectedDates);
+      const existingDateSet = new Set(existingVacations.map(vacation => vacation.date));
+      const vacationsToDelete = existingVacations.filter(vacation => !selectedDateSet.has(vacation.date));
+      const datesToCreate = selectedDates.filter(date => !existingDateSet.has(date));
+
+      if (selectedDates.length === 0 && vacationsToDelete.length === 0) {
+        await Swal.fire({ icon: 'warning', text: '등록하거나 삭제할 휴무가 없습니다.' });
+        return;
+      }
 
       submitBulkVacationBtn.disabled = true;
-      submitBulkVacationBtn.textContent = '등록 중...';
+      submitBulkVacationBtn.textContent = '저장 중...';
+      let changed = false;
       try {
-        const result = await mutateVacation('bulk', 'POST', payload);
+        for (const vacation of vacationsToDelete) {
+          await mutateVacation(`delete/${encodeURIComponent(vacation.id)}`, 'DELETE');
+          changed = true;
+        }
+
+        let addedCount = 0;
+        if (datesToCreate.length > 0) {
+          const payload = {
+            dates: datesToCreate,
+            memo: bulkMemoInput.value.trim()
+          };
+          if (userRole === 'admin') payload.user_id = targetId;
+          const result = await mutateVacation('bulk', 'POST', payload);
+          addedCount = result.count;
+          changed = true;
+        }
+
         closeBulkVacationModal();
+        await fetchMonthData();
         await Swal.fire({
           icon: 'success',
-          text: `휴무 ${result.count}건을 등록했습니다.`
+          text: `휴무 일정을 반영했습니다. (등록 ${addedCount}건, 삭제 ${vacationsToDelete.length}건)`
         });
-        await fetchMonthData();
       } catch (error) {
         await Swal.fire({
           icon: 'error',
           text: `휴무 일괄 등록 실패: ${error.message}`
         });
+        if (changed) await fetchMonthData();
       } finally {
         submitBulkVacationBtn.disabled = false;
-        submitBulkVacationBtn.textContent = '휴무 등록';
+        submitBulkVacationBtn.textContent = '변경사항 저장';
       }
     });
   }
