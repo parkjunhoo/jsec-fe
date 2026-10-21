@@ -553,7 +553,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             <span>☎️</span> 직원 전화번호부
           </a>
           <a href="#" class="drawer-item" id="openResortNoticesFromDrawer">
-            <span>📢</span> 지산리조트 공지사항 확인하기
+            <span>📢</span> 지산 공지사항 &lt;&lt;
           </a>
         </nav>
       </div>
