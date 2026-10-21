@@ -49,6 +49,7 @@
     .meal-empty strong { display: block; margin-bottom: 6px; color: var(--text-main); font-size: 15px; }
     .meal-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 9px; margin-top: 14px; }
     .meal-action { display: inline-flex; align-items: center; justify-content: center; gap: 7px; padding: 0 14px; font-size: 12px; font-weight: 700; }
+    .meal-action-icon { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.7; }
     .meal-action-primary { border-color: var(--primary); background: var(--primary); color: #14251c; }
     .meal-action[hidden] { display: none; }
     .meal-help { margin: 13px 0 0; color: var(--text-sub); font-size: 11px; line-height: 1.6; }
@@ -90,7 +91,7 @@
           이 주의 식단표 사진을 먼저 올려 주세요.
         </div>
         <div class="meal-actions">
-          <button class="meal-action" id="chooseMealPhoto" type="button">📷 사진 선택</button>
+          <button class="meal-action" id="chooseMealPhoto" type="button"><svg class="meal-action-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h3l1.5-2h7L17 7h3v12H4z"/><circle cx="12" cy="13" r="3.5"/></svg>사진 선택</button>
           <button class="meal-action meal-action-primary" id="uploadMealPhoto" type="button" hidden>이 주 식단표 올리기</button>
           <button class="meal-action" id="cancelMealPhoto" type="button" hidden>취소</button>
           <input id="mealPhotoInput" type="file" accept="image/*" capture="environment" hidden>
