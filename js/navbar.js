@@ -232,6 +232,49 @@ document.addEventListener('DOMContentLoaded', async () => {
     .drawer-policy-link:focus-visible { color: #cbd5e1; }
     .drawer-policy-link:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; border-radius: 5px; }
     .drawer-policy-icon { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.6; }
+    .policy-dialog {
+      display: flex;
+      flex-direction: column;
+      width: min(900px, calc(100vw - 32px));
+      height: min(780px, calc(100dvh - 32px));
+      max-width: none;
+      max-height: none;
+      padding: 0;
+      overflow: hidden;
+      border: 1px solid var(--app-border, rgba(255, 255, 255, 0.14));
+      border-radius: 16px;
+      background: var(--app-surface, #1e293b);
+      color: var(--text-main, #f8fafc);
+      box-shadow: 0 24px 70px rgba(0, 0, 0, 0.42);
+    }
+    .policy-dialog::backdrop { background: rgba(4, 12, 20, 0.72); backdrop-filter: blur(5px); }
+    .policy-dialog-header {
+      display: flex;
+      min-height: 56px;
+      flex: 0 0 auto;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 10px 16px 10px 20px;
+      border-bottom: 1px solid var(--app-border, rgba(255, 255, 255, 0.12));
+    }
+    .policy-dialog-title { margin: 0; font-size: 15px; font-weight: 720; }
+    .policy-dialog-close {
+      display: grid;
+      width: 36px;
+      height: 36px;
+      flex: 0 0 auto;
+      place-items: center;
+      border: 1px solid var(--app-border, rgba(255, 255, 255, 0.12));
+      border-radius: 9px;
+      background: var(--app-surface-raised, rgba(255, 255, 255, 0.06));
+      color: inherit;
+      font-size: 22px;
+      line-height: 1;
+      cursor: pointer;
+    }
+    .policy-dialog-close:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+    .policy-dialog-frame { width: 100%; min-height: 0; flex: 1 1 auto; border: 0; background: #f3f6f8; }
     .notification-overlay {
       position: fixed;
       inset: 0;
@@ -435,7 +478,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       <div class="drawer-bottom">
         <button class="btn-nav-logout" id="navLogoutBtn" type="button">로그아웃</button>
-        <a class="drawer-policy-link" href="/privacy-policy.html">
+        <a class="drawer-policy-link" id="openPrivacyPolicy" href="/privacy-policy.html"
+          aria-haspopup="dialog" aria-controls="privacyPolicyDialog">
           <svg class="drawer-policy-icon" viewBox="0 0 24 24" aria-hidden="true">
             <path d="M12 3.5 19 6v5.2c0 4.2-2.8 7.5-7 9.3-4.2-1.8-7-5.1-7-9.3V6l7-2.5Z"/>
             <path d="m9.2 12 1.8 1.8 3.8-4"/>
@@ -444,6 +488,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         </a>
       </div>
     </div>
+    <dialog class="policy-dialog" id="privacyPolicyDialog" aria-labelledby="privacyPolicyDialogTitle">
+      <header class="policy-dialog-header">
+        <h2 class="policy-dialog-title" id="privacyPolicyDialogTitle">개인정보 처리방침</h2>
+        <button class="policy-dialog-close" id="closePrivacyPolicy" type="button" aria-label="닫기">&times;</button>
+      </header>
+      <iframe class="policy-dialog-frame" src="/privacy-policy.html" title="개인정보 처리방침"></iframe>
+    </dialog>
   `;
 
   // 이벤트 연결 및 유저 정보 로드
@@ -451,6 +502,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   const closeBtn = document.getElementById('closeNavDrawer');
   const overlay = document.getElementById('navDrawerOverlay');
   const drawer = document.getElementById('navDrawerMenu');
+  const privacyPolicyLink = document.getElementById('openPrivacyPolicy');
+  const privacyPolicyDialog = document.getElementById('privacyPolicyDialog');
+  const closePrivacyPolicyButton = document.getElementById('closePrivacyPolicy');
   const logoutBtn = document.getElementById('navLogoutBtn');
   const themeSwitch = document.getElementById('themeSwitch');
   const themeSwitchLabel = document.getElementById('themeSwitchLabel');
@@ -528,6 +582,19 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (openBtn) openBtn.addEventListener('click', () => setDrawerOpen(!drawer.classList.contains('active')));
   if (closeBtn) closeBtn.addEventListener('click', () => setDrawerOpen(false));
   if (overlay) overlay.addEventListener('click', () => setDrawerOpen(false));
+  if (privacyPolicyLink && privacyPolicyDialog) {
+    privacyPolicyLink.addEventListener('click', event => {
+      if (typeof privacyPolicyDialog.showModal !== 'function') return;
+      event.preventDefault();
+      setDrawerOpen(false);
+      privacyPolicyDialog.showModal();
+      closePrivacyPolicyButton?.focus();
+    });
+    privacyPolicyDialog.addEventListener('click', event => {
+      if (event.target === privacyPolicyDialog) privacyPolicyDialog.close();
+    });
+  }
+  closePrivacyPolicyButton?.addEventListener('click', () => privacyPolicyDialog?.close());
   document.addEventListener('keydown', event => {
     if (event.key === 'Escape' && drawer.classList.contains('active')) setDrawerOpen(false);
   });
