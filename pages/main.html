@@ -368,6 +368,7 @@
     .guest-dashboard[hidden] { display: none; }
     .guest-kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-bottom: 15px; }
     .guest-kpis.single { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .guest-kpis.triple { grid-template-columns: repeat(3, minmax(0, 1fr)); }
     .guest-kpi { min-width: 0; padding: 14px; border: 1px solid rgba(190, 211, 239, 0.1); border-radius: 12px; background: rgba(255, 255, 255, 0.035); }
     .guest-kpi-label { display: block; color: var(--muted); font-size: 11px; }
     .guest-kpi-value { display: block; margin-top: 7px; color: #f3f7fc; font-size: 21px; font-weight: 780; letter-spacing: -0.035em; overflow-wrap: anywhere; }
@@ -465,6 +466,7 @@
       .personal-panel { padding: 18px; }
       .duty-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .guest-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .guest-kpis.triple { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     }
     @media (max-width: 760px) {
       .home-shell { padding: 22px 16px 38px; }

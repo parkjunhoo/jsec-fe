@@ -390,9 +390,22 @@ document.addEventListener('DOMContentLoaded', async () => {
   function renderGuestDashboard() {
     const allowanceTotal = allowanceEntries.reduce((sum, entry) => sum + (Number(entry.unit_amount) || 0), 0);
     const leaveCounts = new Map();
+    const leaveByWeekday = new Map(['일', '월', '화', '수', '목', '금', '토'].map(day => [day, 0]));
+    const daysInMonth = new Date(selectedMonth.getFullYear(), selectedMonth.getMonth() + 1, 0).getDate();
+    const weekCount = Math.ceil(daysInMonth / 7);
+    const leaveByWeek = new Map(Array.from({ length: weekCount }, (_, index) => [`${index + 1}주차`, 0]));
+    const leaveMembers = new Set();
     allVacations.forEach(vacation => {
       const type = vacation.leave_type || '기타';
       leaveCounts.set(type, (leaveCounts.get(type) || 0) + 1);
+      const date = new Date(`${vacation.date}T00:00:00Z`);
+      if (!Number.isNaN(date.getTime())) {
+        const weekday = ['일', '월', '화', '수', '목', '금', '토'][date.getUTCDay()];
+        const week = `${Math.ceil(date.getUTCDate() / 7)}주차`;
+        leaveByWeekday.set(weekday, leaveByWeekday.get(weekday) + 1);
+        leaveByWeek.set(week, leaveByWeek.get(week) + 1);
+      }
+      leaveMembers.add(vacation.user_id || vacation.username || vacation.id);
     });
     const allowanceTotals = new Map();
     const allowanceByUser = new Map();
@@ -411,9 +424,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     const renderBars = (items, formatter) => {
-      if (!items.length) return '<div class="personal-empty">해당 기간에 데이터가 없습니다.</div>';
-      const max = Math.max(...items.map(([, value]) => value), 1);
-      return `<div class="guest-bar-list">${items.map(([label, value]) => `
+      const populatedItems = items.filter(([, value]) => value > 0);
+      if (!populatedItems.length) return '<div class="personal-empty">해당 기간에 데이터가 없습니다.</div>';
+      const max = Math.max(...populatedItems.map(([, value]) => value), 1);
+      return `<div class="guest-bar-list">${populatedItems.map(([label, value]) => `
         <div class="guest-bar-row">
           <span class="guest-bar-label" title="${escapeHtml(label)}">${escapeHtml(label)}</span>
           <span class="guest-bar-track" aria-hidden="true"><span class="guest-bar-fill" style="display:block;width:${Math.max(value > 0 ? 2 : 0, value / max * 100)}%"></span></span>
@@ -422,6 +436,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     };
 
     const leaveRows = [...leaveCounts.entries()].sort((a, b) => b[1] - a[1]);
+    const weekdayRows = [...leaveByWeekday.entries()];
+    const weekRows = [...leaveByWeek.entries()];
     const allowanceRows = [...allowanceTotals.entries()].sort((a, b) => b[1] - a[1]);
     const rankedUsers = [...allowanceByUser.values()]
       .sort((a, b) => b.amount - a.amount || b.count - a.count || a.name.localeCompare(b.name));
@@ -434,19 +450,30 @@ document.addEventListener('DOMContentLoaded', async () => {
         </div>
         <span class="guest-ranking-amount">${formatMoney(user.amount)}</span>
       </div>`).join('');
+    const mostCommonLeave = leaveRows[0];
 
     teamVacationContent.innerHTML = guestVacationState === 'loading'
       ? '<div class="personal-empty">이번 달 휴무 통계를 불러오는 중입니다.</div>'
       : guestVacationState === 'error'
         ? '<div class="personal-empty" role="alert">팀 휴무 통계를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.</div>'
         : `
-      <div class="guest-kpis single">
+      <div class="guest-kpis triple">
         <article class="guest-kpi"><span class="guest-kpi-label">이번 달 휴무 등록</span><strong class="guest-kpi-value">${allVacations.length}건</strong></article>
+        <article class="guest-kpi"><span class="guest-kpi-label">휴무 등록 인원</span><strong class="guest-kpi-value">${leaveMembers.size}명</strong></article>
+        <article class="guest-kpi"><span class="guest-kpi-label">가장 많은 휴무 유형</span><strong class="guest-kpi-value">${mostCommonLeave ? `${escapeHtml(mostCommonLeave[0])} ${mostCommonLeave[1]}건` : '-'}</strong></article>
       </div>
       <div class="guest-dashboard-grid">
         <section class="guest-chart-card" aria-label="휴무 유형별 건수">
           <h3>휴무 유형별 현황</h3>
           ${renderBars(leaveRows, value => `${value}건`)}
+        </section>
+        <section class="guest-chart-card" aria-label="요일별 휴무 건수">
+          <h3>요일별 휴무 현황</h3>
+          ${renderBars(weekdayRows, value => `${value}건`)}
+        </section>
+        <section class="guest-chart-card" aria-label="주차별 휴무 건수">
+          <h3>주차별 휴무 현황</h3>
+          ${renderBars(weekRows, value => `${value}건`)}
         </section>
       </div>
       <nav class="guest-dashboard-links" aria-label="모니터링 바로가기">
@@ -466,8 +493,8 @@ document.addEventListener('DOMContentLoaded', async () => {
           <h3>수당 종류별 금액</h3>
           ${renderBars(allowanceRows, formatMoney)}
         </section>
-        <section class="guest-chart-card" aria-label="개인별 수당 랭킹">
-          <h3>개인별 수당 랭킹</h3>
+        <section class="guest-chart-card" aria-label="개인별 수당">
+          <h3>개인별 수당</h3>
           ${rankingRows
             ? `<div class="guest-ranking-list">${rankingRows}</div>`
             : '<div class="personal-empty">해당 기간의 수당 기록이 없습니다.</div>'}
