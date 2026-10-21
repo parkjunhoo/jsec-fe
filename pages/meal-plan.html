@@ -3,64 +3,55 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="theme-color" content="#0b1220">
+  <meta name="theme-color" content="#111815">
   <title>지산리조트 보안팀 - 주간 식단표</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
-    :root {
-      color-scheme: dark;
-      --page: #0b1220;
-      --panel: #121d2e;
-      --line: rgba(190, 211, 239, 0.11);
-      --text: #f3f7fc;
-      --muted: #92a2b8;
-      --green: #83d8ad;
-    }
     * { box-sizing: border-box; }
     body {
       min-height: 100vh;
       margin: 0;
       padding-bottom: 36px;
-      background: radial-gradient(ellipse at 82% -10%, rgba(26, 106, 157, 0.2), transparent 38rem), var(--page);
-      color: var(--text);
+      background: var(--bg-main);
+      color: var(--text-main);
       font-family: -apple-system, BlinkMacSystemFont, "Pretendard", "Segoe UI", sans-serif;
     }
     button { font: inherit; }
     .meal-shell { width: min(900px, 100%); margin: 0 auto; padding: 28px 22px 0; }
     .meal-intro { margin-bottom: 22px; }
-    .meal-kicker { margin: 0 0 9px; color: var(--green); font-size: 11px; font-weight: 800; letter-spacing: 0.16em; }
+    .meal-kicker { margin: 0 0 9px; color: var(--primary); font-size: 11px; font-weight: 800; letter-spacing: 0.16em; }
     .meal-intro h1 { margin: 0; font-size: clamp(25px, 5vw, 34px); letter-spacing: -0.045em; }
-    .meal-intro p { margin: 9px 0 0; color: var(--muted); font-size: 14px; line-height: 1.65; }
-    .meal-card { overflow: hidden; border: 1px solid var(--line); border-radius: 18px; background: rgba(18, 29, 46, 0.92); box-shadow: 0 22px 60px rgba(0, 0, 0, 0.2); }
-    .week-nav { display: flex; min-height: 76px; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 18px; border-bottom: 1px solid var(--line); }
+    .meal-intro p { margin: 9px 0 0; color: var(--text-sub); font-size: 14px; line-height: 1.65; }
+    .meal-card { overflow: hidden; border: 1px solid var(--app-border); border-radius: 18px; background: var(--app-surface); box-shadow: var(--app-shadow); }
+    .week-nav { display: flex; min-height: 76px; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 18px; border-bottom: 1px solid var(--app-border); }
     .week-nav button, .meal-action {
       min-height: 40px;
-      border: 1px solid var(--line);
+      border: 1px solid var(--app-border);
       border-radius: 10px;
-      background: rgba(255, 255, 255, 0.04);
-      color: var(--text);
+      background: var(--app-surface-raised);
+      color: var(--text-main);
       cursor: pointer;
     }
     .week-nav button { width: 42px; flex: 0 0 42px; font-size: 20px; }
-    .week-nav button:hover:not(:disabled), .meal-action:hover:not(:disabled) { border-color: rgba(131, 216, 173, 0.55); }
+    .week-nav button:hover:not(:disabled), .meal-action:hover:not(:disabled) { border-color: var(--primary); }
     .week-nav button:disabled, .meal-action:disabled { cursor: wait; opacity: 0.55; }
     .week-label { min-width: 0; text-align: center; }
     .week-label strong { display: block; font-size: 15px; }
-    .week-label span { display: block; margin-top: 4px; color: var(--muted); font-size: 11px; }
+    .week-label span { display: block; margin-top: 4px; color: var(--text-sub); font-size: 11px; }
     .meal-content { padding: 18px; }
-    .meal-status { min-height: 22px; margin: 0 0 12px; color: var(--muted); font-size: 13px; line-height: 1.55; }
-    .meal-status[data-type="error"] { color: #fca5a5; }
-    .meal-status[data-type="success"] { color: var(--green); }
-    .meal-photo-frame { display: grid; min-height: 220px; place-items: center; overflow: hidden; border: 1px dashed rgba(190, 211, 239, 0.2); border-radius: 13px; background: rgba(4, 10, 19, 0.42); }
+    .meal-status { min-height: 22px; margin: 0 0 12px; color: var(--text-sub); font-size: 13px; line-height: 1.55; }
+    .meal-status[data-type="error"] { color: var(--danger); }
+    .meal-status[data-type="success"] { color: var(--primary); }
+    .meal-photo-frame { display: grid; min-height: 220px; place-items: center; overflow: hidden; border: 1px dashed var(--app-border); border-radius: 13px; background: var(--app-surface-raised); }
     .meal-photo-frame[hidden] { display: none; }
-    .meal-photo { display: block; width: 100%; max-height: min(72vh, 900px); object-fit: contain; background: #090e17; }
-    .meal-empty { padding: 44px 20px; color: var(--muted); font-size: 13px; text-align: center; line-height: 1.7; }
-    .meal-empty strong { display: block; margin-bottom: 6px; color: #dce8f6; font-size: 15px; }
+    .meal-photo { display: block; width: 100%; max-height: min(72vh, 900px); object-fit: contain; background: var(--app-surface-raised); }
+    .meal-empty { padding: 44px 20px; color: var(--text-sub); font-size: 13px; text-align: center; line-height: 1.7; }
+    .meal-empty strong { display: block; margin-bottom: 6px; color: var(--text-main); font-size: 15px; }
     .meal-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 9px; margin-top: 14px; }
     .meal-action { display: inline-flex; align-items: center; justify-content: center; gap: 7px; padding: 0 14px; font-size: 12px; font-weight: 700; }
-    .meal-action-primary { border-color: rgba(131, 216, 173, 0.25); background: linear-gradient(135deg, rgba(54, 140, 96, 0.8), rgba(34, 108, 75, 0.9)); }
+    .meal-action-primary { border-color: var(--primary); background: var(--primary); color: #14251c; }
     .meal-action[hidden] { display: none; }
-    .meal-help { margin: 13px 0 0; color: #8292a8; font-size: 11px; line-height: 1.6; }
+    .meal-help { margin: 13px 0 0; color: var(--text-sub); font-size: 11px; line-height: 1.6; }
     @media (max-width: 540px) {
       .meal-shell { padding: 22px 14px 0; }
       .week-nav { padding: 12px; }
@@ -68,7 +59,9 @@
       .meal-photo-frame { min-height: 180px; }
       .meal-actions .meal-action { flex: 1; }
     }
+    html[data-theme="light"] .meal-action-primary { color: #fff; }
   </style>
+  <link rel="stylesheet" href="/css/app-theme.css">
 </head>
 <body>
   <div id="navbar"></div>
