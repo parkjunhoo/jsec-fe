@@ -238,23 +238,46 @@ document.addEventListener('DOMContentLoaded', async () => {
     .drawer-close-label { font-size: 14px; font-weight: 650; }
     .drawer-user-role { font-size: 12px; color: #38bdf8; font-weight: 600; }
     
-    .drawer-links { display: flex; flex-direction: column; gap: 8px; }
+    .drawer-links { display: grid; gap: 17px; padding: 8px 0 4px; }
+    .drawer-group { display: grid; gap: 7px; }
+    .drawer-group-title {
+      margin: 0;
+      padding: 0 2px;
+      color: #849588;
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: 0.1em;
+    }
+    .drawer-group-items { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
     .drawer-item {
       display: flex;
-      align-items: center;
-      gap: 12px;
-      padding: 14px 16px;
+      min-width: 0;
+      min-height: 72px;
+      flex-direction: column;
+      align-items: flex-start;
+      justify-content: center;
+      gap: 8px;
+      padding: 10px 11px;
+      border: 1px solid rgba(195, 220, 204, 0.1);
+      background: rgba(255, 255, 255, 0.025);
       color: #94a3b8;
       text-decoration: none;
-      font-size: 15px;
-      font-weight: 600;
-      border-radius: 12px;
-      transition: all 0.2s;
+      font-size: 12px;
+      font-weight: 650;
+      line-height: 1.25;
+      border-radius: 11px;
+      transition: color 150ms ease, background 150ms ease, border-color 150ms ease, transform 150ms ease;
     }
-    .drawer-item.active, .drawer-item:active {
+    .drawer-item:hover { border-color: rgba(145, 210, 179, 0.28); background: rgba(145, 210, 179, 0.06); color: #edf4ef; }
+    .drawer-item:active { transform: scale(0.98); }
+    .drawer-item:focus-visible { outline: 2px solid var(--primary, #91d2b3); outline-offset: 2px; }
+    .drawer-item.active {
+      border-color: rgba(145, 210, 179, 0.32);
       background: rgba(56, 189, 248, 0.15);
-      color: #38bdf8;
+      color: var(--primary, #91d2b3);
     }
+    .drawer-item-icon { display: grid; width: 31px; height: 31px; place-items: center; border: 1px solid rgba(145, 210, 179, 0.16); border-radius: 9px; background: rgba(145, 210, 179, 0.08); font-size: 16px; }
+    .drawer-item-label { overflow-wrap: anywhere; }
     .btn-nav-logout {
       background: rgba(239, 68, 68, 0.15);
       color: #f87171;
@@ -531,37 +554,57 @@ document.addEventListener('DOMContentLoaded', async () => {
           <span id="nativeBiometricSwitchState" aria-hidden="true">끔</span>
         </button>
 
-        <nav class="drawer-links">
-          <a href="/pages/main.html" class="drawer-item ${currentPath.includes('main.html') ? 'active' : ''}">
-            <span>🏠</span> 메인 메뉴
-          </a>
-          <a href="/pages/users.html" class="drawer-item ${currentPath.includes('users.html') ? 'active' : ''}">
-            <span>👥</span> 회원 조회 및 관리
-          </a>
-          <a href="/pages/allowances.html" class="drawer-item ${currentPath.includes('allowances.html') ? 'active' : ''}">
-            <span>💰</span> 수당 관리
-          </a>
-          <a href="https://www.ibro.co.kr/PayRoll/JOBWITH/index.asp" class="drawer-item" target="_blank" rel="noopener noreferrer">
-            <span>💳</span> 급여 조회
-          </a>
-          <a href="/pages/item-requests.html" class="drawer-item ${currentPath.includes('item-requests.html') ? 'active' : ''}">
-            <span>📦</span> 물품 신청
-          </a>
-          <a href="/pages/vehicle.html" class="drawer-item ${currentPath.includes('vehicle.html') ? 'active' : ''}">
-            <span>🚗</span> 차량 조회
-          </a>
-          <a href="/pages/calendar.html" class="drawer-item ${currentPath.includes('calendar.html') ? 'active' : ''}">
-            <span>📅</span> 휴무 캘린더
-          </a>
-          <a href="/pages/manuals.html" class="drawer-item ${currentPath.includes('manuals.html') ? 'active' : ''}">
-            <span>📘</span> 업무 매뉴얼
-          </a>
-          <a href="/pages/phonebook.html" class="drawer-item ${currentPath.includes('phonebook.html') ? 'active' : ''}">
-            <span>☎️</span> 직원 전화번호부
-          </a>
-          <a href="#" class="drawer-item" id="openResortNoticesFromDrawer">
-            <span>📢</span> 지산 공지사항
-          </a>
+        <nav class="drawer-links" aria-label="업무 메뉴">
+          <section class="drawer-group" aria-labelledby="drawerHomeGroup">
+            <h2 class="drawer-group-title" id="drawerHomeGroup">홈</h2>
+            <div class="drawer-group-items">
+              <a href="/pages/main.html" class="drawer-item ${currentPath.includes('main.html') ? 'active' : ''}" ${currentPath.includes('main.html') ? 'aria-current="page"' : ''}>
+                <span class="drawer-item-icon" aria-hidden="true">🏠</span><span class="drawer-item-label">메인 메뉴</span>
+              </a>
+            </div>
+          </section>
+          <section class="drawer-group" aria-labelledby="drawerWorkGroup">
+            <h2 class="drawer-group-title" id="drawerWorkGroup">근무 · 급여</h2>
+            <div class="drawer-group-items">
+              <a href="/pages/calendar.html" class="drawer-item ${currentPath.includes('calendar.html') ? 'active' : ''}" ${currentPath.includes('calendar.html') ? 'aria-current="page"' : ''}>
+                <span class="drawer-item-icon" aria-hidden="true">📅</span><span class="drawer-item-label">휴무 일정</span>
+              </a>
+              <a href="/pages/allowances.html" class="drawer-item ${currentPath.includes('allowances.html') ? 'active' : ''}" ${currentPath.includes('allowances.html') ? 'aria-current="page"' : ''}>
+                <span class="drawer-item-icon" aria-hidden="true">💰</span><span class="drawer-item-label">수당 관리</span>
+              </a>
+              <a href="https://www.ibro.co.kr/PayRoll/JOBWITH/index.asp" class="drawer-item" target="_blank" rel="noopener noreferrer">
+                <span class="drawer-item-icon" aria-hidden="true">💳</span><span class="drawer-item-label">급여 조회 ↗</span>
+              </a>
+            </div>
+          </section>
+          <section class="drawer-group" aria-labelledby="drawerTeamGroup">
+            <h2 class="drawer-group-title" id="drawerTeamGroup">팀 운영</h2>
+            <div class="drawer-group-items">
+              <a href="/pages/users.html" class="drawer-item ${currentPath.includes('users.html') ? 'active' : ''}" ${currentPath.includes('users.html') ? 'aria-current="page"' : ''}>
+                <span class="drawer-item-icon" aria-hidden="true">👥</span><span class="drawer-item-label">회원 명부</span>
+              </a>
+              <a href="/pages/vehicle.html" class="drawer-item ${currentPath.includes('vehicle.html') ? 'active' : ''}" ${currentPath.includes('vehicle.html') ? 'aria-current="page"' : ''}>
+                <span class="drawer-item-icon" aria-hidden="true">🚗</span><span class="drawer-item-label">차량 조회</span>
+              </a>
+              <a href="/pages/item-requests.html" class="drawer-item ${currentPath.includes('item-requests.html') ? 'active' : ''}" ${currentPath.includes('item-requests.html') ? 'aria-current="page"' : ''}>
+                <span class="drawer-item-icon" aria-hidden="true">📦</span><span class="drawer-item-label">물품 신청</span>
+              </a>
+            </div>
+          </section>
+          <section class="drawer-group" aria-labelledby="drawerInfoGroup">
+            <h2 class="drawer-group-title" id="drawerInfoGroup">자료 · 연락처</h2>
+            <div class="drawer-group-items">
+              <a href="/pages/manuals.html" class="drawer-item ${currentPath.includes('manuals.html') ? 'active' : ''}" ${currentPath.includes('manuals.html') ? 'aria-current="page"' : ''}>
+                <span class="drawer-item-icon" aria-hidden="true">📘</span><span class="drawer-item-label">업무 매뉴얼</span>
+              </a>
+              <a href="/pages/phonebook.html" class="drawer-item ${currentPath.includes('phonebook.html') ? 'active' : ''}" ${currentPath.includes('phonebook.html') ? 'aria-current="page"' : ''}>
+                <span class="drawer-item-icon" aria-hidden="true">☎️</span><span class="drawer-item-label">직원 전화번호부</span>
+              </a>
+              <a href="#" class="drawer-item" id="openResortNoticesFromDrawer">
+                <span class="drawer-item-icon" aria-hidden="true">📢</span><span class="drawer-item-label">지산 공지사항</span>
+              </a>
+            </div>
+          </section>
         </nav>
       </div>
 
