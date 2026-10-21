@@ -505,7 +505,7 @@
     .annual-leave-field { display: grid; gap: 6px; min-width: 0; }
     .annual-leave-field.full { grid-column: 1 / -1; }
     .annual-leave-field label { color: var(--text-sub); font-size: 12px; font-weight: 650; }
-    .annual-leave-field input, .annual-leave-field textarea { width: 100%; min-height: 42px; padding: 9px 11px; border: 1px solid var(--app-border); border-radius: 8px; background: var(--input-bg); color: var(--text-main); font: inherit; font-size: 13px; }
+    .annual-leave-field input, .annual-leave-field select, .annual-leave-field textarea { width: 100%; min-height: 42px; padding: 9px 11px; border: 1px solid var(--app-border); border-radius: 8px; background: var(--input-bg); color: var(--text-main); font: inherit; font-size: 13px; }
     .annual-leave-field textarea { min-height: 78px; resize: vertical; }
     .annual-leave-hint { margin: -4px 0 0; color: var(--text-sub); font-size: 11px; }
     .annual-leave-modal-card { width: min(100%, 560px); }
@@ -690,8 +690,11 @@
             <input id="annualLeaveName" type="text" readonly>
           </div>
           <div class="annual-leave-field full">
-            <label>구분</label>
-            <input type="text" value="연차" readonly>
+            <label for="annualLeaveType">구분 *</label>
+            <select id="annualLeaveType" required>
+              <option value="연차">종일 연차</option>
+              <option value="시간차">시간차</option>
+            </select>
           </div>
           <div class="annual-leave-field">
             <label for="annualLeaveStartDate">신청 시작일 *</label>
@@ -699,7 +702,7 @@
           </div>
           <div class="annual-leave-field">
             <label for="annualLeaveStartTime">시작 시간 *</label>
-            <input id="annualLeaveStartTime" type="time" value="09:00" readonly required>
+            <input id="annualLeaveStartTime" type="time" value="00:00" step="900" readonly required>
           </div>
           <div class="annual-leave-field">
             <label for="annualLeaveEndDate">신청 종료일 *</label>
@@ -707,12 +710,12 @@
           </div>
           <div class="annual-leave-field">
             <label for="annualLeaveEndTime">종료 시간 *</label>
-            <input id="annualLeaveEndTime" type="time" value="18:00" readonly required>
+            <input id="annualLeaveEndTime" type="time" value="00:00" step="900" readonly required>
           </div>
           <div class="annual-leave-field full">
-            <label for="annualLeaveDays">총 연차 일수 *</label>
+            <label for="annualLeaveDays" id="annualLeaveAmountLabel">총 연차 일수 *</label>
             <input id="annualLeaveDays" type="number" min="1" max="31" step="1" readonly required>
-            <p class="annual-leave-hint">기간 내 주말을 제외한 평일 수입니다. 승인 시 해당 평일 일정이 연차로 등록됩니다.</p>
+            <p class="annual-leave-hint" id="annualLeaveAmountHint">기간 내 주말을 제외한 평일 수입니다. 승인 시 해당 평일 일정이 연차로 등록됩니다.</p>
           </div>
           <div class="annual-leave-field full">
             <label for="annualLeaveDetails">세부 사항</label>

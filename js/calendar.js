@@ -110,8 +110,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   const annualLeaveListError = document.getElementById('annualLeaveListError');
   const annualLeaveRequestList = document.getElementById('annualLeaveRequestList');
   const annualLeaveStatusFilter = document.getElementById('annualLeaveStatusFilter');
+  const annualLeaveType = document.getElementById('annualLeaveType');
   const annualLeaveStartDate = document.getElementById('annualLeaveStartDate');
   const annualLeaveEndDate = document.getElementById('annualLeaveEndDate');
+  const annualLeaveStartTime = document.getElementById('annualLeaveStartTime');
+  const annualLeaveEndTime = document.getElementById('annualLeaveEndTime');
   const annualLeaveDays = document.getElementById('annualLeaveDays');
   const submitAnnualLeaveBtn = document.getElementById('submitAnnualLeaveBtn');
   let annualLeaveRequests = [];
@@ -220,7 +223,39 @@ document.addEventListener('DOMContentLoaded', async () => {
     return count;
   }
 
-  function updateAnnualLeaveDays() {
+  function calculateAnnualLeaveHours() {
+    if (!annualLeaveStartTime.value || !annualLeaveEndTime.value) return 0;
+    const [startHour, startMinute] = annualLeaveStartTime.value.split(':').map(Number);
+    const [endHour, endMinute] = annualLeaveEndTime.value.split(':').map(Number);
+    const minutes = (endHour * 60 + endMinute) - (startHour * 60 + startMinute);
+    return minutes > 0 ? minutes / 60 : 0;
+  }
+
+  function updateAnnualLeaveAmount() {
+    if (annualLeaveType.value === '시간차') {
+      annualLeaveEndDate.value = annualLeaveStartDate.value;
+      annualLeaveEndDate.disabled = true;
+      annualLeaveStartTime.readOnly = false;
+      annualLeaveEndTime.readOnly = false;
+      annualLeaveDays.min = '0.25';
+      annualLeaveDays.max = '24';
+      annualLeaveDays.step = '0.25';
+      document.getElementById('annualLeaveAmountLabel').textContent = '사용 시간 (시간) *';
+      document.getElementById('annualLeaveAmountHint').textContent = '시간차는 하루 안에서 시작·종료 시간을 입력해 주세요. 신청 시간은 자동 계산됩니다. (15분 단위)';
+      annualLeaveDays.value = String(calculateAnnualLeaveHours());
+      return;
+    }
+
+    annualLeaveEndDate.disabled = false;
+    annualLeaveStartTime.value = '00:00';
+    annualLeaveEndTime.value = '00:00';
+    annualLeaveStartTime.readOnly = true;
+    annualLeaveEndTime.readOnly = true;
+    annualLeaveDays.min = '1';
+    annualLeaveDays.max = '31';
+    annualLeaveDays.step = '1';
+    document.getElementById('annualLeaveAmountLabel').textContent = '총 연차 일수 *';
+    document.getElementById('annualLeaveAmountHint').textContent = '기간 내 주말을 제외한 평일 수입니다. 승인 시 해당 평일 일정이 연차로 등록됩니다.';
     annualLeaveDays.value = String(countAnnualLeaveWeekdays(
       annualLeaveStartDate.value,
       annualLeaveEndDate.value
@@ -250,7 +285,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       <article class="annual-leave-item" data-annual-request-id="${escapeHtml(item.id)}">
         <header class="annual-leave-item-header">
           <div>
-            <h4 class="annual-leave-item-title">${escapeHtml(item.username)} · ${escapeHtml(item.total_days)}일</h4>
+            <h4 class="annual-leave-item-title">${escapeHtml(item.username)} · ${item.leave_type === '시간차' ? `${escapeHtml(item.hours_used)}시간 시간차` : `${escapeHtml(item.total_days)}일 연차`}</h4>
             <p class="annual-leave-item-meta">${escapeHtml(item.department || '부서 미기재')} · ${escapeHtml(formatAnnualLeaveDate(item.start_date))} ${escapeHtml(item.start_time.slice(0, 5))} ~ ${escapeHtml(formatAnnualLeaveDate(item.end_date))} ${escapeHtml(item.end_time.slice(0, 5))}</p>
             <p class="annual-leave-item-meta">신청일 ${escapeHtml(new Intl.DateTimeFormat('ko-KR', { dateStyle: 'medium', timeZone: 'Asia/Seoul' }).format(new Date(item.created_at)))}</p>
           </div>
@@ -306,8 +341,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     }).format(new Date(item.created_at));
     setAnnualLeaveCell(sheet, 'C7', item.department || '');
     setAnnualLeaveCell(sheet, 'H7', item.username);
-    setAnnualLeaveCell(sheet, 'C8', '연차');
-    setAnnualLeaveCell(sheet, 'C9', `${formatDateTime(item.start_date, item.start_time)}부터\n${formatDateTime(item.end_date, item.end_time)}까지 (총 ${item.total_days}일)`);
+    setAnnualLeaveCell(sheet, 'C8', item.leave_type);
+    setAnnualLeaveCell(sheet, 'C9', item.leave_type === '시간차'
+      ? `${formatDateTime(item.start_date, item.start_time)}부터\n${formatDateTime(item.end_date, item.end_time)}까지 (총 ${item.hours_used}시간)`
+      : `${formatDateTime(item.start_date, item.start_time)}부터\n${formatDateTime(item.end_date, item.end_time)}까지 (총 ${item.total_days}일)`);
     setAnnualLeaveCell(sheet, 'C10', item.details || '');
     setAnnualLeaveCell(sheet, 'B17', `위와 같이 휴가를 신청하오니 허락하여 주시기 바랍니다.\n\n\n${applicationDate}\n\n\n신청자 : ${item.username} (인)`);
 
@@ -323,9 +360,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     const today = getKSTDateString();
     annualLeaveStartDate.value = today;
     annualLeaveEndDate.value = today;
-    document.getElementById('annualLeaveStartTime').value = '09:00';
-    document.getElementById('annualLeaveEndTime').value = '18:00';
-    updateAnnualLeaveDays();
+    annualLeaveType.value = '연차';
+    updateAnnualLeaveAmount();
     annualLeaveModal.classList.add('active');
     annualLeaveModal.setAttribute('aria-hidden', 'false');
   }
@@ -341,24 +377,40 @@ document.addEventListener('DOMContentLoaded', async () => {
   annualLeaveModal.addEventListener('click', event => {
     if (event.target === annualLeaveModal) closeAnnualLeaveModal();
   });
-  annualLeaveStartDate.addEventListener('change', updateAnnualLeaveDays);
-  annualLeaveEndDate.addEventListener('change', updateAnnualLeaveDays);
+  annualLeaveType.addEventListener('change', updateAnnualLeaveAmount);
+  annualLeaveStartDate.addEventListener('change', updateAnnualLeaveAmount);
+  annualLeaveEndDate.addEventListener('change', updateAnnualLeaveAmount);
+  annualLeaveStartTime.addEventListener('change', updateAnnualLeaveAmount);
+  annualLeaveEndTime.addEventListener('change', updateAnnualLeaveAmount);
   annualLeaveStatusFilter.addEventListener('change', renderAnnualLeaveRequests);
 
   annualLeaveForm.addEventListener('submit', async event => {
     event.preventDefault();
     annualLeaveFormError.hidden = true;
+    const leaveType = annualLeaveType.value;
+    const hoursUsed = calculateAnnualLeaveHours();
+    if (leaveType === '시간차'
+      && (annualLeaveStartDate.value !== annualLeaveEndDate.value
+        || hoursUsed < 0.25
+        || hoursUsed > 24
+        || !Number.isInteger(hoursUsed * 4))) {
+      annualLeaveFormError.textContent = '시간차는 같은 날짜에 15분 단위로 0.25~24시간을 신청해 주세요.';
+      annualLeaveFormError.hidden = false;
+      return;
+    }
     submitAnnualLeaveBtn.disabled = true;
     submitAnnualLeaveBtn.textContent = '신청 중...';
     try {
       const result = await requestAnnualLeave('', {
         method: 'POST',
         body: JSON.stringify({
+          leave_type: leaveType,
           start_date: annualLeaveStartDate.value,
-          start_time: document.getElementById('annualLeaveStartTime').value,
+          start_time: annualLeaveStartTime.value,
           end_date: annualLeaveEndDate.value,
-          end_time: document.getElementById('annualLeaveEndTime').value,
-          total_days: Number(annualLeaveDays.value),
+          end_time: annualLeaveEndTime.value,
+          total_days: leaveType === '시간차' ? 1 : Number(annualLeaveDays.value),
+          hours_used: leaveType === '시간차' ? hoursUsed : null,
           details: document.getElementById('annualLeaveDetails').value.trim()
         })
       });
