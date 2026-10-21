@@ -568,7 +568,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             <span>☎️</span> 직원 전화번호부
           </a>
           <a href="#" class="drawer-item" id="openResortNoticesFromDrawer">
-            <span>📢</span> 지산 공지사항 &lt;&lt;
+            <span>📢</span> 지산 공지사항
           </a>
           <a href="#" class="drawer-item" id="openPayrollFromDrawer">
             <span>💳</span> 급여 조회
