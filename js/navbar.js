@@ -461,11 +461,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     .payroll-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 18px; border-bottom: 1px solid var(--app-border, rgba(255,255,255,.12)); }
     .payroll-header h2 { margin: 0; font-size: 17px; }
     .payroll-header-actions { display: flex; align-items: center; gap: 8px; }
-    .payroll-header button, .payroll-open-link { min-height: 34px; padding: 0 10px; border: 1px solid var(--app-border, rgba(255,255,255,.14)); border-radius: 8px; background: var(--app-surface-raised, rgba(255,255,255,.06)); color: inherit; font-size: 12px; text-decoration: none; cursor: pointer; }
-    .payroll-content { min-height: 0; flex: 1; padding: 10px; }
-    .payroll-frame { width: 100%; height: 100%; border: 0; border-radius: 8px; background: #fff; }
-    .payroll-mobile-help { margin: 10px; padding: 18px; border: 1px solid var(--app-border, rgba(255,255,255,.12)); border-radius: 12px; color: var(--text-sub, #94a3b8); font-size: 14px; line-height: 1.6; }
-    .payroll-mobile-help a { display: inline-flex; align-items: center; min-height: 42px; margin-top: 12px; padding: 0 14px; border-radius: 8px; background: var(--primary, #38bdf8); color: #082032; font-weight: 700; text-decoration: none; }
+    .payroll-header button { min-height: 34px; padding: 0 10px; border: 1px solid var(--app-border, rgba(255,255,255,.14)); border-radius: 8px; background: var(--app-surface-raised, rgba(255,255,255,.06)); color: inherit; font-size: 12px; cursor: pointer; }
+    .payroll-content { min-height: 0; flex: 1; overflow: auto; padding: 18px; }
+    .payroll-mobile-help { max-width: 520px; margin: 32px auto; padding: 24px; border: 1px solid var(--app-border, rgba(255,255,255,.12)); border-radius: 12px; color: var(--text-sub, #94a3b8); font-size: 14px; line-height: 1.7; text-align: center; }
+    .payroll-mobile-help strong { display: block; margin-bottom: 8px; color: var(--text-main, #f8fafc); font-size: 17px; }
+    .payroll-mobile-help a { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; margin-top: 16px; padding: 0 18px; border-radius: 8px; background: var(--primary, #38bdf8); color: #082032; font-weight: 700; text-decoration: none; }
     @media (max-width: 480px) { .resort-notice-modal { padding: 0; align-items: flex-end; } .resort-notice-dialog { max-height: 92dvh; border-radius: 18px 18px 0 0; padding-bottom: env(safe-area-inset-bottom); } .resort-notice-item { padding: 11px 13px; } }
   `;
   document.head.appendChild(navStyle);
@@ -617,14 +617,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         <header class="payroll-header">
           <h2 id="payrollTitle">급여 조회</h2>
           <div class="payroll-header-actions">
-            <a class="payroll-open-link" id="payrollOpenExternal" href="https://www.ibro.co.kr/PayRoll/JOBWITH/index.asp">외부 브라우저에서 열기</a>
             <button id="closePayroll" type="button" aria-label="급여 조회 닫기">닫기</button>
           </div>
         </header>
         <div class="payroll-content">
-          <iframe class="payroll-frame" id="payrollFrame" title="급여 조회 사이트" src="about:blank"></iframe>
-          <div class="payroll-mobile-help" id="payrollMobileHelp" hidden>
-            급여 조회 사이트를 안전하게 열기 위해 외부 브라우저에서 로그인해 주세요. 로그인 정보는 앱에 저장되지 않습니다.
+          <div class="payroll-mobile-help" id="payrollMobileHelp">
+            <strong>회사 급여 조회 사이트</strong>
+            앱 안에서 급여 사이트를 표시할 때 오류가 발생해 외부 브라우저에서 열도록 했습니다. 로그인 정보는 앱에 입력되거나 저장되지 않습니다.
             <br><a id="payrollMobileLink" href="https://www.ibro.co.kr/PayRoll/JOBWITH/index.asp">급여 조회 사이트 열기</a>
           </div>
         </div>
@@ -666,23 +665,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   const resortNoticePageLabel = document.getElementById('resortNoticePageLabel');
   const resortNoticeListButton = document.getElementById('resortNoticeListButton');
   const payrollModal = document.getElementById('payrollModal');
-  const payrollFrame = document.getElementById('payrollFrame');
-  const payrollMobileHelp = document.getElementById('payrollMobileHelp');
-  const payrollExternalLinks = [
-    document.getElementById('payrollOpenExternal'),
-    document.getElementById('payrollMobileLink')
-  ];
   const isAndroidApp = Boolean(window.AndroidSecurity);
-  payrollMobileHelp.hidden = !isAndroidApp;
-  payrollFrame.hidden = isAndroidApp;
-  if (isAndroidApp) {
-    payrollExternalLinks.forEach(link => { link.target = '_self'; });
-  } else {
-    payrollExternalLinks.forEach(link => {
-      link.target = '_blank';
-      link.rel = 'noopener noreferrer';
-    });
-  }
+  const payrollMobileLink = document.getElementById('payrollMobileLink');
+  payrollMobileLink.target = isAndroidApp ? '_self' : '_blank';
+  if (!isAndroidApp) payrollMobileLink.rel = 'noopener noreferrer';
   const RESORT_NOTICES_API = 'https://jsec-serverless.adobephotoshop.workers.dev/api/resort-notices';
   let resortNoticePage = 1;
   let resortNoticeTotalPages = 1;
@@ -973,19 +959,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     resortNoticeModal.setAttribute('aria-hidden', 'true');
   }
 
-  ['openResortNotices', 'openResortNoticesFromDrawer'].forEach(id => {
-    document.getElementById(id)?.addEventListener('click', event => {
-      event.preventDefault();
-      openResortNotices();
-    });
-  });
-  resortNoticeContent.addEventListener('click', event => {
-    const target = event.target instanceof Element ? event.target : null;
-    const noticeItem = target?.closest('[data-notice-id]');
-    if (noticeItem && resortNoticeModal.contains(noticeItem)) {
-      openResortNoticeDetail(noticeItem.dataset.noticeId);
-    }
-  });
   document.getElementById('closeResortNotices').addEventListener('click', closeResortNotices);
   resortNoticeModal.addEventListener('click', event => {
     if (event.target === resortNoticeModal) closeResortNotices();
@@ -1003,20 +976,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     setDrawerOpen(false);
     payrollModal.classList.add('active');
     payrollModal.setAttribute('aria-hidden', 'false');
-    if (!isAndroidApp && payrollFrame.src === 'about:blank') {
-      payrollFrame.src = 'https://www.ibro.co.kr/PayRoll/JOBWITH/index.asp';
-    }
   }
   function closePayroll() {
     payrollModal.classList.remove('active');
     payrollModal.setAttribute('aria-hidden', 'true');
   }
-  ['openPayroll', 'openPayrollFromDrawer'].forEach(id => {
-    document.getElementById(id)?.addEventListener('click', event => {
-      event.preventDefault();
-      openPayroll();
-    });
-  });
   document.getElementById('closePayroll').addEventListener('click', closePayroll);
   payrollModal.addEventListener('click', event => {
     if (event.target === payrollModal) closePayroll();
@@ -1024,6 +988,23 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.addEventListener('keydown', event => {
     if (event.key === 'Escape' && payrollModal.classList.contains('active')) closePayroll();
   });
+  document.addEventListener('click', event => {
+    const target = event.target instanceof Element ? event.target : null;
+    if (!target) return;
+
+    const noticeTrigger = target.closest('#openResortNotices, #openResortNoticesFromDrawer');
+    const payrollTrigger = target.closest('#openPayroll, #openPayrollFromDrawer');
+    const noticeItem = target.closest('[data-notice-id]');
+    if (!noticeTrigger && !payrollTrigger && !noticeItem) return;
+
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    if (noticeTrigger) openResortNotices();
+    else if (payrollTrigger) openPayroll();
+    else if (resortNoticeModal.contains(noticeItem)) {
+      openResortNoticeDetail(noticeItem.dataset.noticeId);
+    }
+  }, true);
 
   async function signOutRetiredUser() {
     window.markIntentionalSignOut?.();
