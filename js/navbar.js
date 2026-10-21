@@ -592,6 +592,9 @@ document.addEventListener('DOMContentLoaded', async () => {
           <section class="drawer-group" aria-labelledby="drawerInfoGroup">
             <h2 class="drawer-group-title" id="drawerInfoGroup">자료 · 연락처</h2>
             <div class="drawer-group-items">
+              <a href="/pages/meal-plan.html" class="drawer-item ${currentPath.includes('meal-plan.html') ? 'active' : ''}" ${currentPath.includes('meal-plan.html') ? 'aria-current="page"' : ''}>
+                <span class="drawer-item-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 5h16v14H4z"/><path d="M8 9h8M8 13h8M8 17h5"/><path d="m5 4 2-2m10 2 2-2"/></svg></span><span class="drawer-item-label">주간 식단표</span>
+              </a>
               <a href="/pages/vehicle.html" class="drawer-item ${currentPath.includes('vehicle.html') ? 'active' : ''}" ${currentPath.includes('vehicle.html') ? 'aria-current="page"' : ''}>
                 <span class="drawer-item-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m5 11 1.5-4.5A2 2 0 0 1 8.4 5h7.2a2 2 0 0 1 1.9 1.5L19 11"/><path d="M3 11h18v8H3z"/><path d="M6 19v2m12-2v2M6 15h.01M18 15h.01M3 13l-1-2m19 2 1-2"/></svg></span><span class="drawer-item-label">지산 차량조회</span>
               </a>

@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#0b1220">
+  <title>지산리조트 보안팀 - 주간 식단표</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    :root {
+      color-scheme: dark;
+      --page: #0b1220;
+      --panel: #121d2e;
+      --line: rgba(190, 211, 239, 0.11);
+      --text: #f3f7fc;
+      --muted: #92a2b8;
+      --green: #83d8ad;
+    }
+    * { box-sizing: border-box; }
+    body {
+      min-height: 100vh;
+      margin: 0;
+      padding-bottom: 36px;
+      background: radial-gradient(ellipse at 82% -10%, rgba(26, 106, 157, 0.2), transparent 38rem), var(--page);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Pretendard", "Segoe UI", sans-serif;
+    }
+    button { font: inherit; }
+    .meal-shell { width: min(900px, 100%); margin: 0 auto; padding: 28px 22px 0; }
+    .meal-intro { margin-bottom: 22px; }
+    .meal-kicker { margin: 0 0 9px; color: var(--green); font-size: 11px; font-weight: 800; letter-spacing: 0.16em; }
+    .meal-intro h1 { margin: 0; font-size: clamp(25px, 5vw, 34px); letter-spacing: -0.045em; }
+    .meal-intro p { margin: 9px 0 0; color: var(--muted); font-size: 14px; line-height: 1.65; }
+    .meal-card { overflow: hidden; border: 1px solid var(--line); border-radius: 18px; background: rgba(18, 29, 46, 0.92); box-shadow: 0 22px 60px rgba(0, 0, 0, 0.2); }
+    .week-nav { display: flex; min-height: 76px; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 18px; border-bottom: 1px solid var(--line); }
+    .week-nav button, .meal-action {
+      min-height: 40px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.04);
+      color: var(--text);
+      cursor: pointer;
+    }
+    .week-nav button { width: 42px; flex: 0 0 42px; font-size: 20px; }
+    .week-nav button:hover:not(:disabled), .meal-action:hover:not(:disabled) { border-color: rgba(131, 216, 173, 0.55); }
+    .week-nav button:disabled, .meal-action:disabled { cursor: wait; opacity: 0.55; }
+    .week-label { min-width: 0; text-align: center; }
+    .week-label strong { display: block; font-size: 15px; }
+    .week-label span { display: block; margin-top: 4px; color: var(--muted); font-size: 11px; }
+    .meal-content { padding: 18px; }
+    .meal-status { min-height: 22px; margin: 0 0 12px; color: var(--muted); font-size: 13px; line-height: 1.55; }
+    .meal-status[data-type="error"] { color: #fca5a5; }
+    .meal-status[data-type="success"] { color: var(--green); }
+    .meal-photo-frame { display: grid; min-height: 220px; place-items: center; overflow: hidden; border: 1px dashed rgba(190, 211, 239, 0.2); border-radius: 13px; background: rgba(4, 10, 19, 0.42); }
+    .meal-photo-frame[hidden] { display: none; }
+    .meal-photo { display: block; width: 100%; max-height: min(72vh, 900px); object-fit: contain; background: #090e17; }
+    .meal-empty { padding: 44px 20px; color: var(--muted); font-size: 13px; text-align: center; line-height: 1.7; }
+    .meal-empty strong { display: block; margin-bottom: 6px; color: #dce8f6; font-size: 15px; }
+    .meal-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 9px; margin-top: 14px; }
+    .meal-action { display: inline-flex; align-items: center; justify-content: center; gap: 7px; padding: 0 14px; font-size: 12px; font-weight: 700; }
+    .meal-action-primary { border-color: rgba(131, 216, 173, 0.25); background: linear-gradient(135deg, rgba(54, 140, 96, 0.8), rgba(34, 108, 75, 0.9)); }
+    .meal-action[hidden] { display: none; }
+    .meal-help { margin: 13px 0 0; color: #8292a8; font-size: 11px; line-height: 1.6; }
+    @media (max-width: 540px) {
+      .meal-shell { padding: 22px 14px 0; }
+      .week-nav { padding: 12px; }
+      .meal-content { padding: 13px; }
+      .meal-photo-frame { min-height: 180px; }
+      .meal-actions .meal-action { flex: 1; }
+    }
+  </style>
+</head>
+<body>
+  <div id="navbar"></div>
+  <main class="meal-shell">
+    <header class="meal-intro">
+      <p class="meal-kicker">WEEKLY MENU</p>
+      <h1>주간 식단표</h1>
+      <p>이번 주 식단표 사진을 확인하고, 사진을 찍어 공유할 수 있습니다.<br>새 사진을 올리면 같은 주의 기존 식단표가 교체됩니다.</p>
+    </header>
+    <section class="meal-card" aria-label="주간 식단표">
+      <nav class="week-nav" aria-label="주간 식단표 주 선택">
+        <button id="previousWeek" type="button" aria-label="이전 주">‹</button>
+        <div class="week-label">
+          <strong id="weekRange">불러오는 중</strong>
+          <span id="weekStart"></span>
+        </div>
+        <button id="nextWeek" type="button" aria-label="다음 주">›</button>
+      </nav>
+      <div class="meal-content">
+        <p class="meal-status" id="mealStatus" role="status" aria-live="polite"></p>
+        <div class="meal-photo-frame" id="mealPhotoFrame" hidden>
+          <img class="meal-photo" id="mealPhoto" alt="선택한 주의 식단표 사진">
+        </div>
+        <div class="meal-empty" id="mealEmpty" hidden>
+          <strong>아직 등록된 식단표가 없습니다.</strong>
+          이 주의 식단표 사진을 먼저 올려 주세요.
+        </div>
+        <div class="meal-actions">
+          <button class="meal-action" id="chooseMealPhoto" type="button">📷 사진 선택</button>
+          <button class="meal-action meal-action-primary" id="uploadMealPhoto" type="button" hidden>이 주 식단표 올리기</button>
+          <button class="meal-action" id="cancelMealPhoto" type="button" hidden>취소</button>
+          <input id="mealPhotoInput" type="file" accept="image/*" capture="environment" hidden>
+        </div>
+        <p class="meal-help">사진은 기기에서 JPEG로 압축한 뒤 업로드됩니다. 최대 1MB이며, 같은 주에 다시 올리면 기존 사진을 교체합니다.</p>
+      </div>
+    </section>
+  </main>
+  <script src="/js/app-loading.js"></script>
+  <script src="/js/supabase.js"></script>
+  <script src="/js/user-preferences.js"></script>
+  <script src="/js/navbar.js"></script>
+  <script src="/js/meal-plan.js"></script>
+</body>
+</html>
