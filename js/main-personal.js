@@ -12,7 +12,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const annualLeaveSummary = document.getElementById('personalAnnualLeaveSummary');
   const annualLeaveError = document.getElementById('personalAnnualLeaveError');
   const teamAnnualLeaveArea = document.getElementById('teamAnnualLeaveArea');
-  const teamAnnualLeaveSummary = document.getElementById('teamAnnualLeaveSummary');
+  const teamAnnualLeaveAsOf = document.getElementById('teamAnnualLeaveAsOf');
   const teamAnnualLeaveSelect = document.getElementById('teamAnnualLeaveSelect');
   const teamAnnualLeaveDetail = document.getElementById('teamAnnualLeaveDetail');
   const allowanceSummary = document.getElementById('personalAllowanceSummary');
@@ -44,6 +44,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   const todayParts = getKstParts();
   const today = `${todayParts.year}-${todayParts.month}-${todayParts.day}`;
+  teamAnnualLeaveAsOf.value = today;
   let selectedMonth = new Date(Number(todayParts.year), Number(todayParts.month) - 1, 1);
   let monthRequestId = 0;
   let isGuest = false;
@@ -52,6 +53,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   let allVacations = [];
   let annualLeaveBalances = [];
   let annualLeaveLoaded = false;
+  let annualLeaveRequestId = 0;
   let guestVacationState = 'loading';
   let guestAllowanceState = 'loading';
 
@@ -223,6 +225,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   dutyList.style.display = 'none';
   dutyStatus.hidden = true;
   dutyStatus.style.display = 'none';
+  annualLeaveSummary.hidden = isAdmin;
   if (isGuest) {
     personalTitle.textContent = '팀 운영 대시보드';
     vacationTab.hidden = true;
@@ -295,44 +298,30 @@ document.addEventListener('DOMContentLoaded', async () => {
         <div class="personal-annual-stat"><span>사용 · 신청 대기</span><strong>${formatAnnualDays(balance.used_days)} · ${formatAnnualDays(balance.pending_days)}일</strong></div>
         <div class="personal-annual-stat"><span>신청 가능 잔여</span><strong>${formatAnnualDays(balance.remaining_days)}일</strong></div>
       </div>
-      <p class="personal-annual-note">기준기간 ${escapeHtml(balance.cycle_start)} ~ ${escapeHtml(balance.cycle_end)} · 소진율 ${balance.usage_rate}% · 시간차 1일 기준 ${balance.hours_per_day}시간</p>`;
+      <p class="personal-annual-note">연차 기준일 ${escapeHtml(balance.annual_base_date)} · 산정 기준일 ${escapeHtml(teamAnnualLeaveAsOf.value)} · 기준기간 ${escapeHtml(balance.cycle_start)} ~ ${escapeHtml(balance.cycle_end)} · 소진율 ${balance.usage_rate}% · 시간차 1일 기준 ${balance.hours_per_day}시간</p>`;
   }
 
   function renderAnnualLeave(balances) {
-    if (!balances.length) {
-      annualLeaveSummary.innerHTML = '<div class="personal-empty">표시할 연차 현황이 없습니다.</div>';
-      return;
-    }
-    const eligible = balances.filter(balance => balance.service_year);
     if (isAdmin) {
-      const totalEntitled = eligible.reduce((sum, balance) => sum + balance.entitled_days, 0);
-      const totalUsed = eligible.reduce((sum, balance) => sum + balance.used_days, 0);
-      const totalPending = eligible.reduce((sum, balance) => sum + balance.pending_days, 0);
-      annualLeaveSummary.innerHTML = `<div class="personal-annual-grid">
-        <div class="personal-annual-stat"><span>전체 직원</span><strong>${balances.length}명</strong></div>
-        <div class="personal-annual-stat"><span>산정 가능</span><strong>${eligible.length}명</strong></div>
-        <div class="personal-annual-stat"><span>총 사용</span><strong>${formatAnnualDays(totalUsed)}일</strong></div>
-        <div class="personal-annual-stat"><span>신청 대기</span><strong>${formatAnnualDays(totalPending)}일</strong></div>
-      </div><div class="personal-annual-groups">${groupAnnualLeaveByWorkplace(balances).map(([workplace, group]) => {
-        const calculated = group.filter(balance => balance.service_year);
-        return `<section class="personal-annual-workplace">
-          <h3>${escapeHtml(workplace)} <span>${group.length}명</span></h3>
-          <p>산정 가능 ${calculated.length}명 · 사용 ${formatAnnualDays(calculated.reduce((sum, balance) => sum + balance.used_days, 0))}일 · 잔여 ${formatAnnualDays(calculated.reduce((sum, balance) => sum + balance.remaining_days, 0))}일</p>
-        </section>`;
-      }).join('')}</div>`;
-      teamAnnualLeaveSummary.textContent = `전체 보유 ${formatAnnualDays(totalEntitled)}일 · 전체 잔여 ${formatAnnualDays(
-        eligible.reduce((sum, balance) => sum + balance.remaining_days, 0)
-      )}일 · 직원별 상세를 선택해 확인하세요.`;
+      annualLeaveSummary.hidden = true;
+      const selectedUserId = teamAnnualLeaveSelect.value;
       teamAnnualLeaveSelect.innerHTML = '<option value="">직원을 선택하세요</option>' +
         groupAnnualLeaveByWorkplace(balances).map(([workplace, group]) =>
           `<optgroup label="${escapeHtml(workplace)}">${group
             .map(balance => `<option value="${escapeHtml(balance.user_id)}">${escapeHtml(balance.name)}</option>`)
             .join('')}</optgroup>`
         ).join('');
-      renderAnnualLeaveEmployee(null);
+      teamAnnualLeaveSelect.value = balances.some(balance => balance.user_id === selectedUserId)
+        ? selectedUserId
+        : '';
+      renderAnnualLeaveEmployee(balances.find(balance => balance.user_id === teamAnnualLeaveSelect.value));
       return;
     }
-
+    annualLeaveSummary.hidden = false;
+    if (!balances.length) {
+      annualLeaveSummary.innerHTML = '<div class="personal-empty">표시할 연차 현황이 없습니다.</div>';
+      return;
+    }
     const balance = balances[0];
     if (!balance.service_year) {
       annualLeaveSummary.innerHTML = '<div class="personal-empty">연차 기준일이 등록되어 있지 않아 연차를 계산할 수 없습니다. 관리자에게 문의해 주세요.</div>';
@@ -347,18 +336,24 @@ document.addEventListener('DOMContentLoaded', async () => {
     <p class="personal-annual-note">기준기간 ${escapeHtml(balance.cycle_start)} ~ ${escapeHtml(balance.cycle_end)} · 소진율 ${balance.usage_rate}% · 시간차 1일 기준 ${balance.hours_per_day}시간</p>`;
   }
 
-  async function loadAnnualLeave() {
-    if (annualLeaveLoaded) return;
+  async function loadAnnualLeave(force = false) {
+    if (annualLeaveLoaded && !force) return;
+    const requestId = ++annualLeaveRequestId;
     annualLeaveError.textContent = '';
-    annualLeaveSummary.innerHTML = '<div class="personal-empty">연차 현황을 불러오는 중입니다.</div>';
+    if (!isAdmin) annualLeaveSummary.innerHTML = '<div class="personal-empty">연차 현황을 불러오는 중입니다.</div>';
     try {
-      const result = await request('/annual-leave');
+      const params = new URLSearchParams();
+      if (isAdmin) params.set('as_of', teamAnnualLeaveAsOf.value);
+      const result = await request(`/annual-leave${params.size ? `?${params}` : ''}`);
+      if (requestId !== annualLeaveRequestId) return;
       annualLeaveBalances = result.balances || [];
       isAdmin = result.isAdmin;
       teamAnnualLeaveArea.hidden = !isAdmin;
       renderAnnualLeave(annualLeaveBalances);
       annualLeaveLoaded = true;
     } catch (error) {
+      if (requestId !== annualLeaveRequestId) return;
+      annualLeaveLoaded = false;
       console.error('내 메뉴 연차 현황 조회 오류:', error);
       annualLeaveError.textContent = error.message || '연차 현황을 불러오지 못했습니다.';
       annualLeaveSummary.innerHTML = '<div class="personal-empty">연차 현황을 불러오지 못했습니다. 연차 관리 페이지에서 다시 시도해 주세요.</div>';
@@ -368,6 +363,16 @@ document.addEventListener('DOMContentLoaded', async () => {
   teamAnnualLeaveSelect.addEventListener('change', () => {
     const balance = annualLeaveBalances.find(item => item.user_id === teamAnnualLeaveSelect.value);
     renderAnnualLeaveEmployee(balance);
+  });
+
+  teamAnnualLeaveAsOf.addEventListener('change', () => {
+    if (!teamAnnualLeaveAsOf.value) {
+      teamAnnualLeaveAsOf.value = today;
+      return;
+    }
+    annualLeaveLoaded = false;
+    teamAnnualLeaveDetail.innerHTML = '<div class="personal-empty">선택한 기준일로 연차 현황을 다시 계산하고 있습니다.</div>';
+    loadAnnualLeave();
   });
 
   async function loadVacations(start, end, requestId) {

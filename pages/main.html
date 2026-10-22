@@ -334,22 +334,18 @@
     .personal-tab:focus-visible, .duty-toggle:focus-visible { outline: 3px solid rgba(39, 120, 168, 0.42); outline-offset: 2px; }
     .personal-content { padding-top: 17px; touch-action: pan-y; }
     .personal-content[hidden] { display: none; }
-    .personal-annual-controls { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
-    .personal-annual-controls label { color: var(--muted); font-size: 12px; font-weight: 700; }
-    .personal-annual-controls select { min-width: min(260px, 60%); min-height: 38px; padding: 0 10px; border: 1px solid var(--line); border-radius: 9px; background: var(--panel-raised); color: var(--ink); font: inherit; }
+    .personal-annual-controls { display: grid; grid-template-columns: minmax(160px, 220px) minmax(220px, 1fr); gap: 12px; margin-bottom: 14px; }
+    .personal-annual-control { display: grid; gap: 6px; color: var(--muted); font-size: 12px; font-weight: 700; }
+    .personal-annual-controls select, .personal-annual-controls input { width: 100%; min-height: 38px; padding: 0 10px; border: 1px solid var(--line); border-radius: 9px; background: var(--panel-raised); color: var(--ink); font: inherit; }
     .personal-annual-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 9px; }
     .personal-annual-stat { min-width: 0; padding: 12px; border: 1px solid var(--line); border-radius: 10px; background: rgba(255, 255, 255, 0.035); }
     .personal-annual-stat span { display: block; color: var(--muted); font-size: 11px; }
     .personal-annual-stat strong { display: block; margin-top: 5px; font-size: 18px; }
-    .personal-annual-groups { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 8px; margin-top: 10px; }
-    .personal-annual-workplace { padding: 10px 12px; border: 1px solid var(--line); border-radius: 9px; background: rgba(255, 255, 255, 0.035); }
-    .personal-annual-workplace h3 { margin: 0; font-size: 12px; }
-    .personal-annual-workplace h3 span { color: var(--muted); font-size: 10px; font-weight: 500; }
-    .personal-annual-workplace p { margin: 5px 0 0; color: var(--muted); font-size: 10px; line-height: 1.5; }
     .personal-annual-note { margin: 12px 0 0; color: var(--muted); font-size: 12px; line-height: 1.6; }
     .personal-annual-error { margin: 0; color: #fca5a5; font-size: 12px; }
     .personal-content.month-slide-next { animation: personal-month-next 180ms ease-out; }
     .personal-content.month-slide-previous { animation: personal-month-previous 180ms ease-out; }
+    @media (max-width: 560px) { .personal-annual-controls { grid-template-columns: 1fr; } }
     @keyframes personal-month-next { from { opacity: 0.35; transform: translateX(16px); } to { opacity: 1; transform: translateX(0); } }
     @keyframes personal-month-previous { from { opacity: 0.35; transform: translateX(-16px); } to { opacity: 1; transform: translateX(0); } }
     @media (prefers-reduced-motion: reduce) {
@@ -476,8 +472,8 @@
     html[data-theme="light"] .personal-row-value { color: #176346; }
     html[data-theme="light"] .personal-empty { border-color: var(--app-border); color: var(--text-sub); }
     html[data-theme="light"] .personal-annual-stat { border-color: var(--app-border); background: #f7faf7; }
-    html[data-theme="light"] .personal-annual-workplace { border-color: var(--app-border); background: #f7faf7; }
-    html[data-theme="light"] .personal-annual-controls select { border-color: var(--app-border); background: #fff; color: var(--text-main); }
+    html[data-theme="light"] .personal-annual-controls select,
+    html[data-theme="light"] .personal-annual-controls input { border-color: var(--app-border); background: #fff; color: var(--text-main); }
     html[data-theme="light"] .personal-annual-error { color: #a33139; }
     html[data-theme="light"] .guest-kpi, html[data-theme="light"] .guest-chart-card,
     html[data-theme="light"] .guest-ranking-row { border-color: var(--app-border); background: #f7faf7; }
@@ -651,10 +647,13 @@
         <p class="personal-annual-error" id="personalAnnualLeaveError" role="alert"></p>
         <div id="personalAnnualLeaveSummary" aria-live="polite"><div class="personal-empty">연차 현황을 불러오려면 연차 관리 탭을 선택하세요.</div></div>
         <div id="teamAnnualLeaveArea" hidden>
-          <p class="personal-annual-note" id="teamAnnualLeaveSummary"></p>
           <div class="personal-annual-controls">
-            <label for="teamAnnualLeaveSelect">직원별 상세</label>
-            <select id="teamAnnualLeaveSelect"><option value="">직원을 선택하세요</option></select>
+            <label class="personal-annual-control" for="teamAnnualLeaveAsOf">기준일
+              <input id="teamAnnualLeaveAsOf" type="date" required>
+            </label>
+            <label class="personal-annual-control" for="teamAnnualLeaveSelect">직원별 상세
+              <select id="teamAnnualLeaveSelect"><option value="">직원을 선택하세요</option></select>
+            </label>
           </div>
           <div id="teamAnnualLeaveDetail" aria-live="polite"></div>
         </div>
