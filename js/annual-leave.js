@@ -100,6 +100,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   function renderBalances(balances, isAdmin) {
     annualDateControls.hidden = !isAdmin;
+    annualSummary.hidden = false;
     if (!balances.length) {
       annualSummary.innerHTML = '<div class="annual-empty">표시할 직원 연차 현황이 없습니다.</div>';
       annualChart.replaceChildren();
@@ -125,30 +126,37 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const eligible = balances.filter(item => item.service_year);
     const workplaceGroups = groupByWorkplace(balances);
-    annualSummary.innerHTML = `<div class="annual-summary-grid">
-      <div class="annual-summary"><span>직원</span><strong>${balances.length}명</strong></div>
-      <div class="annual-summary"><span>연차 산정 가능</span><strong>${eligible.length}명</strong></div>
-      <div class="annual-summary"><span>총 보유 일수</span><strong>${eligible.reduce((sum, item) => sum + item.entitled_days, 0)}일</strong></div>
-      <div class="annual-summary"><span>사용 일수</span><strong>${eligible.reduce((sum, item) => sum + item.used_days, 0).toFixed(2)}일</strong></div>
-    </div><div class="annual-workplace-summary">${workplaceGroups.map(([workplace, group]) => {
-      const eligibleGroup = group.filter(item => item.service_year);
-      const used = eligibleGroup.reduce((sum, item) => sum + item.used_days, 0);
-      const pending = eligibleGroup.reduce((sum, item) => sum + item.pending_days, 0);
-      const remaining = eligibleGroup.reduce((sum, item) => sum + item.remaining_days, 0);
-      return `<section class="annual-workplace-card">
-        <h3><span class="annual-workplace-label">근무지</span>${escapeHtml(workplace)} <span>${group.length}명</span></h3>
-        <p>산정 가능 ${eligibleGroup.length}명 · 사용 ${used.toFixed(2)}일 · 대기 ${pending.toFixed(2)}일 · 잔여 ${remaining.toFixed(2)}일</p>
-      </section>`;
-    }).join('')}</div>${missingAnnualBaseDate.length
-      ? `<p class="annual-message">${missingAnnualBaseDate.length}명은 연차 기준일이 없어 연차를 계산하지 못했습니다.</p>`
-      : ''}`;
+    if (isAdmin) {
+      annualSummary.hidden = missingAnnualBaseDate.length === 0;
+      annualSummary.innerHTML = missingAnnualBaseDate.length
+        ? `<p class="annual-message">${missingAnnualBaseDate.length}명은 연차 기준일이 없어 연차를 계산하지 못했습니다.</p>`
+        : '';
+    } else {
+      annualSummary.innerHTML = `<div class="annual-summary-grid">
+        <div class="annual-summary"><span>직원</span><strong>${balances.length}명</strong></div>
+        <div class="annual-summary"><span>연차 산정 가능</span><strong>${eligible.length}명</strong></div>
+        <div class="annual-summary"><span>총 보유 일수</span><strong>${eligible.reduce((sum, item) => sum + item.entitled_days, 0)}일</strong></div>
+        <div class="annual-summary"><span>사용 일수</span><strong>${eligible.reduce((sum, item) => sum + item.used_days, 0).toFixed(2)}일</strong></div>
+      </div><div class="annual-workplace-summary">${workplaceGroups.map(([workplace, group]) => {
+        const eligibleGroup = group.filter(item => item.service_year);
+        const used = eligibleGroup.reduce((sum, item) => sum + item.used_days, 0);
+        const pending = eligibleGroup.reduce((sum, item) => sum + item.pending_days, 0);
+        const remaining = eligibleGroup.reduce((sum, item) => sum + item.remaining_days, 0);
+        return `<section class="annual-workplace-card">
+          <h3><span class="annual-workplace-label">근무지</span>${escapeHtml(workplace)} <span>${group.length}명</span></h3>
+          <p>산정 가능 ${eligibleGroup.length}명 · 사용 ${used.toFixed(2)}일 · 대기 ${pending.toFixed(2)}일 · 잔여 ${remaining.toFixed(2)}일</p>
+        </section>`;
+      }).join('')}</div>${missingAnnualBaseDate.length
+        ? `<p class="annual-message">${missingAnnualBaseDate.length}명은 연차 기준일이 없어 연차를 계산하지 못했습니다.</p>`
+        : ''}`;
+    }
     annualChart.innerHTML = eligible.length
         ? groupByWorkplace(eligible).map(([workplace, group]) => `<section class="annual-chart-group">
           <h3><span class="annual-workplace-label">근무지</span>${escapeHtml(workplace)} <span>${group.length}명</span></h3>
           ${group.map(item => `<div class="annual-chart-row" title="${escapeHtml(item.name)}: ${item.usage_rate}% 사용">
             <span class="annual-chart-name">${escapeHtml(item.name)}</span>
             <span class="annual-track"><span class="annual-fill" style="display:block;width:${item.usage_rate}%"></span></span>
-            <span class="annual-chart-value">${item.usage_rate}% · ${item.used_days}/${item.entitled_days}일</span>
+            <span class="annual-chart-value">${item.usage_rate}% · ${item.usage_counted_days}/${item.gross_entitled_days}일</span>
           </div>`).join('')}
         </section>`).join('')
       : '<div class="annual-empty">연차 기준일이 등록된 재직 직원이 없습니다.</div>';
