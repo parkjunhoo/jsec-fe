@@ -70,10 +70,31 @@
 
     .brand-header {
       text-align: center;
-      margin-bottom: 30px;
+      margin-bottom: 36px;
     }
 
-    .login-brand-logo { width: 58px; height: 58px; margin-bottom: 14px; object-fit: contain; }
+    .brand-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(56, 189, 248, 0.12);
+      color: var(--primary);
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      margin-bottom: 12px;
+      border: 1px solid rgba(56, 189, 248, 0.2);
+    }
+
+    .brand-badge::before {
+      content: '';
+      width: 6px;
+      height: 6px;
+      background-color: var(--primary);
+      border-radius: 50%;
+    }
 
     .brand-header h1 {
       font-size: 24px;
@@ -180,9 +201,9 @@
 
   <div class="app-card">
     <div class="brand-header">
-      <img class="login-brand-logo" src="/logo.png" alt="지산리조트 로고">
-      <h1>지산리조트 보안팀</h1>
-      <p>계정으로 로그인하세요.</p>
+      <div class="brand-badge">JISAN SECURITY</div>
+      <h1>보안관리 시스템</h1>
+      <p>지산리조트 보안팀 전용 서비스</p>
     </div>
 
     <form id="loginForm">

@@ -533,7 +533,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           <div class="drawer-user-row">
             <div>
               <div class="drawer-user-name" id="navUserName">회원 정보 불러오는 중...</div>
-              <div class="drawer-user-role" id="navUserRole">권한 확인 중</div>
+              <div class="drawer-user-role" id="navUserRole">Jisan Security Team</div>
             </div>
             <a href="/pages/settings.html" class="btn-settings-gear" title="개인정보 설정">⚙️</a>
             <button class="drawer-close-btn" id="closeNavDrawer" type="button" aria-label="메뉴 닫기">
