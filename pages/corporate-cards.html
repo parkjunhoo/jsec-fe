@@ -6,6 +6,7 @@
   <meta name="theme-color" content="#111815">
   <title>지산리조트 보안팀 - 법인카드 내역</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
   <link rel="stylesheet" href="/css/app-theme.css">
   <style>
     * { box-sizing: border-box; }
@@ -28,11 +29,19 @@
     .cards-filters { display: flex; align-items: center; gap: 10px; padding: 17px 19px; border-bottom: 1px solid var(--app-border); }
     .cards-month, .cards-search { min-height: 40px; padding: 0 11px; border: 1px solid var(--app-border); border-radius: 9px; background: var(--app-surface-raised); color: var(--text-main); }
     .cards-search { width: min(310px, 100%); margin-left: auto; }
+    .cards-report-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 9px; padding: 13px 19px; border-bottom: 1px solid var(--app-border); background: color-mix(in srgb, var(--app-surface-raised) 55%, transparent); }
+    .cards-report-label { color: var(--text-sub); font-size: 11px; font-weight: 700; }
+    .cards-report-date { min-height: 38px; padding: 0 9px; border: 1px solid var(--app-border); border-radius: 8px; background: var(--app-surface); color: var(--text-main); font-size: 12px; }
+    .cards-report-separator { color: var(--text-sub); font-size: 12px; }
+    .cards-export { min-height: 39px; margin-left: auto; border-color: transparent; background: linear-gradient(135deg, #367b59, #245c42); color: #fff; }
+    html[data-theme="light"] .cards-export { background: linear-gradient(135deg, #197254, #115b42); color: #fff; }
+    .cards-export:disabled { cursor: wait; opacity: .65; }
+    .cards-export-icon { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.8; }
     .cards-summary { display: flex; flex-wrap: wrap; gap: 10px; padding: 15px 19px; border-bottom: 1px solid var(--app-border); }
     .cards-stat { min-width: 145px; flex: 1; padding: 13px 15px; border: 1px solid var(--app-border); border-radius: 12px; background: var(--app-surface-raised); }
     .cards-stat span { display: block; color: var(--text-sub); font-size: 11px; }
     .cards-stat strong { display: block; margin-top: 5px; font-size: 20px; letter-spacing: -.03em; }
-    .cards-charts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; padding: 0 19px 16px; border-bottom: 1px solid var(--app-border); }
+    .cards-charts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; padding: 0 19px 16px; border-bottom: 1px solid var(--app-border); margin-top:10px;}
     .cards-chart-panel { min-width: 0; padding: 16px; border: 1px solid var(--app-border); border-radius: 14px; background: linear-gradient(145deg, var(--app-surface-raised), var(--app-surface)); }
     .cards-chart-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; margin-bottom: 15px; }
     .cards-chart-heading h2 { margin: 0; font-size: 13px; font-weight: 760; }
@@ -97,6 +106,10 @@
       .cards-filters { flex-wrap: wrap; padding: 13px; }
       .cards-month { flex: 1; }
       .cards-search { width: 100%; margin-left: 0; }
+      .cards-report-controls { gap: 7px; padding: 12px 13px; }
+      .cards-report-label { width: 100%; }
+      .cards-report-date { min-width: 0; flex: 1; }
+      .cards-export { width: 100%; margin: 3px 0 0; }
       .cards-summary { gap: 7px; padding: 12px; }
       .cards-stat { min-width: 100px; padding: 11px; }
       .cards-stat strong { font-size: 17px; }
@@ -132,6 +145,18 @@
         <input class="cards-month" id="monthFilter" type="month">
         <label class="sr-only" for="searchFilter">내역 검색</label>
         <input class="cards-search" id="searchFilter" type="search" placeholder="가맹점, 사용자, 항목 검색">
+      </div>
+      <div class="cards-report-controls">
+        <span class="cards-report-label">본사 제출용 보고 기간</span>
+        <label class="sr-only" for="reportStart">보고 시작일</label>
+        <input class="cards-report-date" id="reportStart" type="date" required>
+        <span class="cards-report-separator" aria-hidden="true">부터</span>
+        <label class="sr-only" for="reportEnd">보고 종료일</label>
+        <input class="cards-report-date" id="reportEnd" type="date" required>
+        <button class="cards-button cards-export" id="exportReport" type="button">
+          <svg class="cards-export-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m-5-5 5 5 5-5"/><path d="M5 17v3h14v-3"/></svg>
+          엑셀 보고서 다운로드
+        </button>
       </div>
       <div class="cards-summary" aria-live="polite">
         <div class="cards-stat"><span>조회 건수</span><strong id="entryCount">-</strong></div>
