@@ -334,6 +334,28 @@
     .personal-tab:focus-visible, .duty-toggle:focus-visible { outline: 3px solid rgba(39, 120, 168, 0.42); outline-offset: 2px; }
     .personal-content { padding-top: 17px; touch-action: pan-y; }
     .personal-content[hidden] { display: none; }
+    .admin-menu-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+    .admin-menu-toolbar h3 { margin: 0; font-size: 16px; }
+    .admin-menu-toolbar p { margin: 4px 0 0; color: var(--muted); font-size: 11px; }
+    .admin-menu-refresh, .admin-menu-link { display: inline-flex; min-height: 34px; align-items: center; justify-content: center; padding: 0 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel-raised); color: var(--ink); font: inherit; font-size: 11px; font-weight: 700; text-decoration: none; cursor: pointer; }
+    .admin-menu-refresh:hover, .admin-menu-link:hover { border-color: var(--blue); color: var(--blue); }
+    .admin-menu-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+    .admin-menu-section { min-width: 0; overflow: hidden; border: 1px solid var(--line); border-radius: 11px; background: rgba(255, 255, 255, 0.025); }
+    .admin-menu-section-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 12px; border-bottom: 1px solid var(--line); }
+    .admin-menu-section-heading h4 { margin: 0; font-size: 12px; }
+    .admin-menu-count { min-width: 23px; padding: 3px 6px; border-radius: 99px; background: var(--blue-soft); color: var(--blue); font-size: 10px; font-weight: 750; text-align: center; }
+    .admin-menu-list { display: grid; }
+    .admin-menu-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; padding: 11px 12px; border-bottom: 1px solid var(--line); color: inherit; text-decoration: none; }
+    .admin-menu-row:last-child { border-bottom: 0; }
+    .admin-menu-row:hover { background: rgba(114, 199, 255, 0.045); }
+    .admin-menu-row-main { display: grid; min-width: 0; gap: 4px; }
+    .admin-menu-row-main strong { overflow-wrap: anywhere; font-size: 11px; }
+    .admin-menu-row-main span { color: var(--muted); font-size: 10px; line-height: 1.5; overflow-wrap: anywhere; }
+    .admin-menu-row-value { flex: 0 0 auto; color: var(--blue); font-size: 11px; font-weight: 750; text-align: right; }
+    .admin-menu-empty { padding: 18px 12px; color: var(--muted); font-size: 11px; text-align: center; }
+    .admin-menu-error { padding: 14px 12px; color: #fca5a5; font-size: 11px; text-align: center; }
+    .admin-menu-section-footer { padding: 10px 12px; border-top: 1px solid var(--line); }
+    .admin-menu-link { width: 100%; min-height: 32px; }
     .personal-annual-controls { display: grid; grid-template-columns: minmax(160px, 220px) minmax(220px, 1fr); gap: 12px; margin-bottom: 14px; }
     .personal-annual-control { display: grid; gap: 6px; color: var(--muted); font-size: 12px; font-weight: 700; }
     .personal-annual-controls select, .personal-annual-controls input { width: 100%; min-height: 38px; padding: 0 10px; border: 1px solid var(--line); border-radius: 9px; background: var(--panel-raised); color: var(--ink); font: inherit; }
@@ -346,6 +368,7 @@
     .personal-content.month-slide-next { animation: personal-month-next 180ms ease-out; }
     .personal-content.month-slide-previous { animation: personal-month-previous 180ms ease-out; }
     @media (max-width: 560px) { .personal-annual-controls { grid-template-columns: 1fr; } }
+    @media (max-width: 900px) { .admin-menu-grid { grid-template-columns: 1fr; } }
     @keyframes personal-month-next { from { opacity: 0.35; transform: translateX(16px); } to { opacity: 1; transform: translateX(0); } }
     @keyframes personal-month-previous { from { opacity: 0.35; transform: translateX(-16px); } to { opacity: 1; transform: translateX(0); } }
     @media (prefers-reduced-motion: reduce) {
@@ -633,12 +656,36 @@
         </div>
       </div>
       <div class="personal-tabs" id="personalTabs" role="tablist" aria-label="개인 메뉴">
+        <button class="personal-tab" id="adminMenuTab" type="button" role="tab" aria-selected="false" aria-controls="adminMenuPanel" tabindex="-1" hidden>관리자 메뉴</button>
         <button class="personal-tab" id="personalVacationTab" type="button" role="tab" aria-selected="true" aria-controls="personalVacationPanel">내 휴무</button>
         <button class="personal-tab" id="personalAnnualLeaveTab" type="button" role="tab" aria-selected="false" aria-controls="personalAnnualLeavePanel" tabindex="-1" hidden>연차 관리</button>
         <button class="personal-tab" id="personalAllowanceTab" type="button" role="tab" aria-selected="false" aria-controls="personalAllowancePanel" tabindex="-1" hidden>수당 관리</button>
         <button class="personal-tab" id="teamVacationTab" type="button" role="tab" aria-selected="false" aria-controls="teamVacationPanel" tabindex="-1" hidden>휴무 통계</button>
         <button class="personal-tab" id="teamAllowanceTab" type="button" role="tab" aria-selected="false" aria-controls="teamAllowancePanel" tabindex="-1" hidden>수당 통계</button>
       </div>
+      <section class="personal-content" id="adminMenuPanel" role="tabpanel" aria-labelledby="adminMenuTab" hidden>
+        <header class="admin-menu-toolbar">
+          <div><h3>처리 및 확인이 필요한 항목</h3><p id="adminMenuUpdatedAt">관리자 확인 항목을 불러오는 중입니다.</p></div>
+          <button class="admin-menu-refresh" id="adminMenuRefresh" type="button">새로고침</button>
+        </header>
+        <div class="admin-menu-grid">
+          <section class="admin-menu-section" aria-labelledby="adminAnnualDueTitle">
+            <header class="admin-menu-section-heading"><h4 id="adminAnnualDueTitle">30일 안에 기준기간이 끝나는 연차</h4><span class="admin-menu-count" id="adminAnnualDueCount">0</span></header>
+            <div class="admin-menu-list" id="adminAnnualDueList" aria-live="polite"><div class="admin-menu-empty">연차 현황을 불러오는 중입니다.</div></div>
+            <footer class="admin-menu-section-footer"><a class="admin-menu-link" href="/pages/annual-leave.html">연차 현황 보기</a></footer>
+          </section>
+          <section class="admin-menu-section" aria-labelledby="adminPendingLeaveTitle">
+            <header class="admin-menu-section-heading"><h4 id="adminPendingLeaveTitle">승인 대기 연차 신청</h4><span class="admin-menu-count" id="adminPendingLeaveCount">0</span></header>
+            <div class="admin-menu-list" id="adminPendingLeaveList" aria-live="polite"><div class="admin-menu-empty">신청 목록을 불러오는 중입니다.</div></div>
+            <footer class="admin-menu-section-footer"><a class="admin-menu-link" href="/pages/calendar.html">연차 신청 검토</a></footer>
+          </section>
+          <section class="admin-menu-section" aria-labelledby="adminPendingItemTitle">
+            <header class="admin-menu-section-heading"><h4 id="adminPendingItemTitle">승인 대기 물품 신청</h4><span class="admin-menu-count" id="adminPendingItemCount">0</span></header>
+            <div class="admin-menu-list" id="adminPendingItemList" aria-live="polite"><div class="admin-menu-empty">신청 목록을 불러오는 중입니다.</div></div>
+            <footer class="admin-menu-section-footer"><a class="admin-menu-link" href="/pages/item-requests.html">물품 신청 검토</a></footer>
+          </section>
+        </div>
+      </section>
       <section class="personal-content" id="personalVacationPanel" role="tabpanel" aria-labelledby="personalVacationTab">
         <p class="personal-error" id="personalVacationError" role="alert"></p>
         <div id="personalVacationSummary" aria-live="polite"><div class="personal-empty">이번 달 휴무 일정을 불러오는 중입니다.</div></div>

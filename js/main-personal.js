@@ -1,5 +1,15 @@
 document.addEventListener('DOMContentLoaded', async () => {
   const API_URL = 'https://jsec-serverless.adobephotoshop.workers.dev/api';
+  const adminMenuTab = document.getElementById('adminMenuTab');
+  const adminMenuPanel = document.getElementById('adminMenuPanel');
+  const adminMenuRefresh = document.getElementById('adminMenuRefresh');
+  const adminMenuUpdatedAt = document.getElementById('adminMenuUpdatedAt');
+  const adminAnnualDueList = document.getElementById('adminAnnualDueList');
+  const adminAnnualDueCount = document.getElementById('adminAnnualDueCount');
+  const adminPendingLeaveList = document.getElementById('adminPendingLeaveList');
+  const adminPendingLeaveCount = document.getElementById('adminPendingLeaveCount');
+  const adminPendingItemList = document.getElementById('adminPendingItemList');
+  const adminPendingItemCount = document.getElementById('adminPendingItemCount');
   const vacationTab = document.getElementById('personalVacationTab');
   const annualLeaveTab = document.getElementById('personalAnnualLeaveTab');
   const allowanceTab = document.getElementById('personalAllowanceTab');
@@ -54,6 +64,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   let annualLeaveBalances = [];
   let annualLeaveLoaded = false;
   let annualLeaveRequestId = 0;
+  let adminMenuRequestId = 0;
   let guestVacationState = 'loading';
   let guestAllowanceState = 'loading';
 
@@ -87,6 +98,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   function animateMonthChange(direction) {
     const panelByTab = new Map([
+      [adminMenuTab, adminMenuPanel],
       [vacationTab, vacationPanel],
       [annualLeaveTab, annualLeavePanel],
       [allowanceTab, allowancePanel],
@@ -125,23 +137,27 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   function showTab(selectedTab) {
     activeTab = selectedTab;
-    monthNavigation.hidden = selectedTab === annualLeaveTab;
+    monthNavigation.hidden = selectedTab === annualLeaveTab || selectedTab === adminMenuTab;
+    if (isAdmin) teamDashboard.hidden = selectedTab !== teamVacationTab && selectedTab !== teamAllowanceTab;
     const panelByTab = new Map([
+      [adminMenuTab, adminMenuPanel],
       [vacationTab, vacationPanel],
       [annualLeaveTab, annualLeavePanel],
       [allowanceTab, allowancePanel],
       [teamVacationTab, teamVacationPanel],
       [teamAllowanceTab, teamAllowancePanel]
     ]);
-    [vacationTab, annualLeaveTab, allowanceTab, teamVacationTab, teamAllowanceTab].forEach(tab => {
+    [adminMenuTab, vacationTab, annualLeaveTab, allowanceTab, teamVacationTab, teamAllowanceTab].forEach(tab => {
       const selected = tab === selectedTab;
       tab.setAttribute('aria-selected', String(selected));
       tab.tabIndex = selected ? 0 : -1;
       panelByTab.get(tab).hidden = !selected;
     });
+    if (selectedTab === adminMenuTab) loadAdminMenu();
     if (selectedTab === annualLeaveTab) loadAnnualLeave();
   }
 
+  adminMenuTab.addEventListener('click', () => showTab(adminMenuTab));
   vacationTab.addEventListener('click', () => showTab(vacationTab));
   annualLeaveTab.addEventListener('click', () => showTab(annualLeaveTab));
   allowanceTab.addEventListener('click', () => showTab(allowanceTab));
@@ -168,11 +184,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     }, { passive: true });
     panel.addEventListener('touchcancel', () => { swipeStart = null; }, { passive: true });
   });
-  [vacationTab, annualLeaveTab, allowanceTab, teamVacationTab, teamAllowanceTab].forEach(tab => {
+  [adminMenuTab, vacationTab, annualLeaveTab, allowanceTab, teamVacationTab, teamAllowanceTab].forEach(tab => {
     tab.addEventListener('keydown', event => {
       if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
       event.preventDefault();
-      const availableTabs = [vacationTab, annualLeaveTab, allowanceTab, teamVacationTab, teamAllowanceTab]
+      const availableTabs = [adminMenuTab, vacationTab, annualLeaveTab, allowanceTab, teamVacationTab, teamAllowanceTab]
         .filter(availableTab => !availableTab.hidden);
       const currentIndex = availableTabs.indexOf(tab);
       const nextIndex = event.key === 'Home'
@@ -215,6 +231,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       : `${name}님, ${getSelectedMonthRange().label} 내 휴무 일정을 확인하세요.`;
   }
   allowanceTab.hidden = true;
+  adminMenuTab.hidden = !isAdmin;
   annualLeaveTab.hidden = isGuest;
   teamAllowanceTab.hidden = true;
   allowancePanel.hidden = true;
@@ -228,6 +245,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   annualLeaveSummary.hidden = isAdmin;
   if (isGuest) {
     personalTitle.textContent = '팀 운영 대시보드';
+    adminMenuTab.hidden = true;
     vacationTab.hidden = true;
     allowanceTab.hidden = true;
     teamVacationTab.hidden = false;
@@ -248,8 +266,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     teamVacationTab.hidden = false;
     teamAllowanceTab.hidden = true;
     teamDashboard.hidden = false;
-    showTab(vacationTab);
+    showTab(adminMenuTab);
   } else {
+    adminMenuTab.hidden = true;
     teamDashboard.hidden = true;
     showTab(vacationTab);
   }
@@ -267,6 +286,116 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (!response.ok) throw new Error(result.error || `HTTP ${response.status}`);
     return result;
   }
+
+  function formatAdminDate(value) {
+    if (!value) return '-';
+    if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+      const [year, month, day] = value.split('-');
+      return `${year}.${month}.${day}`;
+    }
+    const date = new Date(value);
+    return Number.isNaN(date.getTime())
+      ? '-'
+      : new Intl.DateTimeFormat('ko-KR', {
+        month: 'numeric',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        timeZone: 'Asia/Seoul'
+      }).format(date);
+  }
+
+  function renderAdminRequestList(listElement, countElement, items, renderItem, error) {
+    if (error) {
+      countElement.textContent = '!';
+      listElement.innerHTML = '<div class="admin-menu-error">목록을 불러오지 못했습니다.</div>';
+      return;
+    }
+    countElement.textContent = String(items.length);
+    listElement.innerHTML = items.length
+      ? `${items.slice(0, 5).map(renderItem).join('')}${items.length > 5
+        ? `<div class="admin-menu-empty">외 ${items.length - 5}건</div>`
+        : ''}`
+      : '<div class="admin-menu-empty">대기 중인 항목이 없습니다.</div>';
+  }
+
+  async function loadAdminMenu() {
+    if (!isAdmin) return;
+    const requestId = ++adminMenuRequestId;
+    adminMenuUpdatedAt.textContent = '관리자 확인 항목을 불러오는 중입니다.';
+    const todayDate = new Date(`${today}T00:00:00Z`);
+    const cutoffDate = new Date(todayDate);
+    cutoffDate.setUTCDate(cutoffDate.getUTCDate() + 30);
+    const cutoff = cutoffDate.toISOString().slice(0, 10);
+    const [balanceResult, leaveResult, itemResult] = await Promise.allSettled([
+      request(`/annual-leave?as_of=${encodeURIComponent(today)}`),
+      request('/annual-leave-requests'),
+      request('/item-requests')
+    ]);
+    if (requestId !== adminMenuRequestId) return;
+
+    if (balanceResult.status === 'fulfilled') {
+      const dueBalances = (balanceResult.value.balances || [])
+        .filter(balance => balance.service_year
+          && balance.cycle_end >= today
+          && balance.cycle_end <= cutoff
+          && (Number(balance.remaining_days) + Number(balance.pending_days)) > 0)
+        .sort((left, right) => left.cycle_end.localeCompare(right.cycle_end));
+      renderAdminRequestList(
+        adminAnnualDueList,
+        adminAnnualDueCount,
+        dueBalances,
+        balance => `<a class="admin-menu-row" href="/pages/annual-leave.html">
+          <span class="admin-menu-row-main"><strong>${escapeHtml(balance.name)} · ${balance.service_year}년차</strong>
+          <span>기준기간 종료 ${formatAdminDate(balance.cycle_end)} · 미소진 ${formatAnnualDays(Number(balance.remaining_days) + Number(balance.pending_days))}일 · 신청 대기 ${formatAnnualDays(balance.pending_days)}일</span></span>
+          <span class="admin-menu-row-value">${formatAnnualDays(balance.remaining_days)}일<br>잔여</span>
+        </a>`,
+        null
+      );
+    } else {
+      renderAdminRequestList(adminAnnualDueList, adminAnnualDueCount, [], () => '', balanceResult.reason);
+    }
+
+    if (leaveResult.status === 'fulfilled') {
+      const pendingLeaves = (leaveResult.value || []).filter(item => item.status === 'pending');
+      renderAdminRequestList(
+        adminPendingLeaveList,
+        adminPendingLeaveCount,
+        pendingLeaves,
+        item => `<a class="admin-menu-row" href="/pages/calendar.html">
+          <span class="admin-menu-row-main"><strong>${escapeHtml(item.username || '이름 없음')} · ${escapeHtml(item.leave_type || '연차')}</strong>
+          <span>${formatAdminDate(item.start_date)}${item.end_date !== item.start_date ? ` ~ ${formatAdminDate(item.end_date)}` : ''} · 신청 ${formatAdminDate(item.created_at)}</span></span>
+          <span class="admin-menu-row-value">${item.leave_type === '시간차'
+            ? `${formatAnnualDays(item.hours_used)}시간`
+            : `${formatAnnualDays(item.total_days)}일`}</span>
+        </a>`,
+        null
+      );
+    } else {
+      renderAdminRequestList(adminPendingLeaveList, adminPendingLeaveCount, [], () => '', leaveResult.reason);
+    }
+
+    if (itemResult.status === 'fulfilled') {
+      const pendingItems = (itemResult.value || []).filter(item => item.status === 'pending');
+      renderAdminRequestList(
+        adminPendingItemList,
+        adminPendingItemCount,
+        pendingItems,
+        item => `<a class="admin-menu-row" href="/pages/item-requests.html">
+          <span class="admin-menu-row-main"><strong>${escapeHtml(item.item_name || '물품')}</strong>
+          <span>${escapeHtml(item.username || '이름 없음')} · 신청 ${formatAdminDate(item.created_at)}${item.specification ? ` · ${escapeHtml(item.specification)}` : ''}</span></span>
+          <span class="admin-menu-row-value">${formatAnnualDays(item.quantity)}개</span>
+        </a>`,
+        null
+      );
+    } else {
+      renderAdminRequestList(adminPendingItemList, adminPendingItemCount, [], () => '', itemResult.reason);
+    }
+
+    adminMenuUpdatedAt.textContent = `기준일 ${formatAdminDate(today)} · 마지막 확인 ${formatAdminDate(new Date().toISOString())}`;
+  }
+
+  adminMenuRefresh.addEventListener('click', loadAdminMenu);
 
   function formatAnnualDays(value) {
     return Number(value).toLocaleString('ko-KR', { maximumFractionDigits: 2 });
