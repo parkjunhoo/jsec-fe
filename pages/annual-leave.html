@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#111815">
+  <title>지산리조트 보안팀 - 연차 관리</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <link rel="stylesheet" href="/css/app-theme.css">
+  <style>
+    * { box-sizing: border-box; }
+    body { min-height: 100vh; margin: 0; padding-bottom: 40px; background: var(--bg-main); color: var(--text-main); font-family: -apple-system, BlinkMacSystemFont, "Pretendard", "Segoe UI", sans-serif; }
+    button, input { font: inherit; }
+    .annual-shell { width: min(1120px, 100%); margin: 0 auto; padding: 28px 20px; }
+    .annual-heading { margin-bottom: 20px; }
+    .annual-heading h1 { margin: 0; font-size: clamp(24px, 5vw, 32px); }
+    .annual-heading p { margin: 8px 0 0; color: var(--text-sub); font-size: 13px; line-height: 1.6; }
+    .annual-card { margin-bottom: 16px; padding: 18px; border: 1px solid var(--app-border); border-radius: 15px; background: var(--app-surface); box-shadow: var(--app-shadow); }
+    .annual-card h2 { margin: 0; font-size: 17px; }
+    .annual-card-description { margin: 6px 0 14px; color: var(--text-sub); font-size: 12px; line-height: 1.55; }
+    .annual-message { margin: 12px 0 0; color: var(--danger); font-size: 13px; }
+    .annual-message:empty { display: none; }
+    .annual-message.success { color: var(--primary); }
+    .annual-summary-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+    .annual-summary { padding: 13px; border: 1px solid var(--app-border); border-radius: 11px; background: var(--app-surface-raised); }
+    .annual-summary span { display: block; color: var(--text-sub); font-size: 11px; }
+    .annual-summary strong { display: block; margin-top: 6px; font-size: 21px; }
+    .annual-chart { display: grid; gap: 12px; margin-top: 16px; }
+    .annual-chart-row { display: grid; grid-template-columns: minmax(90px, 150px) minmax(80px, 1fr) 76px; align-items: center; gap: 10px; }
+    .annual-chart-name { overflow: hidden; font-size: 12px; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
+    .annual-track { height: 12px; overflow: hidden; border-radius: 99px; background: var(--app-surface-raised); }
+    .annual-fill { height: 100%; border-radius: inherit; background: linear-gradient(90deg, #4cae7b, #84d9a4); }
+    .annual-chart-value { color: var(--text-sub); font-size: 11px; text-align: right; white-space: nowrap; }
+    .annual-table-wrap { overflow-x: auto; margin-top: 16px; border: 1px solid var(--app-border); border-radius: 10px; }
+    .annual-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    .annual-table th, .annual-table td { padding: 10px 12px; border-bottom: 1px solid var(--app-border); text-align: right; white-space: nowrap; }
+    .annual-table th { color: var(--text-sub); background: var(--app-surface-raised); font-size: 11px; }
+    .annual-table th:first-child, .annual-table td:first-child { text-align: left; }
+    .annual-table tbody tr:last-child td { border-bottom: 0; }
+    .annual-table .annual-person { font-weight: 700; }
+    .annual-settings { display: grid; grid-template-columns: repeat(5, minmax(100px, 1fr)); gap: 9px; }
+    .annual-setting { display: grid; gap: 5px; color: var(--text-sub); font-size: 11px; }
+    .annual-setting input { width: 100%; min-height: 38px; padding: 0 9px; border: 1px solid var(--app-border); border-radius: 8px; background: var(--app-surface-raised); color: var(--text-main); }
+    .annual-actions { display: flex; justify-content: flex-end; margin-top: 12px; }
+    .annual-button { min-height: 40px; padding: 0 15px; border: 1px solid var(--app-border); border-radius: 9px; background: var(--app-surface-raised); color: var(--text-main); font-size: 12px; font-weight: 700; cursor: pointer; }
+    .annual-button.primary { border-color: transparent; background: var(--primary); color: #14251c; }
+    .annual-button:disabled { opacity: .6; cursor: wait; }
+    .annual-empty { padding: 18px; color: var(--text-sub); text-align: center; font-size: 13px; }
+    [hidden] { display: none !important; }
+    @media (max-width: 700px) {
+      .annual-summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .annual-settings { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .annual-chart-row { grid-template-columns: minmax(70px, 100px) minmax(60px, 1fr) 70px; gap: 7px; }
+    }
+  </style>
+</head>
+<body>
+  <div id="navbar"></div>
+  <main class="annual-shell">
+    <header class="annual-heading">
+      <h1>연차 관리</h1>
+      <p id="annualDescription">입사일 기준 근속연차별 연차 보유량과 사용 현황을 확인합니다.</p>
+    </header>
+    <section class="annual-card" aria-labelledby="annualOverviewTitle">
+      <h2 id="annualOverviewTitle">연차 사용 현황</h2>
+      <p class="annual-card-description" id="annualPeriodDescription">승인된 연차와 신청 대기 중인 연차를 함께 반영합니다. 시간차는 8시간을 1일로 계산합니다.</p>
+      <div id="annualSummary" class="annual-empty">연차 현황을 불러오는 중입니다.</div>
+      <div id="annualChart" class="annual-chart" aria-label="직원별 연차 소진율 그래프"></div>
+      <div class="annual-table-wrap" id="annualTableWrap" hidden>
+        <table class="annual-table">
+          <thead><tr><th>직원</th><th>근속</th><th>기본</th><th>가산</th><th>총 보유</th><th>사용</th><th>신청 대기</th><th>잔여</th><th>소진율</th></tr></thead>
+          <tbody id="annualTableBody"></tbody>
+        </table>
+      </div>
+      <p class="annual-message" id="annualLoadError" role="alert"></p>
+    </section>
+    <section class="annual-card" id="annualSettingsCard" aria-labelledby="annualSettingsTitle" hidden>
+      <h2 id="annualSettingsTitle">근속연차별 가산연차 설정</h2>
+      <p class="annual-card-description">기본 연차 12일에 아래 가산일수를 더합니다. 10년차 이후에는 10년차 설정을 적용합니다.</p>
+      <form id="annualSettingsForm">
+        <div class="annual-settings" id="annualSettingsFields"></div>
+        <div class="annual-actions"><button class="annual-button primary" id="saveAnnualSettings" type="submit">설정 저장</button></div>
+      </form>
+      <p class="annual-message" id="annualSettingsMessage" role="status"></p>
+    </section>
+  </main>
+  <script src="/js/app-loading.js"></script>
+  <script src="/js/supabase.js"></script>
+  <script src="/js/user-preferences.js"></script>
+  <script src="/js/navbar.js"></script>
+  <script src="/js/annual-leave.js"></script>
+</body>
+</html>

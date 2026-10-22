@@ -486,6 +486,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   let pageTitle = '지산리조트 보안팀';
   if (currentPath.includes('main.html')) pageTitle = '메인 메뉴';
   else if (currentPath.includes('item-requests.html')) pageTitle = '물품 신청';
+  else if (currentPath.includes('annual-leave.html')) pageTitle = '연차 관리';
   else if (currentPath.includes('users.html')) pageTitle = '회원 조회 및 관리';
   else if (currentPath.includes('vehicle.html')) pageTitle = '지산 차량조회';
   else if (currentPath.includes('calendar.html')) pageTitle = '휴무 캘린더';
@@ -568,6 +569,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             <div class="drawer-group-items">
               <a href="/pages/calendar.html" class="drawer-item ${currentPath.includes('calendar.html') ? 'active' : ''}" ${currentPath.includes('calendar.html') ? 'aria-current="page"' : ''}>
                 <span class="drawer-item-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 11h18"/><path d="m9 16 2 2 4-4"/></svg></span><span class="drawer-item-label">휴무 일정</span>
+              </a>
+              <a href="/pages/annual-leave.html" class="drawer-item ${currentPath.includes('annual-leave.html') ? 'active' : ''}" ${currentPath.includes('annual-leave.html') ? 'aria-current="page"' : ''}>
+                <span class="drawer-item-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 19V5m0 14h16"/><path d="m7 15 4-4 3 2 5-6"/></svg></span><span class="drawer-item-label">연차 관리</span>
               </a>
               <a href="https://www.ibro.co.kr/PayRoll/JOBWITH/index.asp" class="drawer-item" target="_blank" rel="noopener noreferrer">
                 <span class="drawer-item-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18M7 15h4m4 0h2M8 2v3m8-3v3"/></svg></span><span class="drawer-item-label">급여 조회 ↗</span>

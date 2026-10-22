@@ -103,6 +103,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const VACATIONS_API = 'https://jsec-serverless.adobephotoshop.workers.dev/api/vacations';
   const CALENDAR_NOTES_API = 'https://jsec-serverless.adobephotoshop.workers.dev/api/calendar-notes';
   const ANNUAL_LEAVE_API = 'https://jsec-serverless.adobephotoshop.workers.dev/api/annual-leave-requests';
+  const ANNUAL_BALANCE_API = 'https://jsec-serverless.adobephotoshop.workers.dev/api/annual-leave';
   const CALENDAR_NOTE_EMOJIS = ['📌', '📣', '🎉', '⚠️', '📅', '🎂', '🏖️', '🏥', '🚨', '✅', '⭐', '🎁', '🍀', '☕', '📝', '💡'];
   const annualLeaveModal = document.getElementById('annualLeaveModal');
   const annualLeaveForm = document.getElementById('annualLeaveForm');
@@ -117,7 +118,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   const annualLeaveEndTime = document.getElementById('annualLeaveEndTime');
   const annualLeaveDays = document.getElementById('annualLeaveDays');
   const submitAnnualLeaveBtn = document.getElementById('submitAnnualLeaveBtn');
+  const annualLeaveBalanceLabel = document.getElementById('annualLeaveBalance');
   let annualLeaveRequests = [];
+  let currentAnnualLeaveBalance = null;
   if (userRole === 'guest' || userRole === 'monitor') {
     if (openModalBtn) openModalBtn.style.display = 'none';
     if (openBulkVacationBtn) openBulkVacationBtn.hidden = true;
@@ -210,6 +213,18 @@ document.addEventListener('DOMContentLoaded', async () => {
     return result;
   }
 
+  async function requestAnnualLeaveBalance() {
+    const { data: { session: currentSession }, error: sessionError } = await supabaseClient.auth.getSession();
+    if (sessionError) throw sessionError;
+    if (!currentSession) throw new Error('로그인이 필요합니다.');
+    const response = await fetch(ANNUAL_BALANCE_API, {
+      headers: { Authorization: `Bearer ${currentSession.access_token}` }
+    });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(result.error || `HTTP ${response.status}`);
+    return result;
+  }
+
   function countAnnualLeaveWeekdays(startDate, endDate) {
     if (!startDate || !endDate || endDate < startDate) return 0;
     const start = new Date(`${startDate}T00:00:00Z`);
@@ -243,6 +258,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       document.getElementById('annualLeaveAmountLabel').textContent = '사용 시간 (시간) *';
       document.getElementById('annualLeaveAmountHint').textContent = '시간차는 하루 안에서 시작·종료 시간을 입력해 주세요. 신청 시간은 자동 계산됩니다. (15분 단위)';
       annualLeaveDays.value = String(calculateAnnualLeaveHours());
+      updateAnnualLeaveBalanceNotice();
       return;
     }
 
@@ -260,6 +276,50 @@ document.addEventListener('DOMContentLoaded', async () => {
       annualLeaveStartDate.value,
       annualLeaveEndDate.value
     ));
+    updateAnnualLeaveBalanceNotice();
+  }
+
+  async function loadCurrentAnnualLeaveBalance() {
+    annualLeaveBalanceLabel.textContent = '연차 잔여 일수를 확인하고 있습니다.';
+    annualLeaveBalanceLabel.dataset.type = '';
+    submitAnnualLeaveBtn.disabled = true;
+    try {
+      const result = await requestAnnualLeaveBalance();
+      currentAnnualLeaveBalance = result.balances.find(item => item.user_id === userId) || null;
+      updateAnnualLeaveBalanceNotice();
+    } catch (error) {
+      console.error('연차 잔여 일수 조회 오류:', error);
+      currentAnnualLeaveBalance = null;
+      annualLeaveBalanceLabel.textContent = error.message || '연차 잔여 일수를 확인하지 못했습니다.';
+      annualLeaveBalanceLabel.dataset.type = 'error';
+      submitAnnualLeaveBtn.disabled = true;
+    }
+  }
+
+  function updateAnnualLeaveBalanceNotice() {
+    const balance = currentAnnualLeaveBalance;
+    if (!balance || !balance.service_year) {
+      annualLeaveBalanceLabel.textContent = '입사일이 등록되어 있지 않아 연차를 신청할 수 없습니다. 관리자에게 문의해 주세요.';
+      annualLeaveBalanceLabel.dataset.type = 'error';
+      submitAnnualLeaveBtn.disabled = true;
+      return;
+    }
+    const requestedDays = annualLeaveType.value === '시간차'
+      ? calculateAnnualLeaveHours() / 8
+      : Number(annualLeaveDays.value) || 0;
+    const datesInCycle = annualLeaveStartDate.value >= balance.cycle_start
+      && annualLeaveEndDate.value <= balance.cycle_end;
+    const canApply = datesInCycle && requestedDays > 0 && requestedDays <= balance.remaining_days;
+    annualLeaveBalanceLabel.innerHTML = `현재 <strong>${balance.service_year}년차</strong> · 보유 ${balance.entitled_days}일 · 사용 ${balance.used_days}일 · 신청 대기 ${balance.pending_days}일 · 신청 가능 잔여 <strong>${balance.remaining_days}일</strong><br>기준기간 ${escapeHtml(balance.cycle_start)} ~ ${escapeHtml(balance.cycle_end)} · 시간차는 8시간을 1일로 계산합니다.`;
+    annualLeaveBalanceLabel.dataset.type = canApply ? '' : 'error';
+    if (!datesInCycle) {
+      annualLeaveBalanceLabel.insertAdjacentHTML('beforeend', '<br>신청 기간은 현재 연차 기준기간 안에 있어야 합니다.');
+    } else if (requestedDays <= 0) {
+      annualLeaveBalanceLabel.insertAdjacentHTML('beforeend', '<br>신청 가능한 평일 또는 시간을 입력해 주세요.');
+    } else if (requestedDays > balance.remaining_days) {
+      annualLeaveBalanceLabel.insertAdjacentHTML('beforeend', '<br>신청 일수가 잔여 연차를 초과합니다.');
+    }
+    submitAnnualLeaveBtn.disabled = !canApply;
   }
 
   function formatAnnualLeaveDate(date) {
@@ -395,7 +455,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     URL.revokeObjectURL(downloadUrl);
   }
 
-  function openAnnualLeaveModal() {
+  async function openAnnualLeaveModal() {
     annualLeaveForm.reset();
     annualLeaveFormError.hidden = true;
     document.getElementById('annualLeaveDepartment').value = userDepartment;
@@ -407,6 +467,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     updateAnnualLeaveAmount();
     annualLeaveModal.classList.add('active');
     annualLeaveModal.setAttribute('aria-hidden', 'false');
+    await loadCurrentAnnualLeaveBalance();
   }
 
   function closeAnnualLeaveModal() {
@@ -458,7 +519,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         })
       });
       closeAnnualLeaveModal();
-      await loadAnnualLeaveRequests();
+      await Promise.all([loadAnnualLeaveRequests(), loadCurrentAnnualLeaveBalance()]);
       await Swal.fire({
         icon: result.notificationWarning ? 'warning' : 'success',
         text: result.notificationWarning || '연차 신청이 접수되었습니다. 관리자 승인 후 휴무 일정에 등록됩니다.'
@@ -468,8 +529,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       annualLeaveFormError.textContent = error.message || '연차 신청을 등록하지 못했습니다.';
       annualLeaveFormError.hidden = false;
     } finally {
-      submitAnnualLeaveBtn.disabled = false;
       submitAnnualLeaveBtn.textContent = '신청하기';
+      updateAnnualLeaveBalanceNotice();
     }
   });
 

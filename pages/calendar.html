@@ -510,6 +510,9 @@
     .annual-leave-field input, .annual-leave-field select, .annual-leave-field textarea { width: 100%; min-height: 42px; padding: 9px 11px; border: 1px solid var(--app-border); border-radius: 8px; background: var(--input-bg); color: var(--text-main); font: inherit; font-size: 13px; }
     .annual-leave-field textarea { min-height: 78px; resize: vertical; }
     .annual-leave-hint { margin: -4px 0 0; color: var(--text-sub); font-size: 11px; }
+    .annual-leave-balance { grid-column: 1 / -1; padding: 11px 12px; border: 1px solid var(--app-border); border-radius: 9px; background: var(--app-surface-raised); color: var(--text-sub); font-size: 12px; line-height: 1.6; }
+    .annual-leave-balance strong { color: var(--primary); }
+    .annual-leave-balance[data-type="error"] { color: var(--danger); }
     .annual-leave-modal-card { width: min(100%, 560px); }
     @media (max-width: 480px) {
       .annual-leave-section { padding: 13px; }
@@ -683,6 +686,7 @@
       </div>
       <form id="annualLeaveForm">
         <div class="annual-leave-form">
+          <p class="annual-leave-balance full" id="annualLeaveBalance" role="status" aria-live="polite">연차 잔여 일수를 확인하고 있습니다.</p>
           <div class="annual-leave-field">
             <label for="annualLeaveDepartment">부서 / 근무지</label>
             <input id="annualLeaveDepartment" type="text" readonly>
