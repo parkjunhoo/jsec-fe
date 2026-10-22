@@ -1,18 +1,27 @@
 document.addEventListener('DOMContentLoaded', async () => {
   const API_URL = 'https://jsec-serverless.adobephotoshop.workers.dev/api';
   const vacationTab = document.getElementById('personalVacationTab');
+  const annualLeaveTab = document.getElementById('personalAnnualLeaveTab');
   const allowanceTab = document.getElementById('personalAllowanceTab');
   const teamVacationTab = document.getElementById('teamVacationTab');
   const teamAllowanceTab = document.getElementById('teamAllowanceTab');
   const vacationPanel = document.getElementById('personalVacationPanel');
+  const annualLeavePanel = document.getElementById('personalAnnualLeavePanel');
   const allowancePanel = document.getElementById('personalAllowancePanel');
   const vacationSummary = document.getElementById('personalVacationSummary');
+  const annualLeaveSummary = document.getElementById('personalAnnualLeaveSummary');
+  const annualLeaveError = document.getElementById('personalAnnualLeaveError');
+  const teamAnnualLeaveArea = document.getElementById('teamAnnualLeaveArea');
+  const teamAnnualLeaveSummary = document.getElementById('teamAnnualLeaveSummary');
+  const teamAnnualLeaveSelect = document.getElementById('teamAnnualLeaveSelect');
+  const teamAnnualLeaveDetail = document.getElementById('teamAnnualLeaveDetail');
   const allowanceSummary = document.getElementById('personalAllowanceSummary');
   const vacationError = document.getElementById('personalVacationError');
   const allowanceError = document.getElementById('personalAllowanceError');
   const dutyStatus = document.getElementById('personalDutyStatus');
   const dutyList = document.getElementById('personalDutyList');
   const monthLabel = document.getElementById('personalMonth');
+  const monthNavigation = document.getElementById('personalMonthNav');
   const previousMonthButton = document.getElementById('personalPreviousMonth');
   const nextMonthButton = document.getElementById('personalNextMonth');
   const welcomeMessage = document.getElementById('personalWelcome');
@@ -41,6 +50,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   let isAdmin = false;
   let activeTab = vacationTab;
   let allVacations = [];
+  let annualLeaveBalances = [];
+  let annualLeaveLoaded = false;
   let guestVacationState = 'loading';
   let guestAllowanceState = 'loading';
 
@@ -75,6 +86,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   function animateMonthChange(direction) {
     const panelByTab = new Map([
       [vacationTab, vacationPanel],
+      [annualLeaveTab, annualLeavePanel],
       [allowanceTab, allowancePanel],
       [teamVacationTab, teamVacationPanel],
       [teamAllowanceTab, teamAllowancePanel]
@@ -111,28 +123,32 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   function showTab(selectedTab) {
     activeTab = selectedTab;
+    monthNavigation.hidden = selectedTab === annualLeaveTab;
     const panelByTab = new Map([
       [vacationTab, vacationPanel],
+      [annualLeaveTab, annualLeavePanel],
       [allowanceTab, allowancePanel],
       [teamVacationTab, teamVacationPanel],
       [teamAllowanceTab, teamAllowancePanel]
     ]);
-    [vacationTab, allowanceTab, teamVacationTab, teamAllowanceTab].forEach(tab => {
+    [vacationTab, annualLeaveTab, allowanceTab, teamVacationTab, teamAllowanceTab].forEach(tab => {
       const selected = tab === selectedTab;
       tab.setAttribute('aria-selected', String(selected));
       tab.tabIndex = selected ? 0 : -1;
       panelByTab.get(tab).hidden = !selected;
     });
+    if (selectedTab === annualLeaveTab) loadAnnualLeave();
   }
 
   vacationTab.addEventListener('click', () => showTab(vacationTab));
+  annualLeaveTab.addEventListener('click', () => showTab(annualLeaveTab));
   allowanceTab.addEventListener('click', () => showTab(allowanceTab));
   teamVacationTab.addEventListener('click', () => showTab(teamVacationTab));
   teamAllowanceTab.addEventListener('click', () => showTab(teamAllowanceTab));
   previousMonthButton.addEventListener('click', () => changeMonth(-1));
   nextMonthButton.addEventListener('click', () => changeMonth(1));
   let swipeStart = null;
-  [vacationPanel, allowancePanel, teamVacationPanel, teamAllowancePanel].forEach(panel => {
+  [vacationPanel, annualLeavePanel, allowancePanel, teamVacationPanel, teamAllowancePanel].forEach(panel => {
     panel.addEventListener('touchstart', event => {
       if (event.touches.length !== 1 || event.target.closest('button, a, input, select, textarea')) {
         swipeStart = null;
@@ -150,11 +166,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     }, { passive: true });
     panel.addEventListener('touchcancel', () => { swipeStart = null; }, { passive: true });
   });
-  [vacationTab, allowanceTab, teamVacationTab, teamAllowanceTab].forEach(tab => {
+  [vacationTab, annualLeaveTab, allowanceTab, teamVacationTab, teamAllowanceTab].forEach(tab => {
     tab.addEventListener('keydown', event => {
       if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
       event.preventDefault();
-      const availableTabs = [vacationTab, allowanceTab, teamVacationTab, teamAllowanceTab]
+      const availableTabs = [vacationTab, annualLeaveTab, allowanceTab, teamVacationTab, teamAllowanceTab]
         .filter(availableTab => !availableTab.hidden);
       const currentIndex = availableTabs.indexOf(tab);
       const nextIndex = event.key === 'Home'
@@ -197,8 +213,11 @@ document.addEventListener('DOMContentLoaded', async () => {
       : `${name}님, ${getSelectedMonthRange().label} 내 휴무 일정을 확인하세요.`;
   }
   allowanceTab.hidden = true;
+  annualLeaveTab.hidden = isGuest;
   teamAllowanceTab.hidden = true;
   allowancePanel.hidden = true;
+  annualLeavePanel.hidden = false;
+  teamAnnualLeaveArea.hidden = !isAdmin;
   teamAllowancePanel.hidden = true;
   dutyList.hidden = true;
   dutyList.style.display = 'none';
@@ -213,6 +232,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     teamVacationTab.setAttribute('aria-label', '휴무 통계');
     teamAllowanceTab.setAttribute('aria-label', '수당 통계');
     vacationPanel.hidden = true;
+    annualLeavePanel.hidden = true;
     allowancePanel.hidden = true;
     teamDashboard.hidden = false;
     showTab(teamVacationTab);
@@ -244,6 +264,92 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (!response.ok) throw new Error(result.error || `HTTP ${response.status}`);
     return result;
   }
+
+  function formatAnnualDays(value) {
+    return Number(value).toLocaleString('ko-KR', { maximumFractionDigits: 2 });
+  }
+
+  function renderAnnualLeaveEmployee(balance) {
+    if (!balance) {
+      teamAnnualLeaveDetail.innerHTML = '<div class="personal-empty">직원을 선택하면 연차 상세를 확인할 수 있습니다.</div>';
+      return;
+    }
+    if (!balance.service_year) {
+      teamAnnualLeaveDetail.innerHTML = `<div class="personal-empty">${escapeHtml(balance.name)} 직원은 연차 기준일이 등록되지 않아 계산할 수 없습니다.</div>`;
+      return;
+    }
+    teamAnnualLeaveDetail.innerHTML = `
+      <div class="personal-annual-grid">
+        <div class="personal-annual-stat"><span>근속연차</span><strong>${balance.service_year}년차</strong></div>
+        <div class="personal-annual-stat"><span>총 보유</span><strong>${formatAnnualDays(balance.entitled_days)}일</strong></div>
+        <div class="personal-annual-stat"><span>사용 · 신청 대기</span><strong>${formatAnnualDays(balance.used_days)} · ${formatAnnualDays(balance.pending_days)}일</strong></div>
+        <div class="personal-annual-stat"><span>신청 가능 잔여</span><strong>${formatAnnualDays(balance.remaining_days)}일</strong></div>
+      </div>
+      <p class="personal-annual-note">기준기간 ${escapeHtml(balance.cycle_start)} ~ ${escapeHtml(balance.cycle_end)} · 소진율 ${balance.usage_rate}% · 시간차 1일 기준 ${balance.hours_per_day}시간</p>`;
+  }
+
+  function renderAnnualLeave(balances) {
+    if (!balances.length) {
+      annualLeaveSummary.innerHTML = '<div class="personal-empty">표시할 연차 현황이 없습니다.</div>';
+      return;
+    }
+    const eligible = balances.filter(balance => balance.service_year);
+    if (isAdmin) {
+      const totalEntitled = eligible.reduce((sum, balance) => sum + balance.entitled_days, 0);
+      const totalUsed = eligible.reduce((sum, balance) => sum + balance.used_days, 0);
+      const totalPending = eligible.reduce((sum, balance) => sum + balance.pending_days, 0);
+      annualLeaveSummary.innerHTML = `<div class="personal-annual-grid">
+        <div class="personal-annual-stat"><span>전체 직원</span><strong>${balances.length}명</strong></div>
+        <div class="personal-annual-stat"><span>산정 가능</span><strong>${eligible.length}명</strong></div>
+        <div class="personal-annual-stat"><span>총 사용</span><strong>${formatAnnualDays(totalUsed)}일</strong></div>
+        <div class="personal-annual-stat"><span>신청 대기</span><strong>${formatAnnualDays(totalPending)}일</strong></div>
+      </div>`;
+      teamAnnualLeaveSummary.textContent = `전체 보유 ${formatAnnualDays(totalEntitled)}일 · 전체 잔여 ${formatAnnualDays(
+        eligible.reduce((sum, balance) => sum + balance.remaining_days, 0)
+      )}일 · 직원별 상세를 선택해 확인하세요.`;
+      teamAnnualLeaveSelect.innerHTML = '<option value="">직원을 선택하세요</option>' + balances
+        .map(balance => `<option value="${escapeHtml(balance.user_id)}">${escapeHtml(balance.name)}${balance.department ? ` · ${escapeHtml(balance.department)}` : ''}</option>`)
+        .join('');
+      renderAnnualLeaveEmployee(null);
+      return;
+    }
+
+    const balance = balances[0];
+    if (!balance.service_year) {
+      annualLeaveSummary.innerHTML = '<div class="personal-empty">연차 기준일이 등록되어 있지 않아 연차를 계산할 수 없습니다. 관리자에게 문의해 주세요.</div>';
+      return;
+    }
+    annualLeaveSummary.innerHTML = `<div class="personal-annual-grid">
+      <div class="personal-annual-stat"><span>근속연차</span><strong>${balance.service_year}년차</strong></div>
+      <div class="personal-annual-stat"><span>총 보유</span><strong>${formatAnnualDays(balance.entitled_days)}일</strong></div>
+      <div class="personal-annual-stat"><span>사용 · 신청 대기</span><strong>${formatAnnualDays(balance.used_days)} · ${formatAnnualDays(balance.pending_days)}일</strong></div>
+      <div class="personal-annual-stat"><span>신청 가능 잔여</span><strong>${formatAnnualDays(balance.remaining_days)}일</strong></div>
+    </div>
+    <p class="personal-annual-note">기준기간 ${escapeHtml(balance.cycle_start)} ~ ${escapeHtml(balance.cycle_end)} · 소진율 ${balance.usage_rate}% · 시간차 1일 기준 ${balance.hours_per_day}시간</p>`;
+  }
+
+  async function loadAnnualLeave() {
+    if (annualLeaveLoaded) return;
+    annualLeaveError.textContent = '';
+    annualLeaveSummary.innerHTML = '<div class="personal-empty">연차 현황을 불러오는 중입니다.</div>';
+    try {
+      const result = await request('/annual-leave');
+      annualLeaveBalances = result.balances || [];
+      isAdmin = result.isAdmin;
+      teamAnnualLeaveArea.hidden = !isAdmin;
+      renderAnnualLeave(annualLeaveBalances);
+      annualLeaveLoaded = true;
+    } catch (error) {
+      console.error('내 메뉴 연차 현황 조회 오류:', error);
+      annualLeaveError.textContent = error.message || '연차 현황을 불러오지 못했습니다.';
+      annualLeaveSummary.innerHTML = '<div class="personal-empty">연차 현황을 불러오지 못했습니다. 연차 관리 페이지에서 다시 시도해 주세요.</div>';
+    }
+  }
+
+  teamAnnualLeaveSelect.addEventListener('change', () => {
+    const balance = annualLeaveBalances.find(item => item.user_id === teamAnnualLeaveSelect.value);
+    renderAnnualLeaveEmployee(balance);
+  });
 
   async function loadVacations(start, end, requestId) {
     if (isGuest || isAdmin) {
