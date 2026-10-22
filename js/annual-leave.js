@@ -98,6 +98,36 @@ document.addEventListener('DOMContentLoaded', async () => {
     return [...groups.entries()].sort(([left], [right]) => left.localeCompare(right, 'ko'));
   }
 
+  function getUsageMetrics(balance) {
+    const baseDays = Number(balance.base_days) || 12;
+    const additionalDays = Number(balance.additional_days) || 0;
+    const deductionDays = Number(balance.deduction_days) || 0;
+    const usedDays = Number(balance.used_days) || 0;
+    const grossEntitledDays = Number.isFinite(Number(balance.gross_entitled_days))
+      && balance.gross_entitled_days != null
+      ? Number(balance.gross_entitled_days)
+      : baseDays + additionalDays;
+    const usageCountedDays = Number.isFinite(Number(balance.usage_counted_days))
+      && balance.usage_counted_days != null
+      ? Number(balance.usage_counted_days)
+      : deductionDays + usedDays;
+    return {
+      baseDays,
+      additionalDays,
+      deductionDays,
+      usedDays,
+      grossEntitledDays,
+      usageCountedDays,
+      usageRate: grossEntitledDays
+        ? Number(Math.min(100, usageCountedDays / grossEntitledDays * 100).toFixed(1))
+        : 0
+    };
+  }
+
+  function formatDays(value) {
+    return Number(value || 0).toLocaleString('ko-KR', { maximumFractionDigits: 2 });
+  }
+
   function renderBalances(balances, isAdmin) {
     annualDateControls.hidden = !isAdmin;
     annualSummary.hidden = false;
@@ -151,13 +181,25 @@ document.addEventListener('DOMContentLoaded', async () => {
         : ''}`;
     }
     annualChart.innerHTML = eligible.length
-        ? groupByWorkplace(eligible).map(([workplace, group]) => `<section class="annual-chart-group">
+      ? groupByWorkplace(eligible).map(([workplace, group]) => `<section class="annual-chart-group">
           <h3><span class="annual-workplace-label">근무지</span>${escapeHtml(workplace)} <span>${group.length}명</span></h3>
-          ${group.map(item => `<div class="annual-chart-row" title="${escapeHtml(item.name)}: ${item.usage_rate}% 사용">
-            <span class="annual-chart-name">${escapeHtml(item.name)}</span>
-            <span class="annual-track"><span class="annual-fill" style="display:block;width:${item.usage_rate}%"></span></span>
-            <span class="annual-chart-value">${item.usage_rate}% · ${item.usage_counted_days}/${item.gross_entitled_days}일</span>
-          </div>`).join('')}
+          ${group.map(item => {
+            const metrics = getUsageMetrics(item);
+            return `<article class="annual-chart-row" aria-label="${escapeHtml(item.name)} 연차 현황">
+              <div class="annual-chart-main">
+                <div class="annual-chart-name"><strong>${escapeHtml(item.name)}</strong><span>${item.service_year}년차</span></div>
+                <div class="annual-chart-remaining"><span>남은 연차</span><strong>${formatDays(item.remaining_days)}일</strong></div>
+              </div>
+              <div class="annual-chart-metrics">
+                <div><span>실제 사용</span><strong>${formatDays(metrics.usedDays)}일</strong></div>
+                <div><span>차감 포함 소진</span><strong>${formatDays(metrics.usageCountedDays)} / ${formatDays(metrics.grossEntitledDays)}일</strong></div>
+                <div><span>신청 대기</span><strong>${formatDays(item.pending_days)}일</strong></div>
+              </div>
+              <div class="annual-chart-allocation">기본 ${formatDays(metrics.baseDays)}일 − 차감 ${formatDays(metrics.deductionDays)}일 + 가산 ${formatDays(metrics.additionalDays)}일</div>
+              <div class="annual-chart-usage"><span>소진율 (차감 포함)</span><strong>${metrics.usageRate}%</strong></div>
+              <span class="annual-track" aria-label="차감 포함 소진율 ${metrics.usageRate}%"><span class="annual-fill" style="display:block;width:${metrics.usageRate}%"></span></span>
+            </article>`;
+          }).join('')}
         </section>`).join('')
       : '<div class="annual-empty">연차 기준일이 등록된 재직 직원이 없습니다.</div>';
     annualTableBody.innerHTML = workplaceGroups.map(([workplace, group]) => `
@@ -172,7 +214,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         <td>${item.hours_per_day}시간</td>
         <td>${item.usage_rate == null ? '-' : `${item.usage_rate}%`}</td>
       </tr>`).join('')}`).join('');
-    annualTableWrap.hidden = false;
+    annualTableWrap.hidden = isAdmin;
   }
 
   async function loadAnnualLeave(asOfDate = '') {
