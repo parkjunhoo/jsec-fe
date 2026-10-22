@@ -44,6 +44,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   const homeFavoritesSection = document.getElementById('homeFavoritesSection');
   const homeFavoritesGrid = document.getElementById('homeFavoritesGrid');
   const homeFavoritesStatus = document.getElementById('homeFavoritesStatus');
+  const menuSearchInput = document.getElementById('menuSearchInput');
+  const recentMenuSearches = document.getElementById('recentMenuSearches');
+  const menuSearchStatus = document.getElementById('menuSearchStatus');
+  const menuSearchEmpty = document.getElementById('menuSearchEmpty');
 
   function getKstParts(date = new Date()) {
     const parts = new Intl.DateTimeFormat('en-US', {
@@ -70,6 +74,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   let adminMenuRequestId = 0;
   let guestVacationState = 'loading';
   let guestAllowanceState = 'loading';
+  const RECENT_MENU_SEARCHES_KEY = 'jsec-recent-menu-searches';
+  let recentMenuSearchTerms = [];
 
   function getSelectedMonthRange() {
     const year = selectedMonth.getFullYear();
@@ -102,6 +108,95 @@ document.addEventListener('DOMContentLoaded', async () => {
     return url.origin === window.location.origin
       ? `${url.pathname}${url.search}${url.hash}`
       : url.href;
+  }
+
+  function normalizeMenuSearch(value) {
+    return String(value || '').toLocaleLowerCase('ko-KR').replace(/[\s()-]/g, '');
+  }
+
+  function renderRecentMenuSearches() {
+    recentMenuSearches.replaceChildren();
+    recentMenuSearches.hidden = recentMenuSearchTerms.length === 0;
+    if (!recentMenuSearchTerms.length) return;
+    const label = document.createElement('span');
+    label.className = 'recent-menu-label';
+    label.textContent = '최근 검색';
+    recentMenuSearches.append(label);
+    recentMenuSearchTerms.forEach(term => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'recent-menu-search';
+      button.dataset.recentMenuSearch = term;
+      button.textContent = term;
+      recentMenuSearches.append(button);
+    });
+  }
+
+  function applyMenuSearch() {
+    const query = normalizeMenuSearch(menuSearchInput.value);
+    const terms = query.split(/\s+/).filter(Boolean);
+    let matchCount = 0;
+    document.querySelectorAll('.service-group').forEach(group => {
+      let groupMatchCount = 0;
+      group.querySelectorAll('.menu-card[data-menu-keywords]').forEach(card => {
+        const searchable = normalizeMenuSearch([
+          card.querySelector('.menu-title')?.textContent,
+          card.querySelector('.menu-desc')?.textContent,
+          card.dataset.menuKeywords,
+          group.querySelector('.service-group-heading h3')?.textContent
+        ].join(' '));
+        const matches = terms.every(term => searchable.includes(term));
+        const cardContainer = card.closest('.menu-card-shell') || card;
+        cardContainer.hidden = !matches;
+        if (matches) {
+          groupMatchCount += 1;
+          matchCount += 1;
+        }
+      });
+      group.hidden = Boolean(terms.length) && groupMatchCount === 0;
+    });
+    menuSearchEmpty.hidden = !terms.length || matchCount > 0;
+    menuSearchStatus.textContent = terms.length
+      ? `${matchCount}개 메뉴를 찾았습니다.`
+      : '메뉴명이나 업무 키워드로 검색할 수 있습니다.';
+  }
+
+  function saveRecentMenuSearch(value) {
+    const term = String(value || '').trim().slice(0, 60);
+    if (!term) return;
+    recentMenuSearchTerms = [term, ...recentMenuSearchTerms.filter(item => item !== term)].slice(0, 5);
+    try {
+      localStorage.setItem(RECENT_MENU_SEARCHES_KEY, JSON.stringify(recentMenuSearchTerms));
+    } catch (error) {
+      console.warn('최근 메뉴 검색을 저장하지 못했습니다.', error);
+    }
+    renderRecentMenuSearches();
+  }
+
+  function initializeMenuSearch() {
+    try {
+      const saved = JSON.parse(localStorage.getItem(RECENT_MENU_SEARCHES_KEY) || '[]');
+      if (Array.isArray(saved)) recentMenuSearchTerms = saved
+        .filter(item => typeof item === 'string' && item.trim())
+        .slice(0, 5);
+    } catch {
+      recentMenuSearchTerms = [];
+    }
+    renderRecentMenuSearches();
+    applyMenuSearch();
+    menuSearchInput.addEventListener('input', applyMenuSearch);
+    menuSearchInput.addEventListener('keydown', event => {
+      if (event.key !== 'Enter') return;
+      event.preventDefault();
+      saveRecentMenuSearch(menuSearchInput.value);
+    });
+    recentMenuSearches.addEventListener('click', event => {
+      const button = event.target.closest('[data-recent-menu-search]');
+      if (!button) return;
+      menuSearchInput.value = button.dataset.recentMenuSearch;
+      applyMenuSearch();
+      menuSearchInput.focus();
+    });
   }
 
   function renderHomeFavorites() {
@@ -951,6 +1046,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const initialMonth = getSelectedMonthRange();
   const initialRequestId = ++monthRequestId;
   await window.userPreferences?.load();
+  initializeMenuSearch();
   initializeMenuFavorites();
   await loadVacations(initialMonth.start, initialMonth.end, initialRequestId);
 });

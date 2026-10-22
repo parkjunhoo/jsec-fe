@@ -34,12 +34,8 @@
     .home-shell { width: min(1080px, 100%); margin: 0 auto; padding: 27px 26px 56px; }
     .welcome-panel {
       position: relative;
-      display: flex;
-      min-height: 150px;
-      align-items: center;
-      justify-content: space-between;
-      gap: 22px;
-      padding: 24px 30px;
+      min-height: 0;
+      padding: 18px;
       overflow: hidden;
       border: 1px solid rgba(190, 211, 239, 0.1);
       border-radius: 19px;
@@ -61,8 +57,7 @@
       pointer-events: none;
     }
     .welcome-panel::after { right: -2%; bottom: -145%; width: 390px; }
-    .welcome-copy, .welcome-info { position: relative; z-index: 1; }
-    .welcome-info { display: flex; flex: 1; min-width: 0; align-items: center; justify-content: flex-end; gap: 12px; }
+    .welcome-info { position: relative; z-index: 1; width: 100%; }
     .welcome-kicker {
       display: inline-flex;
       align-items: center;
@@ -98,8 +93,9 @@
     .today-off-summary {
       flex: 1;
       min-width: 0;
-      max-width: 720px;
-      padding: 12px 15px;
+      width: 100%;
+      max-width: none;
+      padding: 16px 18px;
       border: 1px solid rgba(190, 211, 239, 0.11);
       border-radius: 12px;
       background: rgba(7, 18, 30, 0.3);
@@ -118,7 +114,7 @@
       backdrop-filter: none;
     }
     .today-off-heading .welcome-meta time { font-size: 11px; }
-    .today-off-label { color: #b8d0d2; font-size: 10px; font-weight: 750; }
+    .today-off-label { color: #b8d0d2; font-size: 13px; font-weight: 750; }
     .today-off-count {
       flex: 0 0 auto;
       padding: 3px 8px;
@@ -126,18 +122,18 @@
       border-radius: 999px;
       background: rgba(118, 212, 179, 0.1);
       color: #a8e5c6;
-      font-size: 11px;
+      font-size: 13px;
       font-weight: 750;
     }
     .today-off-names {
       display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 7px;
-      margin-top: 6px;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 12px;
     }
     .today-off-location {
       min-width: 0;
-      padding: 8px;
+      padding: 12px;
       border: 1px solid var(--location-border, rgba(190, 211, 239, 0.14));
       border-radius: 10px;
       background: var(--location-surface, rgba(255, 255, 255, 0.035));
@@ -158,9 +154,9 @@
       display: flex;
       align-items: center;
       gap: 6px;
-      margin: 0 0 7px 1px;
+      margin: 0 0 9px 1px;
       color: var(--location-label, #b8d0d2);
-      font-size: 10px;
+      font-size: 12px;
       font-weight: 800;
       letter-spacing: 0.015em;
     }
@@ -173,21 +169,21 @@
       box-shadow: 0 0 9px color-mix(in srgb, var(--location-accent, #b8d0d2) 45%, transparent);
       content: "";
     }
-    .today-off-shifts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 5px; }
+    .today-off-shifts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; }
     .today-off-group {
       min-width: 0;
-      padding: 7px 8px;
+      padding: 10px;
       border: 1px solid rgba(190, 211, 239, 0.1);
       border-radius: 8px;
       background: rgba(255, 255, 255, 0.045);
     }
     .today-off-group[hidden] { display: none; }
     .today-off-group.single { grid-column: 1 / -1; }
-    .today-off-group-label { color: #a9bfce; font-size: 9px; font-weight: 700; }
+    .today-off-group-label { color: #a9bfce; font-size: 11px; font-weight: 700; }
     .today-off-group-members {
       margin-top: 4px;
       color: #edf3fa;
-      font-size: 11px;
+      font-size: 14px;
       font-weight: 600;
       line-height: 1.45;
       overflow-wrap: anywhere;
@@ -206,6 +202,18 @@
     }
     .section-heading h2 { margin: 0; font-size: 18px; font-weight: 760; letter-spacing: -0.035em; }
     .section-heading p { margin: 5px 0 0; color: var(--muted); font-size: 12px; }
+    .menu-search-tools { display: grid; width: min(340px, 42%); gap: 7px; }
+    .menu-search-label { color: var(--muted); font-size: 11px; font-weight: 650; }
+    .menu-search-input { width: 100%; min-height: 42px; padding: 0 13px; border: 1px solid var(--line); border-radius: 10px; background: var(--panel-raised); color: var(--ink); font: inherit; font-size: 12px; }
+    .menu-search-input::placeholder { color: var(--muted); }
+    .recent-menu-searches { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+    .recent-menu-searches[hidden] { display: none; }
+    .recent-menu-label { margin-right: 2px; color: var(--muted); font-size: 10px; }
+    .recent-menu-search { min-height: 26px; padding: 0 8px; border: 1px solid var(--line); border-radius: 999px; background: transparent; color: var(--muted); font-size: 10px; cursor: pointer; }
+    .recent-menu-search:hover { border-color: var(--blue); color: var(--blue); }
+    .menu-search-status { min-height: 16px; margin: 8px 2px 0; color: var(--muted); font-size: 11px; }
+    .menu-search-empty { padding: 22px 12px; border: 1px dashed var(--line); border-radius: 12px; color: var(--muted); font-size: 12px; text-align: center; }
+    .menu-search-empty[hidden] { display: none; }
     .service-group + .service-group { margin-top: 25px; }
     .service-group-heading { margin: 0 2px 11px; }
     .service-group-heading h3 { margin: 0; font-size: 14px; font-weight: 750; letter-spacing: -0.02em; }
@@ -538,11 +546,10 @@
     }
     @media (max-width: 760px) {
       .home-shell { padding: 22px 16px 38px; }
-      .welcome-panel { min-height: 138px; padding: 21px 22px; border-radius: 17px; }
-      .welcome-panel { flex-wrap: wrap; }
-      .welcome-info { flex: 1 1 100%; }
-      .today-off-summary { max-width: none; }
-      .welcome-meta { min-width: 135px; }
+      .section-heading { align-items: stretch; flex-direction: column; }
+      .menu-search-tools { width: 100%; }
+      .welcome-panel { padding: 16px; border-radius: 17px; }
+      .today-off-names { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .menu-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
       .menu-card { min-height: 148px; padding: 16px; }
       .menu-icon { margin-bottom: 16px; }
@@ -550,23 +557,20 @@
     }
     @media (max-width: 520px) {
       .home-shell { padding: 17px 13px 30px; }
-      .welcome-panel { display: grid; grid-template-columns: minmax(0, 1fr) auto; min-height: 0; align-items: center; gap: 10px; padding: 17px 15px; border-radius: 15px; }
-      .welcome-info { grid-column: 1 / -1; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; }
-      .today-off-summary { padding: 9px 11px; }
-      .today-off-label { font-size: 9px; }
-      .today-off-heading { align-items: flex-start; }
-      .today-off-heading .welcome-meta { flex-wrap: wrap; justify-content: flex-end; gap: 4px; }
-      .today-off-heading .welcome-meta time { font-size: 9px; }
-      .today-off-location { padding: 7px; border-radius: 9px; }
-      .today-off-location-title { margin-bottom: 6px; font-size: 9px; }
-      .today-off-group { padding: 6px; }
-      .today-off-group-label { font-size: 8px; }
-      .today-off-group-members { font-size: 10px; }
-      .welcome-kicker { margin-bottom: 8px; font-size: 8px; letter-spacing: 0.11em; }
-      .welcome-panel h1 { max-width: 240px; font-size: 23px; }
-      .welcome-meta { display: grid; width: auto; min-width: 0; flex: 0 0 auto; justify-items: end; gap: 5px; padding: 9px 10px; }
-      .welcome-meta time { font-size: 10px; }
-      .meta-label { font-size: 8px; }
+      .welcome-panel { padding: 12px; border-radius: 15px; }
+      .today-off-summary { padding: 13px; }
+      .today-off-names { grid-template-columns: 1fr; gap: 8px; }
+      .today-off-heading { align-items: center; }
+      .today-off-heading .welcome-meta { flex-wrap: nowrap; justify-content: flex-end; gap: 6px; }
+      .today-off-heading .welcome-meta time { font-size: 11px; }
+      .today-off-location { padding: 11px; border-radius: 9px; }
+      .today-off-location-title { margin-bottom: 8px; font-size: 11px; }
+      .today-off-group { padding: 9px; }
+      .today-off-group-label { font-size: 10px; }
+      .today-off-group-members { font-size: 13px; }
+      .welcome-meta { min-width: 0; }
+      .welcome-meta time { font-size: 11px; }
+      .meta-label { font-size: 9px; }
       .section-heading { align-items: center; margin: 22px 2px 12px; }
       .section-heading h2 { font-size: 16px; }
       .section-heading p { font-size: 11px; }
@@ -617,11 +621,7 @@
   <div id="navbar"></div>
 
   <main class="home-shell">
-    <section class="welcome-panel" aria-labelledby="welcomeTitle">
-      <div class="welcome-copy">
-        <div class="welcome-kicker">JISAN RESORT · SECURITY OPERATIONS</div>
-        <h1 id="welcomeTitle">오늘의 업무</h1>
-      </div>
+    <section class="welcome-panel" aria-label="오늘 휴무 현황">
       <div class="welcome-info">
         <section class="today-off-summary" id="todayOffSummary" aria-label="오늘 휴무자" aria-live="polite" aria-busy="true">
           <div class="today-off-heading">
@@ -756,7 +756,14 @@
           <h2 id="servicesTitle">서비스 메뉴</h2>
           <p>업무 유형별 메뉴를 선택하세요.</p>
         </div>
+        <div class="menu-search-tools">
+          <label class="menu-search-label" for="menuSearchInput">업무 메뉴 검색</label>
+          <input class="menu-search-input" id="menuSearchInput" type="search" autocomplete="off" placeholder="메뉴명 또는 업무 키워드 검색">
+          <div class="recent-menu-searches" id="recentMenuSearches" hidden></div>
+        </div>
       </div>
+      <p class="menu-search-status" id="menuSearchStatus" role="status" aria-live="polite"></p>
+      <div class="menu-search-empty" id="menuSearchEmpty" hidden>검색 결과가 없습니다. 다른 업무 키워드로 찾아보세요.</div>
 
       <section class="service-group" aria-labelledby="workServicesTitle">
         <div class="service-group-heading">
@@ -764,19 +771,19 @@
           <p>휴무 일정과 급여 정보를 확인합니다.</p>
         </div>
         <div class="menu-grid">
-          <a href="/pages/calendar.html" class="menu-card">
+          <a href="/pages/calendar.html" class="menu-card" data-menu-keywords="휴무 일정 캘린더 달력 근무표 근무 일정 스케줄 휴가 공가 시간차 연차 신청">
             <span class="menu-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 11h18"/><path d="m9 16 2 2 4-4"/></svg></span>
             <span class="menu-title">휴무 일정</span>
             <span class="menu-desc">팀 휴무 일정 조회와 관리</span>
             <span class="menu-arrow" aria-hidden="true">↗</span>
           </a>
-          <a href="/pages/annual-leave.html" class="menu-card">
+          <a href="/pages/annual-leave.html" class="menu-card" data-menu-keywords="연차 휴가 잔여 소진 근속 가산 차감 기준일 직원별 연차 관리">
             <span class="menu-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 19V5m0 14h16"/><path d="m7 15 4-4 3 2 5-6"/></svg></span>
             <span class="menu-title">연차 관리</span>
             <span class="menu-desc">연차 잔여·소진 현황 및 가산 설정</span>
             <span class="menu-arrow" aria-hidden="true">↗</span>
           </a>
-          <a href="https://www.ibro.co.kr/PayRoll/JOBWITH/index.asp" class="menu-card" target="_blank" rel="noopener noreferrer">
+          <a href="https://www.ibro.co.kr/PayRoll/JOBWITH/index.asp" class="menu-card" data-menu-keywords="급여 월급 임금 급여명세서 페이롤 payroll" target="_blank" rel="noopener noreferrer">
             <span class="menu-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18M7 15h4m4 0h2M8 2v3m8-3v3"/></svg></span>
             <span class="menu-title">급여 조회</span>
             <span class="menu-desc">급여 조회 사이트에서 급여 내역 확인</span>
@@ -791,13 +798,13 @@
           <p>회원 정보를 관리하고 필요한 물품을 신청합니다.</p>
         </div>
         <div class="menu-grid">
-          <a href="/pages/users.html" class="menu-card">
+          <a href="/pages/users.html" class="menu-card" data-menu-keywords="회원 명부 직원 사원 사용자 계정 권한 인사 재직자 관리">
             <span class="menu-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="10" cy="7" r="4"/><path d="M20 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg></span>
             <span class="menu-title">회원 명부</span>
             <span class="menu-desc">회원 정보와 이용 권한 관리</span>
             <span class="menu-arrow" aria-hidden="true">↗</span>
           </a>
-          <a href="/pages/item-requests.html" class="menu-card">
+          <a href="/pages/item-requests.html" class="menu-card" data-menu-keywords="물품 신청 비품 구매 소모품 장비 물건 요청 승인">
             <span class="menu-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m3 8 9-5 9 5v9l-9 5-9-5V8Z"/><path d="m3.5 8.5 8.5 5 8.5-5M12 13.5V22M7.5 5.5l9 5"/></svg></span>
             <span class="menu-title">물품 신청</span>
             <span class="menu-desc">필요한 물품을 신청하고 처리 상태 확인</span>
@@ -812,31 +819,31 @@
           <p>차량 정보와 업무 자료, 팀 연락처를 확인합니다.</p>
         </div>
         <div class="menu-grid">
-          <a href="/pages/vehicle.html" class="menu-card">
+          <a href="/pages/vehicle.html" class="menu-card" data-menu-keywords="차량 자동차 차 번호 방문 차량 주차 지산 차량조회">
             <span class="menu-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m5 11 1.5-4.5A2 2 0 0 1 8.4 5h7.2a2 2 0 0 1 1.9 1.5L19 11"/><path d="M3 11h18v8H3z"/><path d="M6 19v2m12-2v2M6 15h.01M18 15h.01M3 13l-1-2m19 2 1-2"/></svg></span>
             <span class="menu-title">지산 차량조회</span>
             <span class="menu-desc">등록 차량과 방문 차량 확인</span>
             <span class="menu-arrow" aria-hidden="true">↗</span>
           </a>
-          <a href="/pages/meal-plan.html" class="menu-card">
+          <a href="/pages/meal-plan.html" class="menu-card" data-menu-keywords="식단 식단표 메뉴 밥 식사 점심 저녁 주간 식당">
             <span class="menu-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 5h16v14H4z"/><path d="M8 9h8M8 13h8M8 17h5"/><path d="m5 4 2-2m10 2 2-2"/></svg></span>
             <span class="menu-title">주간 식단표</span>
             <span class="menu-desc">이번 주 식단표 확인 및 사진 업로드</span>
             <span class="menu-arrow" aria-hidden="true">↗</span>
           </a>
-          <a href="/pages/manuals.html" class="menu-card">
+          <a href="/pages/manuals.html" class="menu-card" data-menu-keywords="업무 매뉴얼 지침 대응 상황조치 골프장 스키장 안전 수칙">
             <span class="menu-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-11V5l-8-3-8 3v6c0 7 8 11 8 11Z"/><path d="m9 12 2 2 4-4"/></svg></span>
             <span class="menu-title">업무 매뉴얼</span>
             <span class="menu-desc">상황조치 · 골프장 · 스키장</span>
             <span class="menu-arrow" aria-hidden="true">↗</span>
           </a>
-          <a href="/pages/phonebook.html" class="menu-card">
+          <a href="/pages/phonebook.html" class="menu-card" data-menu-keywords="전화번호 연락처 전화 연락망 부서 직원 통화 전화번호부">
             <span class="menu-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2A19.8 19.8 0 0 1 11.19 18a19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.09 3.18 2 2 0 0 1 4.08 1h3a2 2 0 0 1 2 1.72c.12.96.36 1.9.7 2.8a2 2 0 0 1-.45 2.11L8.06 8.94a16 16 0 0 0 6 6l1.31-1.27a2 2 0 0 1 2.11-.45c.9.34 1.84.58 2.8.7A2 2 0 0 1 22 16.92Z"/></svg></span>
             <span class="menu-title">지산 연락망</span>
             <span class="menu-desc">부서별 연락처 검색과 바로 전화</span>
             <span class="menu-arrow" aria-hidden="true">↗</span>
           </a>
-          <a href="#" id="openResortNotices" class="menu-card" aria-haspopup="dialog" aria-controls="resortNoticeModal">
+          <a href="#" id="openResortNotices" class="menu-card" data-menu-keywords="공지 공지사항 리조트 공지 알림 안내 업데이트" aria-haspopup="dialog" aria-controls="resortNoticeModal">
             <span class="menu-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 4h16v16H4z"/><path d="M8 8h8M8 12h8M8 16h5"/></svg></span>
             <span class="menu-title">지산 공지사항</span>
             <span class="menu-desc">앱에서 공식 공지사항 목록과 내용을 확인</span>
