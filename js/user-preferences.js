@@ -2,7 +2,7 @@
   const storageKey = 'jsec-theme';
   const largeTextStorageKey = 'jsec-large-text';
   const defaultCalendarFilters = ['주간', '야간', '스키장', '골프장', '현관', 'other'];
-  const initialTheme = localStorage.getItem(storageKey) === 'light' ? 'light' : 'dark';
+  const initialTheme = localStorage.getItem(storageKey) === 'dark' ? 'dark' : 'light';
   const initialLargeTextMode = localStorage.getItem(largeTextStorageKey) === 'true';
   const settings = {
     theme: initialTheme,

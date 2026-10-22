@@ -846,3 +846,192 @@ html[data-large-text="true"] .view-mode-toggle { min-width: 48px; min-height: 48
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }
 }
+
+/* Shared visual refresh. Page structure and interaction hooks remain unchanged. */
+:root {
+  --app-shadow: 0 8px 24px rgba(21, 37, 27, 0.06);
+  --app-radius: 12px;
+}
+html { scroll-padding-top: 76px; }
+body {
+  background-color: var(--bg-main);
+  background-image: linear-gradient(rgba(80, 112, 91, 0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(80, 112, 91, 0.025) 1px, transparent 1px);
+  background-size: 36px 36px;
+  font-family: "Pretendard", "Noto Sans KR", "Segoe UI", sans-serif;
+  letter-spacing: 0;
+}
+button, input, select, textarea { font-family: inherit; }
+:focus-visible { outline: 3px solid color-mix(in srgb, var(--primary) 62%, transparent); outline-offset: 2px; }
+
+#navbar .nav-header {
+  min-height: 60px;
+  padding: 9px clamp(16px, 4vw, 40px);
+  border-bottom-color: var(--app-border);
+  background: color-mix(in srgb, var(--app-surface) 95%, transparent);
+  box-shadow: 0 2px 12px rgba(18, 35, 24, 0.045);
+  backdrop-filter: blur(14px);
+}
+#navbar .nav-title { color: var(--text-main); font-size: 15px; font-weight: 750; }
+#navbar .nav-brand-logo { width: 32px; height: 32px; }
+#navbar .notification-btn { border-color: var(--app-border); border-radius: 9px; background: var(--app-surface-raised); color: var(--text-main); }
+#navbar .notification-btn:hover { border-color: var(--primary); background: var(--blue-soft); }
+#navbar .drawer-menu {
+  width: min(340px, 88vw);
+  right: max(-340px, -88vw);
+  padding-right: 18px;
+  padding-left: 18px;
+  border-left-color: var(--app-border);
+  background: var(--app-surface);
+  box-shadow: -16px 0 48px rgba(0, 0, 0, 0.16);
+}
+#navbar .drawer-menu.active { right: 0; }
+#navbar .drawer-header { margin-right: -18px; margin-left: -18px; padding-right: 18px; padding-left: 18px; }
+#navbar .drawer-group-title { color: var(--text-sub); font-size: 10px; letter-spacing: 0; }
+#navbar .drawer-group-items { grid-template-columns: 1fr; gap: 3px; }
+#navbar .drawer-item {
+  min-height: 44px;
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 10px;
+  padding: 6px 8px;
+  border-color: transparent;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-sub);
+  font-size: 13px;
+}
+#navbar .drawer-item:hover { border-color: var(--app-border); background: var(--app-surface-raised); color: var(--text-main); }
+#navbar .drawer-item.active { border-color: color-mix(in srgb, var(--primary) 20%, transparent); background: var(--blue-soft); color: var(--primary); }
+#navbar .drawer-item-icon { width: 29px; height: 29px; border-radius: 8px; background: var(--blue-soft); color: var(--primary); }
+#navbar .theme-switch, #navbar .large-text-switch { min-height: 42px; border-radius: 8px; background: var(--app-surface-raised); color: var(--text-main); }
+#navbar .btn-nav-logout { min-height: 42px; padding: 10px; border-radius: 8px; font-size: 13px; }
+#navbar .notification-dialog { border-radius: 12px; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.22); }
+
+main { animation: app-page-enter 180ms ease-out both; }
+@keyframes app-page-enter { from { opacity: 0.75; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+main h1 { color: var(--text-main); font-weight: 760; line-height: 1.22; letter-spacing: 0; }
+main h2, main h3, main h4 { letter-spacing: 0; }
+main :is(input:not([type="checkbox"]):not([type="radio"]):not([type="color"]), select, textarea) {
+  min-height: 40px;
+  border-radius: 8px;
+  background-color: var(--input-bg);
+  color: var(--text-main);
+}
+main textarea { min-height: 88px; }
+main :is(button, a, input, select, textarea) { transition-duration: 150ms; }
+
+.home-shell, .annual-shell, .request-shell, .manuals-shell, .directory {
+  width: min(1160px, 100%);
+  padding-right: clamp(16px, 3vw, 32px);
+  padding-left: clamp(16px, 3vw, 32px);
+}
+.welcome-panel {
+  min-height: 128px;
+  padding: 20px clamp(18px, 3vw, 30px);
+  border-color: var(--app-border);
+  border-radius: 12px;
+  background: var(--app-surface);
+  color: var(--text-main);
+  box-shadow: var(--app-shadow);
+}
+.welcome-panel::before, .welcome-panel::after { display: none; }
+.welcome-panel h1 { color: var(--text-main); font-size: 30px; letter-spacing: 0; }
+.today-off-summary { border-color: var(--app-border); border-radius: 9px; background: var(--app-surface-raised); box-shadow: none; backdrop-filter: none; }
+.today-off-location, .today-off-group { border-radius: 7px; box-shadow: none; }
+.personal-panel { padding: clamp(16px, 2.4vw, 24px); border-color: var(--app-border); border-radius: 12px; background: var(--app-surface); box-shadow: var(--app-shadow); }
+.personal-tabs { gap: 4px; border-bottom-color: var(--app-border); }
+.personal-tab { min-height: 40px; border-radius: 8px; color: var(--text-sub); }
+.personal-tab[aria-selected="true"] { border-color: color-mix(in srgb, var(--primary) 22%, transparent); background: var(--blue-soft); color: var(--primary); }
+.menu-card {
+  min-height: 140px;
+  border: 1px solid var(--app-border);
+  border-radius: 10px;
+  background: var(--app-surface);
+  box-shadow: none;
+  backdrop-filter: none;
+  transition: transform 150ms ease, border-color 150ms ease, box-shadow 150ms ease;
+}
+.menu-card:hover { transform: translateY(-2px); border-color: color-mix(in srgb, var(--primary) 42%, var(--app-border)); box-shadow: var(--app-shadow); }
+.menu-title { font-size: 14px; font-weight: 720; letter-spacing: 0; }
+.menu-desc { max-width: 30ch; color: var(--text-sub); letter-spacing: 0; }
+.menu-icon { width: 38px; height: 38px; border-radius: 8px; }
+.section-heading h2, .service-group-heading h3 { letter-spacing: 0; }
+
+.annual-card, .request-card, .request-item, .search-panel, .viewer-card, .filter-box,
+.stats-container, .user-card, .vehicle-card, .contact-modal, .department-section,
+.app-card, .directory-state {
+  border-color: var(--app-border);
+  border-radius: 10px;
+  background: var(--app-surface);
+  box-shadow: var(--app-shadow);
+  backdrop-filter: none;
+}
+.annual-card, .request-item, .search-panel, .filter-box, .viewer-card { padding: clamp(14px, 2vw, 20px); }
+.annual-heading, .request-heading, .intro, .directory .hero { margin-bottom: 18px; }
+.annual-heading h1, .request-heading h1, .intro h1, .directory .hero h1 { font-size: 30px; }
+.annual-card h2, .request-list-heading h2, .section-heading h2 { font-size: 16px; font-weight: 730; }
+.annual-summary, .personal-annual-stat, .stats-card, .user-details, .stat-card { border-radius: 8px; box-shadow: none; }
+.annual-table, .stats-table, .user-table, .vehicle-table { border-color: var(--app-border); }
+.annual-table th, .stats-table th, .user-table th, .vehicle-table th { background: var(--app-surface-raised); color: var(--text-sub); }
+.annual-table td, .annual-table th, .stats-table td, .stats-table th { border-color: var(--app-border); }
+.request-status, .annual-cycle-status { border-radius: 5px; font-weight: 700; }
+.request-action, .pdf-control, .viewer-action, .department-filter, .request-filter { border-radius: 8px; }
+.btn-add-user, .btn-add-vehicle, .btn-add-vacation, .btn-submit, .btn-submit-user,
+.request-submit, .annual-button.primary, .directory .add-contact {
+  border: 1px solid color-mix(in srgb, var(--primary) 76%, #17251d);
+  background: var(--primary);
+  color: #10241a;
+  box-shadow: none;
+  font-weight: 750;
+}
+.btn-add-user:hover, .btn-add-vehicle:hover, .btn-add-vacation:hover, .btn-submit:hover,
+.btn-submit-user:hover, .request-submit:hover, .annual-button.primary:hover:not(:disabled),
+.directory .add-contact:hover { filter: brightness(0.94); }
+
+html[data-theme="light"] {
+  --bg-main: #f4f6f3;
+  --app-surface: #fff;
+  --app-surface-raised: #f6f8f5;
+  --app-border: #dfe5df;
+  --text-main: #1d2922;
+  --text-sub: #647168;
+  --primary: #176b4b;
+  --primary-hover: #10563b;
+  --blue: #176b4b;
+  --blue-soft: rgba(23, 107, 75, 0.09);
+  --input-bg: #fff;
+  --app-shadow: 0 8px 24px rgba(21, 37, 27, 0.055);
+}
+html[data-theme="light"] #navbar .nav-header { background: color-mix(in srgb, #fff 95%, transparent); }
+html[data-theme="light"] #navbar .drawer-menu { background: #fff; }
+html[data-theme="light"] .welcome-panel, html[data-theme="light"] .menu-card { background: #fff; }
+html[data-theme="light"] .today-off-summary { background: #f7f9f6; }
+html[data-theme="light"] .annual-card, html[data-theme="light"] .request-card,
+html[data-theme="light"] .request-item, html[data-theme="light"] .search-panel,
+html[data-theme="light"] .viewer-card, html[data-theme="light"] .filter-box,
+html[data-theme="light"] .stats-container, html[data-theme="light"] .user-card,
+html[data-theme="light"] .vehicle-card, html[data-theme="light"] .contact-modal,
+html[data-theme="light"] .department-section, html[data-theme="light"] .app-card { background: #fff; }
+html[data-theme="light"] .btn-add-user, html[data-theme="light"] .btn-add-vehicle,
+html[data-theme="light"] .btn-add-vacation, html[data-theme="light"] .btn-submit,
+html[data-theme="light"] .btn-submit-user, html[data-theme="light"] .request-submit,
+html[data-theme="light"] .annual-button.primary, html[data-theme="light"] .directory .add-contact {
+  border-color: #145b40;
+  background: #176b4b;
+  color: #fff;
+}
+html[data-theme="light"] :is(input:not([type="checkbox"]):not([type="radio"]):not([type="color"]), select, textarea) { color: var(--text-main); }
+
+@media (max-width: 760px) {
+  #navbar .nav-header { min-height: 56px; padding: 8px 14px; }
+  .home-shell, .annual-shell, .request-shell, .manuals-shell, .directory { padding-right: 14px; padding-left: 14px; }
+  .welcome-panel { align-items: stretch; flex-direction: column; gap: 12px; padding: 17px; }
+  .welcome-panel h1, .annual-heading h1, .request-heading h1, .intro h1, .directory .hero h1 { font-size: 25px; }
+  .welcome-info { justify-content: stretch; }
+  .today-off-summary { width: 100%; max-width: none; }
+  .personal-panel { margin-top: 14px; }
+  .menu-card { min-height: 128px; }
+}
+@media (prefers-reduced-motion: reduce) { main { animation: none; } }
