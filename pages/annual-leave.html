@@ -26,6 +26,12 @@
     .annual-summary span { display: block; color: var(--text-sub); font-size: 11px; }
     .annual-summary strong { display: block; margin-top: 6px; font-size: 21px; }
     .annual-chart { display: grid; gap: 12px; margin-top: 16px; }
+    .annual-workplace-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 9px; margin-top: 12px; }
+    .annual-workplace-card, .annual-chart-group { min-width: 0; padding: 12px; border: 1px solid var(--app-border); border-radius: 10px; background: var(--app-surface); }
+    .annual-workplace-card h3, .annual-chart-group h3 { margin: 0; font-size: 13px; }
+    .annual-workplace-card h3 span, .annual-chart-group h3 span { color: var(--text-sub); font-size: 11px; font-weight: 500; }
+    .annual-workplace-card p { margin: 7px 0 0; color: var(--text-sub); font-size: 11px; line-height: 1.5; }
+    .annual-chart-group { display: grid; gap: 10px; }
     .annual-chart-row { display: grid; grid-template-columns: minmax(90px, 150px) minmax(80px, 1fr) 76px; align-items: center; gap: 10px; }
     .annual-chart-name { overflow: hidden; font-size: 12px; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
     .annual-track { height: 12px; overflow: hidden; border-radius: 99px; background: var(--app-surface-raised); }
@@ -35,6 +41,7 @@
     .annual-table { width: 100%; border-collapse: collapse; font-size: 12px; }
     .annual-table th, .annual-table td { padding: 10px 12px; border-bottom: 1px solid var(--app-border); text-align: right; white-space: nowrap; }
     .annual-table th { color: var(--text-sub); background: var(--app-surface-raised); font-size: 11px; }
+    .annual-table .annual-workplace-row th { color: var(--text-main); background: var(--app-surface-raised); text-align: left; font-size: 12px; }
     .annual-table th:first-child, .annual-table td:first-child { text-align: left; }
     .annual-table tbody tr:last-child td { border-bottom: 0; }
     .annual-table .annual-person { font-weight: 700; }
@@ -59,7 +66,7 @@
   <main class="annual-shell">
     <header class="annual-heading">
       <h1>연차 관리</h1>
-      <p id="annualDescription">입사일 기준 근속연차별 연차 보유량과 사용 현황을 확인합니다.</p>
+      <p id="annualDescription">연차 기준일 기준 근속연차별 연차 보유량과 사용 현황을 확인합니다.</p>
     </header>
     <section class="annual-card" aria-labelledby="annualOverviewTitle">
       <h2 id="annualOverviewTitle">연차 사용 현황</h2>

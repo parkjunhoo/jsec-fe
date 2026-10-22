@@ -269,6 +269,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     return Number(value).toLocaleString('ko-KR', { maximumFractionDigits: 2 });
   }
 
+  function groupAnnualLeaveByWorkplace(balances) {
+    const groups = new Map();
+    balances.forEach(balance => {
+      const workplace = balance.department || '근무지 미등록';
+      if (!groups.has(workplace)) groups.set(workplace, []);
+      groups.get(workplace).push(balance);
+    });
+    return [...groups.entries()].sort(([left], [right]) => left.localeCompare(right, 'ko'));
+  }
+
   function renderAnnualLeaveEmployee(balance) {
     if (!balance) {
       teamAnnualLeaveDetail.innerHTML = '<div class="personal-empty">직원을 선택하면 연차 상세를 확인할 수 있습니다.</div>';
@@ -303,13 +313,22 @@ document.addEventListener('DOMContentLoaded', async () => {
         <div class="personal-annual-stat"><span>산정 가능</span><strong>${eligible.length}명</strong></div>
         <div class="personal-annual-stat"><span>총 사용</span><strong>${formatAnnualDays(totalUsed)}일</strong></div>
         <div class="personal-annual-stat"><span>신청 대기</span><strong>${formatAnnualDays(totalPending)}일</strong></div>
-      </div>`;
+      </div><div class="personal-annual-groups">${groupAnnualLeaveByWorkplace(balances).map(([workplace, group]) => {
+        const calculated = group.filter(balance => balance.service_year);
+        return `<section class="personal-annual-workplace">
+          <h3>${escapeHtml(workplace)} <span>${group.length}명</span></h3>
+          <p>산정 가능 ${calculated.length}명 · 사용 ${formatAnnualDays(calculated.reduce((sum, balance) => sum + balance.used_days, 0))}일 · 잔여 ${formatAnnualDays(calculated.reduce((sum, balance) => sum + balance.remaining_days, 0))}일</p>
+        </section>`;
+      }).join('')}</div>`;
       teamAnnualLeaveSummary.textContent = `전체 보유 ${formatAnnualDays(totalEntitled)}일 · 전체 잔여 ${formatAnnualDays(
         eligible.reduce((sum, balance) => sum + balance.remaining_days, 0)
       )}일 · 직원별 상세를 선택해 확인하세요.`;
-      teamAnnualLeaveSelect.innerHTML = '<option value="">직원을 선택하세요</option>' + balances
-        .map(balance => `<option value="${escapeHtml(balance.user_id)}">${escapeHtml(balance.name)}${balance.department ? ` · ${escapeHtml(balance.department)}` : ''}</option>`)
-        .join('');
+      teamAnnualLeaveSelect.innerHTML = '<option value="">직원을 선택하세요</option>' +
+        groupAnnualLeaveByWorkplace(balances).map(([workplace, group]) =>
+          `<optgroup label="${escapeHtml(workplace)}">${group
+            .map(balance => `<option value="${escapeHtml(balance.user_id)}">${escapeHtml(balance.name)}</option>`)
+            .join('')}</optgroup>`
+        ).join('');
       renderAnnualLeaveEmployee(null);
       return;
     }
