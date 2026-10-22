@@ -8,6 +8,8 @@
   const statusMessage = document.getElementById('statusMessage');
   const emptyState = document.getElementById('emptyState');
   const addEntryButton = document.getElementById('addEntry');
+  const categoryChart = document.getElementById('categoryChart');
+  const dailyChart = document.getElementById('dailyChart');
   const entryDialog = document.getElementById('entryDialog');
   const entryForm = document.getElementById('entryForm');
   const formError = document.getElementById('formError');
@@ -31,6 +33,96 @@
 
   const amountFormatter = new Intl.NumberFormat('ko-KR');
   const dateFormatter = new Intl.DateTimeFormat('ko-KR', { year: 'numeric', month: '2-digit', day: '2-digit' });
+
+  function formatCompactMoney(value) {
+    if (value >= 100000000) return `${(value / 100000000).toFixed(value % 100000000 ? 1 : 0)}억`;
+    if (value >= 10000) return `${(value / 10000).toFixed(value % 10000 ? 1 : 0)}만`;
+    return amountFormatter.format(value);
+  }
+
+  function renderCharts(visible) {
+    const monthLabel = monthFilter.value || '전체 기간';
+    document.getElementById('categoryChartNote').textContent = monthLabel;
+    document.getElementById('dailyChartNote').textContent = monthLabel;
+
+    if (!visible.length) {
+      categoryChart.innerHTML = '<div class="cards-chart-empty">표시할 사용 내역이 없습니다.</div>';
+      dailyChart.innerHTML = '<div class="cards-chart-empty">내역을 등록하면 일자별 추이가 표시됩니다.</div>';
+      return;
+    }
+
+    const categoryTotals = new Map();
+    for (const entry of visible) {
+      categoryTotals.set(entry.category, (categoryTotals.get(entry.category) || 0) + Number(entry.amount));
+    }
+    const sortedCategories = [...categoryTotals.entries()]
+      .sort((first, second) => second[1] - first[1]);
+    const categories = sortedCategories.length > 6
+      ? [
+        ...sortedCategories.slice(0, 5),
+        ['기타 항목', sortedCategories.slice(5).reduce((sum, [, amount]) => sum + amount, 0)]
+      ]
+      : sortedCategories;
+    const largestCategory = Math.max(...categories.map(([, amount]) => amount), 1);
+    categoryChart.innerHTML = categories.map(([category, amount]) => `
+      <div class="cards-category-item">
+        <span class="cards-category-name" title="${escapeHtml(category)}">${escapeHtml(category)}</span>
+        <span class="cards-category-track" aria-hidden="true"><span class="cards-category-fill" style="width:${Math.max(2, amount / largestCategory * 100)}%"></span></span>
+        <span class="cards-category-value">${formatCompactMoney(amount)}원</span>
+      </div>`).join('');
+
+    if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(monthFilter.value)) {
+      dailyChart.innerHTML = '<div class="cards-chart-empty">일자별 추이를 보려면 조회 월을 선택해 주세요.</div>';
+      return;
+    }
+    const selectedMonth = /^\d{4}-(0[1-9]|1[0-2])$/.test(monthFilter.value)
+      ? monthFilter.value
+      : new Date().toISOString().slice(0, 7);
+    const [year, month] = selectedMonth.split('-').map(Number);
+    const daysInMonth = new Date(year, month, 0).getDate();
+    const dailyTotals = Array(daysInMonth).fill(0);
+    for (const entry of visible) {
+      if (entry.spent_on.startsWith(`${selectedMonth}-`)) {
+        const day = Number(entry.spent_on.slice(8, 10));
+        if (day >= 1 && day <= daysInMonth) dailyTotals[day - 1] += Number(entry.amount);
+      }
+    }
+
+    const width = 720;
+    const height = 180;
+    const left = 50;
+    const right = 12;
+    const top = 12;
+    const bottom = 28;
+    const plotWidth = width - left - right;
+    const plotHeight = height - top - bottom;
+    const maxValue = Math.max(...dailyTotals, 1);
+    const axisMax = Math.max(10000, Math.ceil(maxValue / 4 / 10000) * 10000) * 4;
+    const points = dailyTotals.map((amount, index) => ({
+      x: left + (daysInMonth === 1 ? plotWidth / 2 : index * plotWidth / (daysInMonth - 1)),
+      y: top + plotHeight - (amount / axisMax) * plotHeight,
+      amount,
+      day: index + 1
+    }));
+    const line = points.map(point => `${point.x.toFixed(1)},${point.y.toFixed(1)}`).join(' ');
+    const areaPath = `M ${points[0].x.toFixed(1)} ${top + plotHeight} L ${line.replace(/,/g, ' ')} L ${points[points.length - 1].x.toFixed(1)} ${top + plotHeight} Z`;
+    const grid = Array.from({ length: 5 }, (_, index) => {
+      const value = axisMax * (4 - index) / 4;
+      const y = top + plotHeight * index / 4;
+      return `<line class="cards-chart-gridline" x1="${left}" y1="${y}" x2="${width - right}" y2="${y}"></line><text class="cards-chart-axis" x="${left - 7}" y="${y + 3}" text-anchor="end">${escapeHtml(formatCompactMoney(value))}</text>`;
+    }).join('');
+    const labelDays = new Set([1, 5, 10, 15, 20, 25, daysInMonth]);
+    const labels = points.filter(point => labelDays.has(point.day)).map(point =>
+      `<text class="cards-chart-axis" x="${point.x}" y="${height - 6}" text-anchor="middle">${point.day}일</text>`
+    ).join('');
+    const markers = points.filter(point => point.amount > 0).map(point =>
+      `<circle class="cards-chart-point" cx="${point.x.toFixed(1)}" cy="${point.y.toFixed(1)}" r="3.2"><title>${point.day}일 · ${amountFormatter.format(point.amount)}원</title></circle>`
+    ).join('');
+    dailyChart.innerHTML = `<svg class="cards-daily-chart" viewBox="0 0 ${width} ${height}" role="img" aria-label="${escapeHtml(selectedMonth)} 일자별 법인카드 사용 금액 그래프">
+      <defs><linearGradient id="cardsChartArea" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#46a276" stop-opacity=".3"></stop><stop offset="100%" stop-color="#46a276" stop-opacity=".02"></stop></linearGradient></defs>
+      ${grid}<path class="cards-chart-area" d="${areaPath}"></path><polyline class="cards-chart-line" points="${line}"></polyline>${markers}${labels}
+    </svg>`;
+  }
 
   function setStatus(message, type = '') {
     statusMessage.textContent = message;
@@ -68,6 +160,7 @@
     document.getElementById('totalAmount').textContent = `${amountFormatter.format(total)}원`;
     document.getElementById('receiptCount').textContent =
       `${visible.filter(entry => entry.receipt_size_bytes).length}건`;
+    renderCharts(visible);
     emptyState.hidden = visible.length > 0;
 
     entryRows.innerHTML = visible.map(entry => {
