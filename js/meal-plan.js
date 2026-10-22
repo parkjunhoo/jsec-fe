@@ -17,9 +17,11 @@
   const mealPhoto = document.getElementById('mealPhoto');
   const mealEmpty = document.getElementById('mealEmpty');
   const choosePhotoButton = document.getElementById('chooseMealPhoto');
+  const capturePhotoButton = document.getElementById('captureMealPhoto');
   const uploadPhotoButton = document.getElementById('uploadMealPhoto');
   const cancelPhotoButton = document.getElementById('cancelMealPhoto');
   const photoInput = document.getElementById('mealPhotoInput');
+  const cameraInput = document.getElementById('mealCameraInput');
   const mealViewer = document.getElementById('mealViewer');
   const mealViewerTitle = document.getElementById('mealViewerTitle');
   const mealViewerStage = document.getElementById('mealViewerStage');
@@ -73,6 +75,7 @@
     previousWeekButton.disabled = busy;
     nextWeekButton.disabled = busy;
     choosePhotoButton.disabled = busy;
+    capturePhotoButton.disabled = busy;
     uploadPhotoButton.disabled = busy;
     cancelPhotoButton.disabled = busy;
   }
@@ -105,6 +108,7 @@
     uploadPhotoButton.hidden = true;
     cancelPhotoButton.hidden = true;
     photoInput.value = '';
+    cameraInput.value = '';
   }
 
   function showImageUrl(url) {
@@ -369,8 +373,8 @@
     }
   }
 
-  async function onPhotoSelected() {
-    const file = photoInput.files?.[0];
+  async function onPhotoSelected(event) {
+    const file = event.currentTarget.files?.[0];
     if (!file) return;
     setBusy(true);
     setStatus('사진을 읽고 압축하고 있습니다.');
@@ -423,7 +427,9 @@
   previousWeekButton.addEventListener('click', () => moveWeek(-1));
   nextWeekButton.addEventListener('click', () => moveWeek(1));
   choosePhotoButton.addEventListener('click', () => photoInput.click());
+  capturePhotoButton.addEventListener('click', () => cameraInput.click());
   photoInput.addEventListener('change', onPhotoSelected);
+  cameraInput.addEventListener('change', onPhotoSelected);
   uploadPhotoButton.addEventListener('click', uploadMealPlan);
   cancelPhotoButton.addEventListener('click', () => {
     clearPendingImage();

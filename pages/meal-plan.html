@@ -138,10 +138,12 @@
           이 주의 식단표 사진을 먼저 올려 주세요.
         </div>
         <div class="meal-actions">
-          <button class="meal-action" id="chooseMealPhoto" type="button"><svg class="meal-action-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h3l1.5-2h7L17 7h3v12H4z"/><circle cx="12" cy="13" r="3.5"/></svg>사진 선택</button>
+          <button class="meal-action" id="captureMealPhoto" type="button"><svg class="meal-action-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h3l1.5-2h7L17 7h3v12H4z"/><circle cx="12" cy="13" r="3.5"/></svg>카메라 촬영</button>
+          <button class="meal-action" id="chooseMealPhoto" type="button"><svg class="meal-action-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8.5" cy="9" r="1.5"/><path d="m21 15-5-5L5 20"/></svg>갤러리에서 선택</button>
           <button class="meal-action meal-action-primary" id="uploadMealPhoto" type="button" hidden>이 주 식단표 올리기</button>
           <button class="meal-action" id="cancelMealPhoto" type="button" hidden>취소</button>
-          <input id="mealPhotoInput" type="file" accept="image/*" capture="environment" hidden>
+          <input id="mealCameraInput" type="file" accept="image/*" capture="environment" hidden>
+          <input id="mealPhotoInput" type="file" accept="image/*" hidden>
         </div>
         <p class="meal-help">사진은 기기에서 JPEG로 압축한 뒤 업로드됩니다. 최대 1MB이며, 같은 주에 다시 올리면 기존 사진을 교체합니다.</p>
       </div>

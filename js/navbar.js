@@ -587,6 +587,9 @@ document.addEventListener('DOMContentLoaded', async () => {
               <a href="/pages/item-requests.html" class="drawer-item ${currentPath.includes('item-requests.html') ? 'active' : ''}" ${currentPath.includes('item-requests.html') ? 'aria-current="page"' : ''}>
                 <span class="drawer-item-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m3 8 9-5 9 5v9l-9 5-9-5V8Z"/><path d="m3.5 8.5 8.5 5 8.5-5M12 13.5V22M7.5 5.5l9 5"/></svg></span><span class="drawer-item-label">물품 신청</span>
               </a>
+              <a href="/pages/corporate-cards.html" data-corporate-card-link class="drawer-item ${currentPath.includes('corporate-cards.html') ? 'active' : ''}" ${currentPath.includes('corporate-cards.html') ? 'aria-current="page"' : ''} style="display:none" hidden>
+                <span class="drawer-item-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18M7 15h4m4 0h2"/></svg></span><span class="drawer-item-label">법인카드 내역</span>
+              </a>
             </div>
           </section>
           <section class="drawer-group" aria-labelledby="drawerInfoGroup">
@@ -1216,6 +1219,11 @@ document.addEventListener('DOMContentLoaded', async () => {
       window.setInterval(refreshNotifications, 60000);
 
       if (profile) {
+        document.querySelectorAll('[data-corporate-card-link]').forEach(link => {
+          const permitted = profile.role === 'admin' || profile.role === 'guest';
+          link.hidden = !permitted;
+          link.style.display = permitted ? '' : 'none';
+        });
         const userNameEl = document.getElementById('navUserName');
         const userRoleEl = document.getElementById('navUserRole');
         if (userNameEl) userNameEl.textContent = `${profile.name} 님`;
