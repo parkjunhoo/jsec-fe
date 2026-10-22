@@ -37,14 +37,22 @@
     .annual-track { height: 12px; overflow: hidden; border-radius: 99px; background: var(--app-surface-raised); }
     .annual-fill { height: 100%; border-radius: inherit; background: linear-gradient(90deg, #4cae7b, #84d9a4); }
     .annual-chart-value { color: var(--text-sub); font-size: 11px; text-align: right; white-space: nowrap; }
+    .annual-control-bar { display: flex; justify-content: flex-end; margin: 12px 0; }
+    .annual-date-field, .annual-deduction-employee { display: grid; gap: 5px; color: var(--text-sub); font-size: 11px; font-weight: 700; }
+    .annual-date-field input, .annual-deduction-employee select { min-width: 180px; min-height: 38px; padding: 0 9px; border: 1px solid var(--app-border); border-radius: 8px; background: var(--app-surface-raised); color: var(--text-main); }
     .annual-table-wrap { overflow-x: auto; margin-top: 16px; border: 1px solid var(--app-border); border-radius: 10px; }
     .annual-table { width: 100%; border-collapse: collapse; font-size: 12px; }
     .annual-table th, .annual-table td { padding: 10px 12px; border-bottom: 1px solid var(--app-border); text-align: right; white-space: nowrap; }
     .annual-table th { color: var(--text-sub); background: var(--app-surface-raised); font-size: 11px; }
-    .annual-table .annual-workplace-row th { color: var(--text-main); background: var(--app-surface-raised); text-align: left; font-size: 12px; }
+    .annual-table .annual-workplace-row th { padding-top: 12px; padding-bottom: 12px; border-top: 2px solid var(--primary); background: var(--app-surface-raised); color: var(--text-main); text-align: left; font-size: 13px; }
     .annual-table th:first-child, .annual-table td:first-child { text-align: left; }
     .annual-table tbody tr:last-child td { border-bottom: 0; }
     .annual-table .annual-person { font-weight: 700; }
+    .annual-workplace-label, .annual-person-label { display: inline-block; margin-right: 8px; padding: 3px 6px; border-radius: 4px; font-size: 10px; font-weight: 700; vertical-align: 1px; }
+    .annual-workplace-label { background: rgba(76, 174, 123, 0.16); color: var(--primary); }
+    .annual-person-label { background: var(--app-surface-raised); color: var(--text-sub); }
+    .annual-deduction-heading { margin: 12px 0 0; }
+    .annual-deduction-employee { max-width: 360px; margin-bottom: 12px; }
     .annual-settings { display: grid; grid-template-columns: repeat(5, minmax(100px, 1fr)); gap: 9px; }
     .annual-setting { display: grid; gap: 5px; color: var(--text-sub); font-size: 11px; }
     .annual-setting input { width: 100%; min-height: 38px; padding: 0 9px; border: 1px solid var(--app-border); border-radius: 8px; background: var(--app-surface-raised); color: var(--text-main); }
@@ -58,6 +66,7 @@
       .annual-summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .annual-settings { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .annual-chart-row { grid-template-columns: minmax(70px, 100px) minmax(60px, 1fr) 70px; gap: 7px; }
+      .annual-date-field { width: 100%; }
     }
   </style>
 </head>
@@ -71,11 +80,16 @@
     <section class="annual-card" aria-labelledby="annualOverviewTitle">
       <h2 id="annualOverviewTitle">연차 사용 현황</h2>
       <p class="annual-card-description" id="annualPeriodDescription">승인된 연차와 신청 대기 중인 연차를 함께 반영합니다. 시간차는 근무지에 따라 8시간 또는 12시간을 연차 1일로 계산합니다.</p>
+      <div class="annual-control-bar" id="annualDateControls" hidden>
+        <label class="annual-date-field" for="annualAsOfDate">산정 기준일
+          <input id="annualAsOfDate" type="date" required>
+        </label>
+      </div>
       <div id="annualSummary" class="annual-empty">연차 현황을 불러오는 중입니다.</div>
       <div id="annualChart" class="annual-chart" aria-label="직원별 연차 소진율 그래프"></div>
       <div class="annual-table-wrap" id="annualTableWrap" hidden>
         <table class="annual-table">
-          <thead><tr><th>직원</th><th>근속</th><th>기본</th><th>가산</th><th>총 보유</th><th>사용</th><th>신청 대기</th><th>잔여</th><th>시간차 1일 기준</th><th>소진율</th></tr></thead>
+          <thead><tr><th>직원</th><th>근속</th><th>기본</th><th>기본 차감</th><th>가산</th><th>총 보유</th><th>사용</th><th>신청 대기</th><th>잔여</th><th>시간차 1일 기준</th><th>소진율</th></tr></thead>
           <tbody id="annualTableBody"></tbody>
         </table>
       </div>
@@ -89,6 +103,18 @@
         <div class="annual-actions"><button class="annual-button primary" id="saveAnnualSettings" type="submit">설정 저장</button></div>
       </form>
       <p class="annual-message" id="annualSettingsMessage" role="status"></p>
+    </section>
+    <section class="annual-card" id="annualDeductionsCard" aria-labelledby="annualDeductionsTitle" hidden>
+      <h2 id="annualDeductionsTitle">직원별 기본연차 차감 설정</h2>
+      <p class="annual-card-description">직원별·근속연차별 기본연차 차감일수를 설정합니다. 차감은 1~10년차에 각각 적용되며, 10년차 이후에는 10년차 설정을 적용합니다.</p>
+      <form id="annualDeductionsForm">
+        <label class="annual-deduction-employee" for="annualDeductionEmployee">직원 선택
+          <select id="annualDeductionEmployee" required><option value="">직원을 선택하세요</option></select>
+        </label>
+        <div class="annual-settings" id="annualDeductionFields"></div>
+        <div class="annual-actions"><button class="annual-button primary" id="saveAnnualDeductions" type="submit">차감 설정 저장</button></div>
+      </form>
+      <p class="annual-message" id="annualDeductionsMessage" role="status"></p>
     </section>
   </main>
   <script src="/js/app-loading.js"></script>
