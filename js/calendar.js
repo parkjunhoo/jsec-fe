@@ -299,18 +299,18 @@ document.addEventListener('DOMContentLoaded', async () => {
   function updateAnnualLeaveBalanceNotice() {
     const balance = currentAnnualLeaveBalance;
     if (!balance || !balance.service_year) {
-      annualLeaveBalanceLabel.textContent = '입사일이 등록되어 있지 않아 연차를 신청할 수 없습니다. 관리자에게 문의해 주세요.';
+      annualLeaveBalanceLabel.textContent = '연차 기준일이 등록되어 있지 않아 연차를 신청할 수 없습니다. 관리자에게 문의해 주세요.';
       annualLeaveBalanceLabel.dataset.type = 'error';
       submitAnnualLeaveBtn.disabled = true;
       return;
     }
     const requestedDays = annualLeaveType.value === '시간차'
-      ? calculateAnnualLeaveHours() / 8
+      ? calculateAnnualLeaveHours() / balance.hours_per_day
       : Number(annualLeaveDays.value) || 0;
     const datesInCycle = annualLeaveStartDate.value >= balance.cycle_start
       && annualLeaveEndDate.value <= balance.cycle_end;
     const canApply = datesInCycle && requestedDays > 0 && requestedDays <= balance.remaining_days;
-    annualLeaveBalanceLabel.innerHTML = `현재 <strong>${balance.service_year}년차</strong> · 보유 ${balance.entitled_days}일 · 사용 ${balance.used_days}일 · 신청 대기 ${balance.pending_days}일 · 신청 가능 잔여 <strong>${balance.remaining_days}일</strong><br>기준기간 ${escapeHtml(balance.cycle_start)} ~ ${escapeHtml(balance.cycle_end)} · 시간차는 8시간을 1일로 계산합니다.`;
+    annualLeaveBalanceLabel.innerHTML = `현재 <strong>${balance.service_year}년차</strong> · 보유 ${balance.entitled_days}일 · 사용 ${balance.used_days}일 · 신청 대기 ${balance.pending_days}일 · 신청 가능 잔여 <strong>${balance.remaining_days}일</strong><br>기준기간 ${escapeHtml(balance.cycle_start)} ~ ${escapeHtml(balance.cycle_end)} · 현재 근무지는 ${balance.hours_per_day}시간을 연차 1일로 계산합니다.`;
     annualLeaveBalanceLabel.dataset.type = canApply ? '' : 'error';
     if (!datesInCycle) {
       annualLeaveBalanceLabel.insertAdjacentHTML('beforeend', '<br>신청 기간은 현재 연차 기준기간 안에 있어야 합니다.');
