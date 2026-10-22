@@ -26,6 +26,7 @@
     .venue-switch { display: flex; gap: 8px; padding: 14px 18px; border-bottom: 1px solid var(--app-border); }
     .venue-option { min-height: 38px; padding: 0 14px; border: 1px solid var(--app-border); border-radius: 10px; background: var(--app-surface-raised); color: var(--text-sub); font-weight: 700; cursor: pointer; }
     .venue-option[aria-pressed="true"] { border-color: var(--primary); background: var(--primary); color: #14251c; }
+    .venue-option:focus-visible { outline: 3px solid var(--primary); outline-offset: 2px; }
     .week-nav { display: flex; min-height: 76px; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 18px; border-bottom: 1px solid var(--app-border); }
     .week-nav button, .meal-action {
       min-height: 40px;
@@ -111,6 +112,8 @@
       .meal-viewer-hint { top: 12px; font-size: 10px; }
       .meal-viewer-zoom-tools { bottom: max(18px, env(safe-area-inset-bottom)); }
     }
+    html[data-theme="light"] .venue-option { border-color: #9aa99e; background: #fff; color: #34483e; }
+    html[data-theme="light"] .venue-option[aria-pressed="true"] { border-color: #145c40; background: #197254; color: #fff; }
     html[data-theme="light"] .meal-action-primary { color: #fff; }
   </style>
   <link rel="stylesheet" href="/css/app-theme.css">
