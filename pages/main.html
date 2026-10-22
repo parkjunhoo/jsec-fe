@@ -224,6 +224,19 @@
     }
     .service-count strong { color: var(--blue); font-size: 12px; }
     .menu-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 13px; }
+    .menu-card-shell { position: relative; min-width: 0; }
+    .menu-card-shell > .menu-card { height: 100%; padding-right: 54px; }
+    .menu-card-shell > .menu-card .menu-arrow { top: auto; right: 18px; bottom: 17px; }
+    .menu-favorite-toggle { position: absolute; top: 12px; right: 12px; z-index: 2; display: grid; width: 34px; height: 34px; place-items: center; border: 1px solid var(--line); border-radius: 9px; background: rgba(11, 18, 32, 0.62); color: #aabbd0; font-size: 19px; line-height: 1; cursor: pointer; }
+    .menu-favorite-toggle[aria-pressed="true"] { border-color: rgba(241, 190, 91, 0.4); color: #f1be5b; }
+    .menu-favorite-toggle:hover { border-color: rgba(241, 190, 91, 0.65); color: #f1be5b; }
+    .menu-favorite-toggle:focus-visible { outline: 3px solid rgba(241, 190, 91, 0.45); outline-offset: 2px; }
+    .home-favorites { margin: 0 0 30px; }
+    .home-favorites[hidden] { display: none; }
+    .home-favorites-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 11px; }
+    .home-favorites-heading h2 { margin: 0; font-size: 17px; font-weight: 750; }
+    .home-favorites-heading p { margin: 0; color: var(--muted); font-size: 11px; }
+    .home-favorites-status { min-height: 16px; margin: 8px 2px 0; color: var(--muted); font-size: 11px; }
     .menu-card {
       position: relative;
       display: flex;
@@ -607,7 +620,7 @@
     <section class="welcome-panel" aria-labelledby="welcomeTitle">
       <div class="welcome-copy">
         <div class="welcome-kicker">JISAN RESORT · SECURITY OPERATIONS</div>
-        <h1 id="welcomeTitle">보안팀 업무 포털</h1>
+        <h1 id="welcomeTitle">오늘의 업무</h1>
       </div>
       <div class="welcome-info">
         <section class="today-off-summary" id="todayOffSummary" aria-label="오늘 휴무자" aria-live="polite" aria-busy="true">
@@ -726,6 +739,15 @@
           <div id="teamAllowanceContent" aria-live="polite"><div class="personal-empty">이번 달 수당 통계를 불러오는 중입니다.</div></div>
         </section>
       </section>
+    </section>
+
+    <section class="home-favorites" id="homeFavoritesSection" aria-labelledby="homeFavoritesTitle" hidden>
+      <header class="home-favorites-heading">
+        <h2 id="homeFavoritesTitle">내 즐겨찾기</h2>
+        <p>자주 쓰는 메뉴를 빠르게 여세요.</p>
+      </header>
+      <div class="menu-grid" id="homeFavoritesGrid"></div>
+      <p class="home-favorites-status" id="homeFavoritesStatus" role="status" aria-live="polite"></p>
     </section>
 
     <section aria-labelledby="servicesTitle">

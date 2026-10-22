@@ -7,7 +7,8 @@
   const settings = {
     theme: initialTheme,
     large_text_mode: initialLargeTextMode,
-    calendar_location_filters: defaultCalendarFilters
+    calendar_location_filters: defaultCalendarFilters,
+    favorites: []
   };
   let userId = null;
   let loadPromise = null;
@@ -53,6 +54,18 @@
             settings.calendar_location_filters = data.calendar_location_filters;
           }
         }
+
+        const { data: favoriteRows, error: favoritesError } = await supabaseClient
+          .from('user_favorites')
+          .select('favorite_type, favorite_key')
+          .eq('user_id', userId);
+        if (favoritesError) {
+          console.warn('즐겨찾기를 불러오지 못했습니다.', favoritesError);
+        } else {
+          settings.favorites = (favoriteRows || []).filter(item =>
+            ['menu', 'contact'].includes(item.favorite_type) && item.favorite_key
+          ).map(item => ({ type: item.favorite_type, key: String(item.favorite_key) }));
+        }
       } catch (error) {
         console.warn('사용자 설정을 불러오지 못했습니다. 기본 설정을 사용합니다.', error);
       }
@@ -90,9 +103,41 @@
     }
   }
 
+  async function toggleFavorite(type, key) {
+    await load();
+    const favoriteType = String(type || '');
+    const favoriteKey = String(key || '');
+    if (!userId) throw new Error('로그인이 필요합니다.');
+    if (!['menu', 'contact'].includes(favoriteType) || !favoriteKey || favoriteKey.length > 2048) {
+      throw new Error('즐겨찾기 항목이 올바르지 않습니다.');
+    }
+
+    const exists = settings.favorites.some(item => item.type === favoriteType && item.key === favoriteKey);
+    const operation = exists
+      ? supabaseClient.from('user_favorites').delete()
+        .eq('user_id', userId).eq('favorite_type', favoriteType).eq('favorite_key', favoriteKey)
+      : supabaseClient.from('user_favorites').upsert({
+        user_id: userId,
+        favorite_type: favoriteType,
+        favorite_key: favoriteKey
+      }, { onConflict: 'user_id,favorite_type,favorite_key' });
+    const { error } = await operation;
+    if (error) throw error;
+
+    settings.favorites = exists
+      ? settings.favorites.filter(item => item.type !== favoriteType || item.key !== favoriteKey)
+      : [...settings.favorites, { type: favoriteType, key: favoriteKey }];
+    window.dispatchEvent(new CustomEvent('jsec:favorites-changed', {
+      detail: settings.favorites.map(item => ({ ...item }))
+    }));
+    return !exists;
+  }
+
   window.userPreferences = {
     load,
     getSettings: () => ({ ...settings }),
+    getFavorites: () => settings.favorites.map(item => ({ ...item })),
+    toggleFavorite,
     setTheme: async theme => {
       applyTheme(theme);
       return save({ theme: settings.theme });

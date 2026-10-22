@@ -140,6 +140,9 @@
       gap: 12px;
       margin: 19px 2px 10px;
     }
+    .directory-toolbar-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 10px; }
+    .favorites-only-toggle { display: inline-flex; align-items: center; gap: 6px; color: var(--muted); font-size: 11px; font-weight: 650; white-space: nowrap; cursor: pointer; }
+    .favorites-only-toggle input { width: 16px; height: 16px; accent-color: #eab84f; }
     .result-count { color: var(--muted); font-size: 12px; }
     .result-count strong { color: var(--text); font-size: 14px; }
     .reset-filters {
@@ -225,6 +228,10 @@
     }
     .contact-phone { display: block; margin-top: 5px; color: #c3d1e2; font-size: 12px; font-variant-numeric: tabular-nums; letter-spacing: 0.02em; }
     .contact-actions { display: flex; flex: 0 0 auto; align-items: center; gap: 6px; }
+    .contact-favorite { display: grid; width: 34px; height: 34px; flex: 0 0 auto; place-items: center; border: 1px solid var(--line); border-radius: 10px; background: transparent; color: var(--muted); font-size: 19px; cursor: pointer; }
+    .contact-favorite[aria-pressed="true"] { border-color: rgba(234, 184, 79, 0.4); background: rgba(234, 184, 79, 0.08); color: #eab84f; }
+    .contact-favorite:hover, .contact-favorite:focus-visible { border-color: rgba(234, 184, 79, 0.65); color: #eab84f; }
+    .contact-favorite:focus-visible { outline: 2px solid rgba(234, 184, 79, 0.45); outline-offset: 2px; }
     .contact-edit, .contact-delete {
       display: grid;
       width: 34px;
@@ -430,7 +437,8 @@
 
     <div class="directory-toolbar">
       <p class="result-count" id="resultCount" aria-live="polite">직원 정보를 불러오고 있습니다.</p>
-      <div style="display: flex; align-items: center; gap: 12px;">
+      <div class="directory-toolbar-actions">
+        <label class="favorites-only-toggle" for="favoritesOnlyToggle"><input id="favoritesOnlyToggle" type="checkbox">즐겨찾기만</label>
         <button class="reset-filters" id="resetFilters" type="button" hidden>초기화</button>
         <button class="add-contact" id="addContactButton" type="button" hidden>＋ 연락처 등록</button>
       </div>
@@ -493,6 +501,7 @@
       const searchInput = document.getElementById('contactSearch');
       const clearSearchButton = document.getElementById('clearSearch');
       const departmentFilters = document.getElementById('departmentFilters');
+      const favoritesOnlyToggle = document.getElementById('favoritesOnlyToggle');
       const departmentCount = document.getElementById('departmentCount');
       const contactList = document.getElementById('contactList');
       const resultCount = document.getElementById('resultCount');
@@ -510,6 +519,7 @@
       const departmentSuggestions = document.getElementById('departmentSuggestions');
       const collator = new Intl.Collator('ko');
       let contacts = [];
+      let favoriteContactIds = new Set();
       let selectedDepartment = '';
       let saving = false;
       let isAdmin = false;
@@ -598,9 +608,19 @@
 
         info.append(nameRow, team, phone);
         card.append(avatar, info);
+        const actions = document.createElement('div');
+        actions.className = 'contact-actions';
+        const favoriteButton = document.createElement('button');
+        const isFavorite = favoriteContactIds.has(String(contact.id));
+        favoriteButton.className = 'contact-favorite';
+        favoriteButton.type = 'button';
+        favoriteButton.dataset.contactFavorite = String(contact.id);
+        favoriteButton.setAttribute('aria-pressed', String(isFavorite));
+        favoriteButton.setAttribute('aria-label', `${contact.name} ${isFavorite ? '즐겨찾기 해제' : '즐겨찾기 추가'}`);
+        favoriteButton.title = isFavorite ? '즐겨찾기 해제' : '즐겨찾기 추가';
+        favoriteButton.textContent = isFavorite ? '★' : '☆';
+        actions.append(favoriteButton);
         if (isAdmin) {
-          const actions = document.createElement('div');
-          actions.className = 'contact-actions';
           const editButton = document.createElement('button');
           editButton.className = 'contact-edit';
           editButton.type = 'button';
@@ -616,8 +636,8 @@
           deleteButton.setAttribute('aria-label', `${contact.name} 연락처 삭제`);
           deleteButton.textContent = '⌫';
           actions.append(editButton, deleteButton);
-          card.append(actions);
         }
+        card.append(actions);
         return card;
       }
 
@@ -648,6 +668,7 @@
       function renderContacts() {
         const query = normalize(searchInput.value);
         const filtered = contacts.filter(contact => {
+          if (favoritesOnlyToggle.checked && !favoriteContactIds.has(String(contact.id))) return false;
           if (selectedDepartment && contact.department !== selectedDepartment) return false;
           const searchable = normalize([
             contact.name,
@@ -664,7 +685,7 @@
         const count = document.createElement('strong');
         count.textContent = String(filtered.length);
         resultCount.append(count, document.createTextNode(`명 표시 · 전체 ${contacts.length}명`));
-        resetButton.hidden = !selectedDepartment && !searchInput.value;
+        resetButton.hidden = !selectedDepartment && !searchInput.value && !favoritesOnlyToggle.checked;
         directoryState.hidden = true;
 
         if (filtered.length === 0) {
@@ -729,6 +750,10 @@
           if (profileError) throw profileError;
           isAdmin = profile?.role === 'admin';
           addContactButton.hidden = !isAdmin;
+          await window.userPreferences?.load();
+          favoriteContactIds = new Set((window.userPreferences?.getFavorites() || [])
+            .filter(item => item.type === 'contact')
+            .map(item => item.key));
 
           const { data, error } = await supabaseClient
             .from('phonebook')
@@ -864,9 +889,11 @@
         selectedDepartment = departmentFilters.value;
         renderContacts();
       });
+      favoritesOnlyToggle.addEventListener('change', renderContacts);
       resetButton.addEventListener('click', () => {
         selectedDepartment = '';
         searchInput.value = '';
+        favoritesOnlyToggle.checked = false;
         clearSearchButton.hidden = true;
         departmentFilters.value = '';
         renderDepartmentFilters();
@@ -883,12 +910,35 @@
         if (event.key === 'Escape' && contactModal.classList.contains('active')) closeContactForm();
       });
       contactList.addEventListener('click', event => {
+        const favoriteButton = event.target.closest('[data-contact-favorite]');
+        if (favoriteButton) {
+          const contact = contacts.find(item => String(item.id) === favoriteButton.dataset.contactFavorite);
+          if (!contact || !window.userPreferences) return;
+          favoriteButton.disabled = true;
+          window.userPreferences.toggleFavorite('contact', String(contact.id))
+            .catch(async error => {
+              console.error('전화번호부 즐겨찾기 저장 오류:', error);
+              await Swal.fire({
+                icon: 'error',
+                title: '즐겨찾기를 저장하지 못했습니다',
+                text: error.message || '잠시 후 다시 시도해 주세요.'
+              });
+            })
+            .finally(() => { favoriteButton.disabled = false; });
+          return;
+        }
         const button = event.target.closest('[data-contact-action]');
         if (!button || !isAdmin) return;
         const contact = contacts.find(item => String(item.id) === button.dataset.contactId);
         if (!contact) return;
         if (button.dataset.contactAction === 'edit') openContactForm(contact);
         if (button.dataset.contactAction === 'delete') deleteContact(contact);
+      });
+
+      window.addEventListener('jsec:favorites-changed', event => {
+        const favorites = event.detail || window.userPreferences?.getFavorites() || [];
+        favoriteContactIds = new Set(favorites.filter(item => item.type === 'contact').map(item => item.key));
+        renderContacts();
       });
 
       await loadContacts();

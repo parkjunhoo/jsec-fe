@@ -249,6 +249,20 @@ document.addEventListener('DOMContentLoaded', async () => {
       letter-spacing: 0.1em;
     }
     .drawer-group-items { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+    .drawer-item-shell { position: relative; min-width: 0; }
+    .drawer-item-shell > .drawer-item { width: 100%; min-height: 78px; padding-right: 34px; }
+    .drawer-item-favorite { position: absolute; top: 6px; right: 6px; z-index: 2; display: grid; width: 28px; height: 28px; place-items: center; border: 1px solid transparent; border-radius: 7px; background: rgba(11, 18, 32, 0.45); color: #aabbd0; font-size: 17px; line-height: 1; cursor: pointer; }
+    .drawer-item-favorite[aria-pressed="true"] { color: #f1be5b; }
+    .drawer-item-favorite:hover, .drawer-item-favorite:focus-visible { border-color: rgba(241, 190, 91, 0.45); color: #f1be5b; }
+    .drawer-item-favorite:focus-visible, .drawer-favorite-link:focus-visible { outline: 2px solid var(--primary, #91d2b3); outline-offset: 2px; }
+    .drawer-favorites-list { display: grid; gap: 6px; }
+    .drawer-favorite-row { display: grid; grid-template-columns: minmax(0, 1fr) 34px; align-items: center; gap: 5px; }
+    .drawer-favorite-link { display: flex; min-width: 0; min-height: 42px; align-items: center; gap: 9px; padding: 6px 9px; border: 1px solid rgba(145, 210, 179, 0.16); border-radius: 9px; background: rgba(145, 210, 179, 0.055); color: #dce8df; font-size: 11px; font-weight: 650; text-decoration: none; }
+    .drawer-favorite-link:hover { border-color: rgba(145, 210, 179, 0.4); }
+    .drawer-favorite-link .drawer-item-icon { width: 27px; height: 27px; flex: 0 0 auto; }
+    .drawer-favorite-label { min-width: 0; overflow-wrap: anywhere; }
+    .drawer-favorites-status { min-height: 14px; color: #fca5a5; font-size: 10px; }
+    .drawer-favorites-status:empty { display: none; }
     .drawer-item {
       display: flex;
       min-width: 0;
@@ -556,6 +570,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         </button>
 
         <nav class="drawer-links" aria-label="업무 메뉴">
+          <section class="drawer-group" id="drawerFavoritesGroup" aria-labelledby="drawerFavoritesTitle" hidden>
+            <h2 class="drawer-group-title" id="drawerFavoritesTitle">즐겨찾기</h2>
+            <div class="drawer-favorites-list" id="drawerFavoritesList"></div>
+            <div class="drawer-favorites-status" id="drawerFavoritesStatus" role="status" aria-live="polite"></div>
+          </section>
           <section class="drawer-group" aria-labelledby="drawerHomeGroup">
             <h2 class="drawer-group-title" id="drawerHomeGroup">홈</h2>
             <div class="drawer-group-items">
@@ -649,6 +668,109 @@ document.addEventListener('DOMContentLoaded', async () => {
       </section>
     </div>
   `;
+
+  const drawerFavoritesGroup = document.getElementById('drawerFavoritesGroup');
+  const drawerFavoritesList = document.getElementById('drawerFavoritesList');
+  const drawerFavoritesStatus = document.getElementById('drawerFavoritesStatus');
+
+  function getMenuFavoriteKey(anchor) {
+    const href = anchor.getAttribute('href');
+    if (!href || href === '#') return '';
+    const url = new URL(href, window.location.origin);
+    return url.origin === window.location.origin
+      ? `${url.pathname}${url.search}${url.hash}`
+      : url.href;
+  }
+
+  function setupDrawerMenuFavorites() {
+    const menuLinks = [...navContainer.querySelectorAll('.drawer-group-items .drawer-item')]
+      .map(anchor => ({ anchor, key: getMenuFavoriteKey(anchor) }))
+      .filter(item => item.key);
+    menuLinks.forEach(({ anchor, key }) => {
+      if (anchor.parentElement.classList.contains('drawer-item-shell')) return;
+      const shell = document.createElement('div');
+      shell.className = 'drawer-item-shell';
+      anchor.parentNode.insertBefore(shell, anchor);
+      shell.append(anchor);
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'drawer-item-favorite';
+      button.dataset.drawerFavorite = key;
+      button.dataset.menuLabel = anchor.querySelector('.drawer-item-label')?.textContent.trim() || '메뉴';
+      button.setAttribute('aria-pressed', 'false');
+      button.setAttribute('aria-label', `${button.dataset.menuLabel} 즐겨찾기에 추가`);
+      button.textContent = '☆';
+      shell.append(button);
+    });
+    renderDrawerFavorites(menuLinks);
+  }
+
+  function renderDrawerFavorites(menuLinks) {
+    if (!drawerFavoritesList || !preferences) return;
+    const entries = menuLinks || [...navContainer.querySelectorAll('.drawer-group-items .drawer-item')]
+      .map(anchor => ({ anchor, key: getMenuFavoriteKey(anchor) }))
+      .filter(item => item.key);
+    const favorites = preferences.getFavorites().filter(item => item.type === 'menu');
+    const menuByKey = new Map(entries.map(item => [item.key, item.anchor]));
+    const visibleFavorites = favorites.filter(item => menuByKey.has(item.key));
+    drawerFavoritesList.replaceChildren();
+    drawerFavoritesGroup.hidden = visibleFavorites.length === 0;
+
+    visibleFavorites.forEach(favorite => {
+      const source = menuByKey.get(favorite.key);
+      const row = document.createElement('div');
+      row.className = 'drawer-favorite-row';
+      const link = document.createElement('a');
+      link.className = 'drawer-favorite-link';
+      link.href = source.getAttribute('href');
+      if (source.target) link.target = source.target;
+      if (source.rel) link.rel = source.rel;
+      const sourceIcon = source.querySelector('.drawer-item-icon');
+      if (sourceIcon) link.append(sourceIcon.cloneNode(true));
+      const label = document.createElement('span');
+      label.className = 'drawer-favorite-label';
+      label.textContent = source.querySelector('.drawer-item-label')?.textContent.trim() || '메뉴';
+      link.append(label);
+      const removeButton = document.createElement('button');
+      removeButton.type = 'button';
+      removeButton.className = 'drawer-item-favorite';
+      removeButton.dataset.drawerFavorite = favorite.key;
+      removeButton.dataset.menuLabel = label.textContent;
+      removeButton.setAttribute('aria-pressed', 'true');
+      removeButton.setAttribute('aria-label', `${label.textContent} 즐겨찾기에서 제거`);
+      removeButton.title = '즐겨찾기에서 제거';
+      removeButton.textContent = '★';
+      row.append(link, removeButton);
+      drawerFavoritesList.append(row);
+    });
+
+    navContainer.querySelectorAll('[data-drawer-favorite]').forEach(button => {
+      const favorite = favorites.some(item => item.key === button.dataset.drawerFavorite);
+      button.setAttribute('aria-pressed', String(favorite));
+      button.textContent = favorite ? '★' : '☆';
+      button.title = favorite ? '즐겨찾기에서 제거' : '즐겨찾기에 추가';
+      button.setAttribute('aria-label', `${button.dataset.menuLabel} ${button.title}`);
+    });
+  }
+
+  setupDrawerMenuFavorites();
+  window.addEventListener('jsec:favorites-changed', () => renderDrawerFavorites());
+  navContainer.addEventListener('click', async event => {
+    const button = event.target.closest('[data-drawer-favorite]');
+    if (!button) return;
+    event.preventDefault();
+    event.stopPropagation();
+    button.disabled = true;
+    drawerFavoritesStatus.textContent = '';
+    try {
+      await preferences.toggleFavorite('menu', button.dataset.drawerFavorite);
+    } catch (error) {
+      console.error('햄버거 메뉴 즐겨찾기 저장 오류:', error);
+      drawerFavoritesStatus.textContent = error.message || '즐겨찾기를 저장하지 못했습니다.';
+    } finally {
+      button.disabled = false;
+    }
+  });
 
   // Attach event handlers and load user information.
   const openBtn = document.getElementById('openNavDrawer');

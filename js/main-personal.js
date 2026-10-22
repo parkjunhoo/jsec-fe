@@ -41,6 +41,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   const teamAllowancePanel = document.getElementById('teamAllowancePanel');
   const teamVacationContent = document.getElementById('teamVacationContent');
   const teamAllowanceContent = document.getElementById('teamAllowanceContent');
+  const homeFavoritesSection = document.getElementById('homeFavoritesSection');
+  const homeFavoritesGrid = document.getElementById('homeFavoritesGrid');
+  const homeFavoritesStatus = document.getElementById('homeFavoritesStatus');
 
   function getKstParts(date = new Date()) {
     const parts = new Intl.DateTimeFormat('en-US', {
@@ -91,6 +94,82 @@ document.addEventListener('DOMContentLoaded', async () => {
       "'": '&#39;'
     })[character]);
   }
+
+  function getMenuFavoriteKey(anchor) {
+    const href = anchor.getAttribute('href');
+    if (!href || href === '#') return '';
+    const url = new URL(href, window.location.origin);
+    return url.origin === window.location.origin
+      ? `${url.pathname}${url.search}${url.hash}`
+      : url.href;
+  }
+
+  function renderHomeFavorites() {
+    if (!homeFavoritesSection || !window.userPreferences) return;
+    const favorites = window.userPreferences.getFavorites().filter(item => item.type === 'menu');
+    const cards = new Map([...document.querySelectorAll('.service-group .menu-card')]
+      .map(anchor => [getMenuFavoriteKey(anchor), anchor])
+      .filter(([key]) => key));
+    homeFavoritesGrid.replaceChildren();
+    const visibleFavorites = favorites.filter(item => cards.has(item.key));
+    if (!visibleFavorites.length) {
+      homeFavoritesGrid.innerHTML = '<div class="personal-empty">아직 즐겨찾기한 메뉴가 없습니다. 서비스 메뉴의 별표를 눌러 추가하세요.</div>';
+    } else {
+      visibleFavorites.forEach(item => {
+        const card = cards.get(item.key).cloneNode(true);
+        card.classList.add('favorite-shortcut');
+        homeFavoritesGrid.append(card);
+      });
+    }
+    homeFavoritesSection.hidden = false;
+    document.querySelectorAll('[data-menu-favorite]').forEach(button => {
+      const favorite = favorites.some(item => item.key === button.dataset.menuFavorite);
+      button.setAttribute('aria-pressed', String(favorite));
+      button.textContent = favorite ? '★' : '☆';
+      button.title = favorite ? '즐겨찾기에서 제거' : '즐겨찾기에 추가';
+      button.setAttribute('aria-label', `${button.dataset.menuLabel} ${button.title}`);
+    });
+  }
+
+  function initializeMenuFavorites() {
+    if (!homeFavoritesGrid || !window.userPreferences) return;
+    document.querySelectorAll('.service-group .menu-card').forEach(anchor => {
+      const favoriteKey = getMenuFavoriteKey(anchor);
+      if (!favoriteKey || anchor.parentElement.classList.contains('menu-card-shell')) return;
+      const shell = document.createElement('div');
+      shell.className = 'menu-card-shell';
+      anchor.parentNode.insertBefore(shell, anchor);
+      shell.append(anchor);
+      const favoriteButton = document.createElement('button');
+      favoriteButton.type = 'button';
+      favoriteButton.className = 'menu-favorite-toggle';
+      favoriteButton.dataset.menuFavorite = favoriteKey;
+      favoriteButton.dataset.menuLabel = anchor.querySelector('.menu-title')?.textContent.trim() || '메뉴';
+      favoriteButton.setAttribute('aria-pressed', 'false');
+      favoriteButton.textContent = '☆';
+      shell.append(favoriteButton);
+    });
+    renderHomeFavorites();
+  }
+
+  document.addEventListener('click', async event => {
+    const button = event.target.closest('[data-menu-favorite]');
+    if (!button) return;
+    event.preventDefault();
+    event.stopPropagation();
+    button.disabled = true;
+    homeFavoritesStatus.textContent = '';
+    try {
+      await window.userPreferences.toggleFavorite('menu', button.dataset.menuFavorite);
+    } catch (error) {
+      console.error('메뉴 즐겨찾기 저장 오류:', error);
+      homeFavoritesStatus.textContent = error.message || '즐겨찾기를 저장하지 못했습니다.';
+    } finally {
+      button.disabled = false;
+    }
+  });
+
+  window.addEventListener('jsec:favorites-changed', renderHomeFavorites);
 
   function formatMoney(value) {
     return `${new Intl.NumberFormat('ko-KR').format(Number(value) || 0)}원`;
@@ -871,5 +950,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   const initialMonth = getSelectedMonthRange();
   const initialRequestId = ++monthRequestId;
+  await window.userPreferences?.load();
+  initializeMenuFavorites();
   await loadVacations(initialMonth.start, initialMonth.end, initialRequestId);
 });
