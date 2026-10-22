@@ -18,6 +18,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   const annualDeductionFields = document.getElementById('annualDeductionFields');
   const annualDeductionsMessage = document.getElementById('annualDeductionsMessage');
   const saveDeductionsButton = document.getElementById('saveAnnualDeductions');
+  const annualAdminActions = document.getElementById('annualAdminActions');
+  const annualSettingsDialog = document.getElementById('annualSettingsDialog');
+  const annualDeductionsDialog = document.getElementById('annualDeductionsDialog');
+  const openAnnualSettingsButton = document.getElementById('openAnnualSettings');
+  const openAnnualDeductionsButton = document.getElementById('openAnnualDeductions');
   let annualBalances = [];
   let employeeDeductions = [];
   let annualRequestId = 0;
@@ -128,6 +133,52 @@ document.addEventListener('DOMContentLoaded', async () => {
     return Number(value || 0).toLocaleString('ko-KR', { maximumFractionDigits: 2 });
   }
 
+  function getCycleCheck(balance, metrics) {
+    if (!balance.service_year || !balance.cycle_end) {
+      const hasBaseDate = Boolean(balance.annual_base_date);
+      return {
+        state: 'missing',
+        label: hasBaseDate ? '산정 기준일 이전' : '연차 기준일 등록 필요',
+        detail: hasBaseDate ? `연차 기준일 ${balance.annual_base_date}` : '연차 주기 확인 불가',
+        closingSoon: false
+      };
+    }
+
+    const reference = new Date(`${annualAsOfDate.value}T00:00:00Z`);
+    const cycleEnd = new Date(`${balance.cycle_end}T00:00:00Z`);
+    const daysUntilEnd = Math.max(0, Math.ceil((cycleEnd - reference) / 86400000));
+    const remainingDays = Number(balance.remaining_days) || 0;
+    const pendingDays = Number(balance.pending_days) || 0;
+    const actualCompletion = metrics.usageCountedDays >= metrics.grossEntitledDays - 0.005;
+    const pendingCompletion = metrics.usageCountedDays + pendingDays >= metrics.grossEntitledDays - 0.005;
+
+    if (actualCompletion) {
+      return {
+        state: 'complete',
+        label: '소진 완료',
+        detail: `기준기간 종료 ${balance.cycle_end}`,
+        closingSoon: false
+      };
+    }
+    if (pendingCompletion) {
+      return {
+        state: 'pending',
+        label: '신청 대기 포함 소진 예정',
+        detail: `승인 후 잔여 확인 · 기준기간 종료 ${balance.cycle_end}`,
+        closingSoon: daysUntilEnd <= 30
+      };
+    }
+
+    return {
+      state: 'remaining',
+      label: `잔여 ${formatDays(remainingDays)}일`,
+      detail: daysUntilEnd === 0
+        ? `기준기간 오늘 종료 · ${balance.cycle_end}`
+        : `기준기간 종료까지 ${daysUntilEnd}일 · ${balance.cycle_end}`,
+      closingSoon: daysUntilEnd <= 30
+    };
+  }
+
   function renderBalances(balances, isAdmin) {
     annualDateControls.hidden = !isAdmin;
     annualSummary.hidden = false;
@@ -180,12 +231,23 @@ document.addEventListener('DOMContentLoaded', async () => {
         ? `<p class="annual-message">${missingAnnualBaseDate.length}명은 연차 기준일이 없어 연차를 계산하지 못했습니다.</p>`
         : ''}`;
     }
-    annualChart.innerHTML = eligible.length
-      ? groupByWorkplace(eligible).map(([workplace, group]) => `<section class="annual-chart-group">
+    annualChart.innerHTML = balances.length
+      ? groupByWorkplace(balances).map(([workplace, group]) => `<section class="annual-chart-group">
           <h3><span class="annual-workplace-label">근무지</span>${escapeHtml(workplace)} <span>${group.length}명</span></h3>
           ${group.map(item => {
+            if (!item.service_year) {
+              const cycleCheck = getCycleCheck(item, {});
+              return `<article class="annual-chart-row" data-cycle-state="${cycleCheck.state}" aria-label="${escapeHtml(item.name)} 연차 기준일 상태">
+                <div class="annual-chart-main">
+                  <div class="annual-chart-name"><strong>${escapeHtml(item.name)}</strong></div>
+                  <div class="annual-chart-remaining"><span>남은 연차</span><strong>-</strong></div>
+                </div>
+                <div class="annual-cycle-check"><strong class="annual-cycle-status" data-state="${cycleCheck.state}">${cycleCheck.label}</strong><span>${cycleCheck.detail}</span></div>
+              </article>`;
+            }
             const metrics = getUsageMetrics(item);
-            return `<article class="annual-chart-row" aria-label="${escapeHtml(item.name)} 연차 현황">
+            const cycleCheck = getCycleCheck(item, metrics);
+            return `<article class="annual-chart-row" data-cycle-state="${cycleCheck.state}" data-closing-soon="${cycleCheck.closingSoon}" aria-label="${escapeHtml(item.name)} 연차 현황">
               <div class="annual-chart-main">
                 <div class="annual-chart-name"><strong>${escapeHtml(item.name)}</strong><span>${item.service_year}년차</span></div>
                 <div class="annual-chart-remaining"><span>남은 연차</span><strong>${formatDays(item.remaining_days)}일</strong></div>
@@ -196,6 +258,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 <div><span>신청 대기</span><strong>${formatDays(item.pending_days)}일</strong></div>
               </div>
               <div class="annual-chart-allocation">기본 ${formatDays(metrics.baseDays)}일 − 차감 ${formatDays(metrics.deductionDays)}일 + 가산 ${formatDays(metrics.additionalDays)}일</div>
+              <div class="annual-cycle-check"><strong class="annual-cycle-status" data-state="${cycleCheck.state}">${cycleCheck.label}</strong><span>${cycleCheck.detail}</span></div>
               <div class="annual-chart-usage"><span>소진율 (차감 포함)</span><strong>${metrics.usageRate}%</strong></div>
               <span class="annual-track" aria-label="차감 포함 소진율 ${metrics.usageRate}%"><span class="annual-fill" style="display:block;width:${metrics.usageRate}%"></span></span>
             </article>`;
@@ -225,6 +288,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       const result = await request(path);
       if (requestId !== annualRequestId) return;
       annualAsOfDate.value = result.isAdmin ? result.asOfDate : '';
+      annualAdminActions.hidden = !result.isAdmin;
       annualSettingsCard.hidden = !result.isAdmin;
       annualDeductionsCard.hidden = !result.isAdmin;
       annualBalances = result.balances || [];
@@ -245,6 +309,19 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
   annualDeductionEmployee.addEventListener('change', renderDeductionFields);
+
+  openAnnualSettingsButton.addEventListener('click', () => annualSettingsDialog.showModal());
+  openAnnualDeductionsButton.addEventListener('click', () => annualDeductionsDialog.showModal());
+  document.querySelectorAll('[data-close-dialog]').forEach(button => {
+    button.addEventListener('click', () => {
+      document.getElementById(button.dataset.closeDialog).close();
+    });
+  });
+  [annualSettingsDialog, annualDeductionsDialog].forEach(dialog => {
+    dialog.addEventListener('click', event => {
+      if (event.target === dialog) dialog.close();
+    });
+  });
 
   annualSettingsForm.addEventListener('submit', async event => {
     event.preventDefault();
