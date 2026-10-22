@@ -485,7 +485,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   let pageTitle = '지산리조트 보안팀';
   if (currentPath.includes('main.html')) pageTitle = '메인 메뉴';
-  else if (currentPath.includes('allowances.html')) pageTitle = '수당 관리';
   else if (currentPath.includes('item-requests.html')) pageTitle = '물품 신청';
   else if (currentPath.includes('users.html')) pageTitle = '회원 조회 및 관리';
   else if (currentPath.includes('vehicle.html')) pageTitle = '지산 차량조회';
@@ -570,9 +569,6 @@ document.addEventListener('DOMContentLoaded', async () => {
               <a href="/pages/calendar.html" class="drawer-item ${currentPath.includes('calendar.html') ? 'active' : ''}" ${currentPath.includes('calendar.html') ? 'aria-current="page"' : ''}>
                 <span class="drawer-item-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 11h18"/><path d="m9 16 2 2 4-4"/></svg></span><span class="drawer-item-label">휴무 일정</span>
               </a>
-              <a href="/pages/allowances.html" class="drawer-item ${currentPath.includes('allowances.html') ? 'active' : ''}" ${currentPath.includes('allowances.html') ? 'aria-current="page"' : ''}>
-                <span class="drawer-item-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18M7 15h3m5 0h2"/><path d="M8 3h8"/></svg></span><span class="drawer-item-label">수당 관리</span>
-              </a>
               <a href="https://www.ibro.co.kr/PayRoll/JOBWITH/index.asp" class="drawer-item" target="_blank" rel="noopener noreferrer">
                 <span class="drawer-item-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18M7 15h4m4 0h2M8 2v3m8-3v3"/></svg></span><span class="drawer-item-label">급여 조회 ↗</span>
               </a>
@@ -586,9 +582,6 @@ document.addEventListener('DOMContentLoaded', async () => {
               </a>
               <a href="/pages/item-requests.html" class="drawer-item ${currentPath.includes('item-requests.html') ? 'active' : ''}" ${currentPath.includes('item-requests.html') ? 'aria-current="page"' : ''}>
                 <span class="drawer-item-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m3 8 9-5 9 5v9l-9 5-9-5V8Z"/><path d="m3.5 8.5 8.5 5 8.5-5M12 13.5V22M7.5 5.5l9 5"/></svg></span><span class="drawer-item-label">물품 신청</span>
-              </a>
-              <a href="/pages/corporate-cards.html" data-corporate-card-link class="drawer-item ${currentPath.includes('corporate-cards.html') ? 'active' : ''}" ${currentPath.includes('corporate-cards.html') ? 'aria-current="page"' : ''} style="display:none" hidden>
-                <span class="drawer-item-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18M7 15h4m4 0h2"/></svg></span><span class="drawer-item-label">법인카드 내역</span>
               </a>
             </div>
           </section>
@@ -1219,11 +1212,6 @@ document.addEventListener('DOMContentLoaded', async () => {
       window.setInterval(refreshNotifications, 60000);
 
       if (profile) {
-        document.querySelectorAll('[data-corporate-card-link]').forEach(link => {
-          const permitted = profile.role === 'admin' || profile.role === 'guest';
-          link.hidden = !permitted;
-          link.style.display = permitted ? '' : 'none';
-        });
         const userNameEl = document.getElementById('navUserName');
         const userRoleEl = document.getElementById('navUserRole');
         if (userNameEl) userNameEl.textContent = `${profile.name} 님`;

@@ -2,219 +2,28 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#111815">
-  <title>지산리조트 보안팀 - 수당 관리</title>
-  <link rel="stylesheet" href="/lib/sw2/sweetalert2.min.css">
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <style>
-    * { box-sizing: border-box; }
-    body { margin: 0; }
-    .allowance-shell { width: min(1180px, 100%); margin: 0 auto; padding: 24px clamp(14px, 3vw, 28px) 48px; }
-    .allowance-heading { display: flex; align-items: flex-end; justify-content: space-between; gap: 18px; margin-bottom: 20px; }
-    .allowance-kicker { margin-bottom: 6px; color: var(--primary); font-size: 10px; font-weight: 750; letter-spacing: 0.12em; }
-    .allowance-heading h1 { margin: 0; color: var(--text-main); font-size: 25px; font-weight: 760; }
-    .allowance-heading p { margin: 6px 0 0; color: var(--text-sub); font-size: 13px; }
-    .allowance-controls { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 8px; }
-    .allowance-control, .allowance-primary-button, .allowance-export-button {
-      min-height: 40px; border: 1px solid var(--app-border); border-radius: 8px;
-      background: var(--app-surface); color: var(--text-main); font: inherit; font-size: 13px;
-    }
-    .allowance-control { padding: 0 11px; }
-    .allowance-primary-button, .allowance-export-button { padding: 0 13px; font-weight: 700; cursor: pointer; white-space: nowrap; }
-    .allowance-primary-button { border-color: transparent; background: linear-gradient(135deg, #65b58b, #367b59); color: #fff; }
-    .allowance-export-button[hidden] { display: none; }
-    .allowance-export-button {
-      display: inline-flex; align-items: center; justify-content: center; gap: 8px;
-      border-color: rgba(80, 170, 112, 0.38);
-      background: linear-gradient(135deg, rgba(43, 126, 79, 0.2), rgba(35, 94, 63, 0.34));
-      color: #8fe0a7;
-      transition: border-color 150ms ease, background 150ms ease, transform 150ms ease;
-    }
-    .allowance-export-button:hover:not(:disabled) { border-color: rgba(100, 208, 137, 0.65); background: linear-gradient(135deg, rgba(43, 146, 83, 0.3), rgba(35, 110, 69, 0.42)); }
-    .allowance-export-button:active:not(:disabled) { transform: translateY(1px); }
-    .allowance-export-button:focus-visible { outline: 2px solid #8fe0a7; outline-offset: 2px; }
-    .allowance-export-button:disabled { cursor: wait; opacity: 0.65; }
-    .allowance-export-icon { width: 17px; height: 17px; flex: 0 0 auto; }
-    .allowance-tabs { display: flex; gap: 5px; overflow-x: auto; margin-bottom: 16px; border-bottom: 1px solid var(--app-border); scrollbar-width: thin; }
-    .allowance-tab { flex: 0 0 auto; min-height: 42px; padding: 0 15px; border: 0; border-bottom: 2px solid transparent; background: transparent; color: var(--text-sub); font: inherit; font-size: 13px; font-weight: 650; cursor: pointer; white-space: nowrap; }
-    .allowance-tab[aria-selected="true"] { border-bottom-color: var(--primary); color: var(--primary); }
-    .allowance-summary-heading { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin: 16px 2px 9px; }
-    .allowance-summary-heading h2 { margin: 0; color: var(--text-main); font-size: 15px; font-weight: 730; }
-    .allowance-summary-heading p { margin: 0; color: var(--text-sub); font-size: 12px; }
-    .allowance-total { display: inline-flex; align-items: center; gap: 7px; color: var(--text-sub); font-size: 12px; }
-    .allowance-total strong { color: var(--primary); font-size: 15px; font-variant-numeric: tabular-nums; }
-    .allowance-table-wrap { width: 100%; overflow-x: auto; border: 1px solid var(--app-border); border-radius: 9px; background: var(--app-surface); }
-    .allowance-table { width: 100%; border-collapse: collapse; font-size: 13px; text-align: left; }
-    .allowance-table th, .allowance-table td { padding: 11px 12px; border-bottom: 1px solid var(--app-border); vertical-align: middle; }
-    .allowance-table th { background: var(--app-surface-raised); color: var(--text-sub); font-size: 11px; font-weight: 700; white-space: nowrap; }
-    .allowance-table td { color: var(--text-main); }
-    .allowance-table tbody tr:last-child td { border-bottom: 0; }
-    .allowance-table .amount { color: var(--text-main); font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
-    .allowance-table .date, .allowance-table .shift { white-space: nowrap; }
-    .allowance-table .note { min-width: 120px; color: var(--text-sub); white-space: pre-wrap; overflow-wrap: anywhere; }
-    .allowance-actions { display: flex; justify-content: flex-end; gap: 6px; white-space: nowrap; }
-    .allowance-row-action { min-height: 30px; padding: 0 9px; border: 1px solid var(--app-border); border-radius: 6px; background: transparent; color: var(--text-main); font: inherit; font-size: 11px; cursor: pointer; }
-    .allowance-row-action.delete { color: var(--danger); }
-    .allowance-empty { padding: 30px 14px !important; color: var(--text-sub) !important; text-align: center; }
-    .allowance-error { margin: 0 0 14px; color: var(--danger); font-size: 13px; }
-    .allowance-secondary-heading { margin-top: 24px; }
-    .allowance-entry-view { display: grid; gap: 14px; }
-    .allowance-entry-view[hidden] { display: none; }
-    .allowance-entry-calendar-wrap, .allowance-day-panel { border: 1px solid var(--app-border); border-radius: 9px; background: var(--app-surface); }
-    .allowance-category-calendar-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 14px; border-bottom: 1px solid var(--app-border); }
-    .allowance-category-calendar-head h2 { margin: 0; color: var(--text-main); font-size: 15px; }
-    .allowance-category-calendar-head[hidden] { display: none; }
-    .allowance-sheet-preview { min-width: 0; overflow: hidden; border: 1px solid var(--app-border); border-radius: 9px; background: var(--app-surface); }
-    .allowance-sheet-preview[hidden] { display: none; }
-    .allowance-sheet-preview-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; padding: 12px 14px; border-bottom: 1px solid var(--app-border); }
-    .allowance-sheet-preview-heading h2 { margin: 0; color: var(--text-main); font-size: 15px; font-weight: 730; }
-    .allowance-sheet-preview-heading span { color: var(--text-sub); font-size: 11px; }
-    .allowance-sheet-table-wrap { width: 100%; overflow: auto; }
-    .allowance-sheet-table { width: max-content; min-width: 100%; border-collapse: collapse; font-size: 12px; text-align: center; }
-    .allowance-sheet-table th, .allowance-sheet-table td { min-width: 92px; padding: 8px 10px; border: 1px solid var(--app-border); color: var(--text-main); white-space: nowrap; }
-    .allowance-sheet-table .sheet-title { min-width: 180px; padding: 13px; background: #1f5b46; color: #fff; font-size: 15px; font-weight: 800; }
-    .allowance-sheet-table .sheet-spacer { height: 8px; padding: 0; border: 0; }
-    .allowance-sheet-table .sheet-heading { background: #367b59; color: #fff; font-weight: 750; }
-    .allowance-sheet-table .sheet-subheading { background: #e4f1e8; color: #1f5b46; font-weight: 750; }
-    .allowance-sheet-table .sheet-label { background: #f4f8f4; font-weight: 700; }
-    .allowance-sheet-table .sheet-money { font-variant-numeric: tabular-nums; }
-    .allowance-sheet-table .sheet-total td { background: #fff2cc; color: #4f421c; font-weight: 800; }
-    .allowance-sheet-table .sheet-total .sheet-money { color: #4f421c; }
-    .allowance-day-panel-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
-    .allowance-day-panel-head h2 { margin: 3px 0 0; color: var(--text-main); font-size: 15px; }
-    .allowance-entry-month-title { margin: 0; color: var(--text-sub); font-size: 12px; font-weight: 700; }
-    .allowance-calendar-nav { display: flex; gap: 6px; }
-    .allowance-calendar-nav button { width: 34px; height: 34px; border: 1px solid var(--app-border); border-radius: 7px; background: var(--app-surface-raised); color: var(--text-main); font-size: 16px; cursor: pointer; }
-    .allowance-entry-calendar { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); grid-template-rows: 40px; grid-auto-rows: 104px; }
-    .allowance-weekday { padding: 9px 2px; border-bottom: 1px solid var(--app-border); color: var(--text-sub); font-size: 11px; font-weight: 700; text-align: center; }
-    .allowance-weekday:first-child { color: #f87171; }
-    .allowance-weekday:nth-child(7) { color: #60a5fa; }
-    .allowance-day-cell, .allowance-calendar-empty { min-width: 0; border: 0; border-right: 1px solid var(--app-border); border-bottom: 1px solid var(--app-border); }
-    .allowance-calendar-empty { background: color-mix(in srgb, var(--app-surface-raised) 35%, transparent); }
-    .allowance-day-cell { display: flex; flex-direction: column; gap: 3px; width: 100%; height: 100%; min-height: 0; padding: 5px; background: transparent; color: var(--text-main); text-align: left; cursor: pointer; }
-    .allowance-day-cell:nth-child(7n) { border-right: 0; }
-    .allowance-day-cell.weekend-sunday .allowance-day-number { color: #f87171; }
-    .allowance-day-cell.weekend-saturday .allowance-day-number { color: #60a5fa; }
-    .allowance-day-cell.selected { background: color-mix(in srgb, var(--primary) 12%, var(--app-surface)); box-shadow: inset 0 0 0 1px var(--primary); }
-    .allowance-day-cell:focus-visible { position: relative; z-index: 1; outline: 2px solid var(--primary); outline-offset: -2px; }
-    .allowance-day-cell.today .allowance-day-number { color: var(--primary); font-weight: 800; }
-    .allowance-day-cell.outside-month { color: var(--text-sub); opacity: 0.38; }
-    .allowance-day-number { display: block; flex: 0 0 auto; font-size: 12px; font-weight: 650; font-variant-numeric: tabular-nums; }
-    .allowance-day-summary { display: grid; flex: 1 1 auto; min-height: 0; align-content: start; gap: 3px; overflow-y: auto; scrollbar-width: thin; color: var(--text-sub); font-size: 12px; line-height: 1.25; overflow-wrap: anywhere; }
-    .allowance-day-summary strong { font-weight: 800; white-space: nowrap; }
-    .allowance-person-tag {
-      display: inline-block;
-      max-width: 100%;
-      padding: 1px 4px;
-      border-radius: 4px;
-      background: color-mix(in srgb, var(--member-color) 16%, transparent);
-      color: var(--text-main);
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-      vertical-align: top;
-    }
-    .allowance-target-control { display: flex; align-items: center; gap: 9px; margin-bottom: 12px; color: var(--text-sub); font-size: 12px; }
-    .allowance-target-control select { min-height: 36px; min-width: 150px; padding: 0 9px; border: 1px solid var(--app-border); border-radius: 7px; background: var(--input-bg); color: var(--text-main); }
-    .allowance-day-panel { padding: 14px; }
-    .allowance-day-hint { margin: 0 0 13px; color: var(--text-sub); font-size: 12px; line-height: 1.5; }
-    .allowance-slot-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
-    .allowance-slot { display: flex; align-items: center; justify-content: space-between; gap: 9px; min-width: 0; padding: 11px; border: 1px solid var(--app-border); border-radius: 8px; background: var(--app-surface-raised); }
-    .allowance-slot-info { min-width: 0; }
-    .allowance-slot-title { color: var(--text-main); font-size: 12px; font-weight: 700; }
-    .allowance-slot-status { margin-top: 4px; color: var(--text-sub); font-size: 11px; overflow-wrap: anywhere; }
-    .allowance-slot-status.taken { color: var(--member-color, var(--primary)); }
-    .allowance-slot-actions { display: flex; flex: 0 0 auto; gap: 5px; }
-    .allowance-slot-button { min-height: 32px; padding: 0 9px; border: 1px solid var(--app-border); border-radius: 6px; background: transparent; color: var(--text-main); font: inherit; font-size: 11px; cursor: pointer; white-space: nowrap; }
-    .allowance-slot-button.claim { border-color: transparent; background: #367b59; color: #fff; }
-    .allowance-slot-button.delete { color: var(--danger); }
-    @media (max-width: 720px) {
-      .allowance-heading { align-items: flex-start; flex-direction: column; }
-      .allowance-controls { width: 100%; justify-content: flex-start; }
-      .allowance-controls .allowance-control:first-child { flex: 1; min-width: 132px; }
-      .allowance-heading h1 { font-size: 22px; }
-      .allowance-table { min-width: 700px; }
-      .allowance-table.summary-table { min-width: 540px; }
-      .allowance-entry-calendar { grid-auto-rows: 92px; }
-      .allowance-day-cell { padding: 4px 3px; }
-      .allowance-day-panel-head { align-items: flex-start; }
-    }
-    @media (max-width: 380px) {
-      .allowance-controls { display: grid; grid-template-columns: 1fr 1fr; }
-      .allowance-controls .allowance-control:first-child { grid-column: 1 / -1; }
-      .allowance-controls button { width: 100%; }
-      .allowance-total { display: grid; gap: 2px; justify-items: end; }
-      .allowance-slot-list { grid-template-columns: 1fr; }
-    }
-  </style>
+  <title>지산리조트 보안팀 - 기능 안내</title>
   <link rel="stylesheet" href="/css/app-theme.css">
+  <style>
+    body { min-height: 100vh; margin: 0; background: var(--bg-main); color: var(--text-main); font-family: -apple-system, BlinkMacSystemFont, "Pretendard", "Segoe UI", sans-serif; }
+    .disabled-notice { width: min(640px, calc(100% - 32px)); margin: 48px auto; padding: 28px; border: 1px solid var(--app-border); border-radius: 16px; background: var(--app-surface); text-align: center; }
+    .disabled-notice h1 { margin: 0; font-size: 22px; }
+    .disabled-notice p { margin: 12px 0 20px; color: var(--text-sub); line-height: 1.7; }
+    .disabled-notice a { color: var(--primary); font-weight: 700; }
+  </style>
 </head>
 <body>
   <div id="navbar"></div>
-  <main class="allowance-shell">
-    <header class="allowance-heading">
-      <div>
-        <div class="allowance-kicker">JISAN SECURITY · PAYROLL</div>
-        <h1>수당 관리</h1>
-        <p id="allowancePageDescription">수당 기록과 월별 정산을 확인합니다.</p>
-      </div>
-      <div class="allowance-controls">
-        <input class="allowance-control" id="allowanceMonth" type="month" aria-label="정산 월">
-        <select class="allowance-control" id="allowanceUserFilter" aria-label="직원 선택" hidden>
-          <option value="">전체 직원</option>
-        </select>
-        <button class="allowance-export-button" id="allowanceExportBtn" type="button" hidden>
-          <svg class="allowance-export-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-            <path d="M13.5 3.5H6.75A1.75 1.75 0 0 0 5 5.25v13.5c0 .97.78 1.75 1.75 1.75h11.5c.97 0 1.75-.78 1.75-1.75V10l-6.5-6.5Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/>
-            <path d="M13 4v6h6M8.25 13l3.5 5m0-5-3.5 5m6.5-5v5m0-5h2.5m-2.5 2.5h2.1m-2.1 2.5h2.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-          <span>엑셀 다운로드</span>
-        </button>
-      </div>
-    </header>
-
-    <nav class="allowance-tabs" role="tablist" aria-label="수당 보기">
-      <button class="allowance-tab" id="tab-journal" role="tab" type="button" data-tab="journal" aria-selected="true">수당 일지</button>
-      <button class="allowance-tab" id="tab-ball_pickup" role="tab" type="button" data-tab="ball_pickup" aria-selected="false">연습장 볼수거</button>
-      <button class="allowance-tab" id="tab-caddie_shuttle" role="tab" type="button" data-tab="caddie_shuttle" aria-selected="false">캐디 셔틀</button>
-      <button class="allowance-tab" id="tab-entry" role="tab" type="button" data-tab="entry" aria-selected="false">수당 입력</button>
-    </nav>
-
-    <div id="allowanceError" class="allowance-error" role="alert" hidden></div>
-    <section id="allowanceSummary"></section>
-    <section id="allowanceEntryView" class="allowance-entry-view" hidden>
-      <div class="allowance-entry-calendar-wrap">
-        <header class="allowance-category-calendar-head" id="allowanceCategoryCalendarHead" hidden>
-          <h2 id="allowanceCategoryCalendarTitle"></h2>
-        </header>
-        <div id="allowanceEntryCalendar" class="allowance-entry-calendar"></div>
-      </div>
-      <section class="allowance-sheet-preview" id="allowanceSheetPreview" hidden></section>
-      <section class="allowance-day-panel" id="allowanceDayPanel" aria-labelledby="entrySelectedDate">
-        <header class="allowance-day-panel-head">
-          <div>
-            <p class="allowance-entry-month-title" id="entryCalendarTitle"></p>
-            <h2 id="entrySelectedDate"></h2>
-          </div>
-        </header>
-        <p class="allowance-day-hint">오전·오후 셔틀은 각각 1명, 볼수거는 하루 최대 2회까지 등록할 수 있습니다.</p>
-        <div class="allowance-target-control" id="entryTargetControl" hidden>
-          <label for="entryTargetUser">기록 대상</label>
-          <select id="entryTargetUser"></select>
-        </div>
-        <div id="allowanceDaySlots" class="allowance-slot-list"></div>
-      </section>
-    </section>
-    <section id="allowanceDetails"></section>
+  <main class="disabled-notice">
+    <h1>수당 관리 기능 비활성화</h1>
+    <p>수당 관리 기능은 현재 사용할 수 없습니다.</p>
+    <a href="/pages/main.html">메인 메뉴로 돌아가기</a>
   </main>
-
-  <script src="/lib/sw2/sweetalert2.min.js"></script>
-  <script>window.Swal = window.Sweetalert2;</script>
   <script src="/js/app-loading.js"></script>
   <script src="/js/supabase.js"></script>
   <script src="/js/user-preferences.js"></script>
   <script src="/js/navbar.js"></script>
-  <script src="/js/allowances.js?v=2026102101"></script>
 </body>
 </html>

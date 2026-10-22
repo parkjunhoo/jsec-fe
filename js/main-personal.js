@@ -94,13 +94,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     const requestId = ++monthRequestId;
     monthLabel.textContent = label;
     welcomeMessage.textContent = isGuest
-      ? `${label} 팀 휴무와 수당 현황입니다.`
-      : `${label} 내 일정과 수당을 확인하세요.`;
+      ? `${label} 팀 휴무 현황입니다.`
+      : `${label} 내 휴무 일정을 확인하세요.`;
     animateMonthChange(offset);
-    await Promise.all([
-      loadVacations(start, end, requestId),
-      loadAllowanceData(start, end, requestId)
-    ]);
+    await loadVacations(start, end, requestId);
   }
 
   function formatVacationDate(value) {
@@ -197,14 +194,22 @@ document.addEventListener('DOMContentLoaded', async () => {
     const name = profile.name || profile.username;
     if (name) welcomeMessage.textContent = isGuest
       ? `${name}님, ${getSelectedMonthRange().label} 팀 현황입니다.`
-      : `${name}님, ${getSelectedMonthRange().label} 내 일정과 수당을 확인하세요.`;
+      : `${name}님, ${getSelectedMonthRange().label} 내 휴무 일정을 확인하세요.`;
   }
+  allowanceTab.hidden = true;
+  teamAllowanceTab.hidden = true;
+  allowancePanel.hidden = true;
+  teamAllowancePanel.hidden = true;
+  dutyList.hidden = true;
+  dutyList.style.display = 'none';
+  dutyStatus.hidden = true;
+  dutyStatus.style.display = 'none';
   if (isGuest) {
     personalTitle.textContent = '팀 운영 대시보드';
     vacationTab.hidden = true;
     allowanceTab.hidden = true;
     teamVacationTab.hidden = false;
-    teamAllowanceTab.hidden = false;
+    teamAllowanceTab.hidden = true;
     teamVacationTab.setAttribute('aria-label', '휴무 통계');
     teamAllowanceTab.setAttribute('aria-label', '수당 통계');
     vacationPanel.hidden = true;
@@ -215,10 +220,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     dutyList.style.display = 'none';
     dutyStatus.hidden = true;
     dutyStatus.style.display = 'none';
-    welcomeMessage.textContent = `${getSelectedMonthRange().label} 팀 휴무와 수당 현황입니다.`;
+    welcomeMessage.textContent = `${getSelectedMonthRange().label} 팀 휴무 현황입니다.`;
   } else if (isAdmin) {
     teamVacationTab.hidden = false;
-    teamAllowanceTab.hidden = false;
+    teamAllowanceTab.hidden = true;
     teamDashboard.hidden = false;
     showTab(vacationTab);
   } else {
@@ -498,9 +503,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             : '<div class="personal-empty">해당 기간의 수당 기록이 없습니다.</div>'}
         </section>
       </div>
-      <nav class="guest-dashboard-links" aria-label="모니터링 바로가기">
-        <a class="guest-dashboard-link" href="/pages/allowances.html">수당 상세 및 엑셀 ↗</a>
-      </nav>`;
+      `;
   }
 
   async function loadAllowanceData(start, end, requestId) {
@@ -609,9 +612,5 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   const initialMonth = getSelectedMonthRange();
   const initialRequestId = ++monthRequestId;
-  await Promise.all([
-    loadVacations(initialMonth.start, initialMonth.end, initialRequestId),
-    loadAllowanceData(initialMonth.start, initialMonth.end, initialRequestId),
-    isGuest ? Promise.resolve() : loadTodayAvailability()
-  ]);
+  await loadVacations(initialMonth.start, initialMonth.end, initialRequestId);
 });

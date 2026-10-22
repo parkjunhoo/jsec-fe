@@ -10,6 +10,8 @@
 
   const previousWeekButton = document.getElementById('previousWeek');
   const nextWeekButton = document.getElementById('nextWeek');
+  const golfVenueButton = document.getElementById('golfVenue');
+  const skiVenueButton = document.getElementById('skiVenue');
   const weekRange = document.getElementById('weekRange');
   const weekStartLabel = document.getElementById('weekStart');
   const mealStatus = document.getElementById('mealStatus');
@@ -33,6 +35,7 @@
   const mealDownloadLink = document.getElementById('mealDownload');
 
   let selectedWeek = getCurrentWeekStart();
+  let selectedVenue = 'golf';
   let mealPlan = null;
   let pendingImage = null;
   let displayedImageUrl = '';
@@ -74,6 +77,8 @@
     isBusy = busy;
     previousWeekButton.disabled = busy;
     nextWeekButton.disabled = busy;
+    golfVenueButton.disabled = busy;
+    skiVenueButton.disabled = busy;
     choosePhotoButton.disabled = busy;
     capturePhotoButton.disabled = busy;
     uploadPhotoButton.disabled = busy;
@@ -118,7 +123,7 @@
     displayedImageUrl = url;
     mealPhoto.src = url;
     mealDownloadLink.href = url;
-    mealDownloadLink.download = `식단표-${selectedWeek}.jpg`;
+    mealDownloadLink.download = `식단표-${selectedVenue}-${selectedWeek}.jpg`;
     mealPhotoFrame.hidden = false;
     mealEmpty.hidden = true;
   }
@@ -224,7 +229,7 @@
     imageZoom = 1;
     viewerPanX = 0;
     viewerPanY = 0;
-    mealViewerTitle.textContent = `식단표 · ${selectedWeek}`;
+    mealViewerTitle.textContent = `${selectedVenue === 'golf' ? '골프장' : '스키장'} 식단표 · ${selectedWeek}`;
     mealViewerImage.src = displayedImageUrl;
     mealViewer.showModal();
     requestAnimationFrame(updateViewerImageSize);
@@ -273,7 +278,7 @@
     showEmptyState();
 
     try {
-      const query = new URLSearchParams({ week: selectedWeek });
+      const query = new URLSearchParams({ week: selectedWeek, venue: selectedVenue });
       const response = await requestMealPlan(`?${query}`);
       const result = await response.json();
       if (sequence !== loadSequence) return;
@@ -281,7 +286,7 @@
 
       if (!mealPlan) {
         showEmptyState();
-        setStatus('이 주에는 아직 등록된 식단표가 없습니다.');
+        setStatus('이 시설에는 이 주에 등록된 식단표가 없습니다.');
         return;
       }
 
@@ -394,12 +399,13 @@
 
   async function uploadMealPlan() {
     if (!pendingImage || isBusy) return;
-    if (mealPlan && !window.confirm('이 주의 기존 식단표 사진을 새 사진으로 교체할까요?')) return;
+    const venueLabel = selectedVenue === 'golf' ? '골프장' : '스키장';
+    if (mealPlan && !window.confirm(`${venueLabel}의 이 주 식단표 사진을 교체할까요?`)) return;
 
     setBusy(true);
     setStatus('식단표 사진을 업로드하고 있습니다.');
     try {
-      const query = new URLSearchParams({ week: selectedWeek });
+      const query = new URLSearchParams({ week: selectedWeek, venue: selectedVenue });
       const response = await requestMealPlan(`?${query}`, {
         method: 'POST',
         headers: { 'Content-Type': 'image/jpeg' },
@@ -408,7 +414,7 @@
       await response.json();
       clearPendingImage();
       await loadMealPlan();
-      setStatus('식단표 사진을 등록했습니다.', 'success');
+      setStatus(`${venueLabel} 식단표 사진을 등록했습니다.`, 'success');
     } catch (error) {
       setStatus(error.message || '사진 업로드에 실패했습니다.', 'error');
     } finally {
@@ -424,6 +430,16 @@
     loadMealPlan();
   }
 
+  function selectVenue(venue) {
+    if (isBusy || venue === selectedVenue) return;
+    selectedVenue = venue;
+    golfVenueButton.setAttribute('aria-pressed', String(venue === 'golf'));
+    skiVenueButton.setAttribute('aria-pressed', String(venue === 'ski'));
+    loadMealPlan();
+  }
+
+  golfVenueButton.addEventListener('click', () => selectVenue('golf'));
+  skiVenueButton.addEventListener('click', () => selectVenue('ski'));
   previousWeekButton.addEventListener('click', () => moveWeek(-1));
   nextWeekButton.addEventListener('click', () => moveWeek(1));
   choosePhotoButton.addEventListener('click', () => photoInput.click());

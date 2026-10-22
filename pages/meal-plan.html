@@ -23,6 +23,9 @@
     .meal-intro h1 { margin: 0; font-size: clamp(25px, 5vw, 34px); letter-spacing: -0.045em; }
     .meal-intro p { margin: 9px 0 0; color: var(--text-sub); font-size: 14px; line-height: 1.65; }
     .meal-card { overflow: hidden; border: 1px solid var(--app-border); border-radius: 18px; background: var(--app-surface); box-shadow: var(--app-shadow); }
+    .venue-switch { display: flex; gap: 8px; padding: 14px 18px; border-bottom: 1px solid var(--app-border); }
+    .venue-option { min-height: 38px; padding: 0 14px; border: 1px solid var(--app-border); border-radius: 10px; background: var(--app-surface-raised); color: var(--text-sub); font-weight: 700; cursor: pointer; }
+    .venue-option[aria-pressed="true"] { border-color: var(--primary); background: var(--primary); color: #14251c; }
     .week-nav { display: flex; min-height: 76px; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 18px; border-bottom: 1px solid var(--app-border); }
     .week-nav button, .meal-action {
       min-height: 40px;
@@ -96,6 +99,7 @@
     .meal-viewer-zoom-tools { position: absolute; bottom: 18px; left: 50%; display: flex; align-items: center; gap: 6px; padding: 6px; transform: translateX(-50%); border: 1px solid rgba(255, 255, 255, 0.14); border-radius: 13px; background: rgba(17, 25, 35, 0.92); box-shadow: 0 8px 26px rgba(0, 0, 0, 0.3); }
     @media (max-width: 540px) {
       .meal-shell { padding: 22px 14px 0; }
+      .venue-switch { padding: 12px; }
       .week-nav { padding: 12px; }
       .meal-content { padding: 13px; }
       .meal-photo-frame { min-height: 180px; }
@@ -117,9 +121,13 @@
     <header class="meal-intro">
       <p class="meal-kicker">WEEKLY MENU</p>
       <h1>주간 식단표</h1>
-      <p>이번 주 식단표 사진을 확인하고, 사진을 찍어 공유할 수 있습니다.<br>새 사진을 올리면 같은 주의 기존 식단표가 교체됩니다.</p>
+      <p>골프장과 스키장 식단표를 각각 등록하고 확인할 수 있습니다.<br>새 사진을 올리면 선택한 시설의 같은 주 식단표만 교체됩니다.</p>
     </header>
     <section class="meal-card" aria-label="주간 식단표">
+      <div class="venue-switch" role="group" aria-label="식단표 시설 선택">
+        <button class="venue-option" id="golfVenue" type="button" aria-pressed="true">골프장</button>
+        <button class="venue-option" id="skiVenue" type="button" aria-pressed="false">스키장</button>
+      </div>
       <nav class="week-nav" aria-label="주간 식단표 주 선택">
         <button id="previousWeek" type="button" aria-label="이전 주">‹</button>
         <div class="week-label">
@@ -131,7 +139,7 @@
       <div class="meal-content">
         <p class="meal-status" id="mealStatus" role="status" aria-live="polite"></p>
         <div class="meal-photo-frame" id="mealPhotoFrame" hidden>
-          <img class="meal-photo" id="mealPhoto" alt="선택한 주의 식단표 사진">
+          <img class="meal-photo" id="mealPhoto" alt="선택한 시설과 주의 식단표 사진">
         </div>
         <div class="meal-empty" id="mealEmpty" hidden>
           <strong>아직 등록된 식단표가 없습니다.</strong>
@@ -145,7 +153,7 @@
           <input id="mealCameraInput" type="file" accept="image/*" capture="environment" hidden>
           <input id="mealPhotoInput" type="file" accept="image/*" hidden>
         </div>
-        <p class="meal-help">사진은 기기에서 JPEG로 압축한 뒤 업로드됩니다. 최대 1MB이며, 같은 주에 다시 올리면 기존 사진을 교체합니다.</p>
+        <p class="meal-help">사진은 기기에서 JPEG로 압축한 뒤 업로드됩니다. 최대 1MB이며, 선택한 시설과 주에 다시 올리면 해당 식단표만 교체합니다.</p>
       </div>
     </section>
   </main>
