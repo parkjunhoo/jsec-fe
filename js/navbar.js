@@ -269,6 +269,23 @@ document.addEventListener('DOMContentLoaded', async () => {
     html[data-theme="light"] #navbar .drawer-item-shell > .drawer-item-favorite { border-color: var(--app-border); background: #fff; color: #66766d; }
     html[data-theme="light"] #navbar .drawer-item-shell > .drawer-item-favorite[aria-pressed="true"],
     html[data-theme="light"] #navbar .drawer-favorite-row > .drawer-item-favorite { border-color: rgba(138, 97, 0, 0.28); background: #fff8e7; color: #805900; }
+    .drawer-menu-search { display: grid; gap: 7px; margin: 4px 0 2px; }
+    .drawer-menu-search label { color: var(--text-sub, #a4b4aa); font-size: 11px; font-weight: 700; }
+    .drawer-menu-search input { width: 100%; min-height: 40px; padding: 0 11px; border: 1px solid var(--app-border, rgba(195, 220, 204, 0.14)); border-radius: 9px; background: var(--input-bg, #141e19); color: var(--text-main, #edf4ef); font: inherit; font-size: 12px; }
+    .drawer-menu-search input::placeholder { color: var(--text-sub, #a4b4aa); }
+    .drawer-menu-search input:focus { outline: 2px solid color-mix(in srgb, var(--primary, #91d2b3) 38%, transparent); outline-offset: 1px; }
+    .drawer-menu-search-recent { display: flex; flex-wrap: wrap; gap: 5px; }
+    .drawer-menu-search-recent[hidden] { display: none; }
+    .drawer-menu-search-recent-label { width: 100%; color: var(--text-sub, #a4b4aa); font-size: 10px; }
+    .drawer-menu-search-recent button { min-height: 25px; padding: 0 7px; border: 1px solid var(--app-border, rgba(195, 220, 204, 0.14)); border-radius: 999px; background: transparent; color: var(--text-sub, #a4b4aa); font-size: 10px; cursor: pointer; }
+    .drawer-menu-search-recent button:hover { border-color: var(--primary, #91d2b3); color: var(--primary, #91d2b3); }
+    .drawer-menu-search-status { min-height: 13px; color: var(--text-sub, #a4b4aa); font-size: 10px; }
+    .drawer-menu-search-status:empty { display: none; }
+    html[data-theme="light"] #navbar .drawer-menu-search input { background: #f7f9f6; color: var(--text-main); }
+    html[data-theme="light"] #navbar .drawer-menu-search label,
+    html[data-theme="light"] #navbar .drawer-menu-search-recent-label { color: var(--text-sub); }
+    html[data-theme="light"] #navbar .drawer-menu-search-recent button { background: #f5f8f4; color: #43594b; }
+    html[data-theme="light"] #navbar .drawer-menu-search-recent button:hover { color: #155c43; }
     .drawer-item {
       display: flex;
       min-width: 0;
@@ -570,6 +587,12 @@ document.addEventListener('DOMContentLoaded', async () => {
           <span>큰 글씨 모드</span>
           <span id="largeTextSwitchState" aria-hidden="true">끔</span>
         </button>
+        <div class="drawer-menu-search">
+          <label for="drawerMenuSearchInput">메뉴 검색</label>
+          <input id="drawerMenuSearchInput" type="search" autocomplete="off" placeholder="예: 연차, 차량, 식단">
+          <div class="drawer-menu-search-recent" id="drawerMenuSearchRecent" hidden></div>
+          <div class="drawer-menu-search-status" id="drawerMenuSearchStatus" role="status" aria-live="polite"></div>
+        </div>
         <button class="large-text-switch" id="nativeBiometricSwitch" type="button" aria-pressed="false" style="display: none;">
           <span>생체 인증 잠금</span>
           <span id="nativeBiometricSwitchState" aria-hidden="true">끔</span>
@@ -759,7 +782,126 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
+  function getDrawerMenuSearchTerms(anchor) {
+    const pathname = anchor.getAttribute('href')?.startsWith('/')
+      ? new URL(anchor.href).pathname
+      : '';
+    const keywordMap = {
+      '/pages/main.html': '홈 메인 시작 대시보드',
+      '/pages/calendar.html': '휴무 일정 캘린더 달력 근무표 스케줄 휴가 공가 시간차 연차 신청',
+      '/pages/annual-leave.html': '연차 휴가 잔여 소진 근속 가산 차감 기준일 직원',
+      '/pages/users.html': '회원 명부 직원 사원 사용자 계정 권한 인사 재직자',
+      '/pages/item-requests.html': '물품 신청 비품 구매 소모품 장비 물건 요청 승인',
+      '/pages/meal-plan.html': '식단 식단표 메뉴 밥 식사 점심 저녁 주간 식당',
+      '/pages/vehicle.html': '차량 자동차 차 번호 방문 차량 주차',
+      '/pages/manuals.html': '업무 매뉴얼 지침 대응 상황조치 골프장 스키장 안전 수칙',
+      '/pages/phonebook.html': '전화번호 연락처 전화 연락망 부서 직원 통화 전화번호부'
+    };
+    if (anchor.id === 'openResortNoticesFromDrawer') return '공지 공지사항 리조트 공지 알림 안내 업데이트';
+    if (anchor.href.includes('/PayRoll/')) return '급여 월급 임금 급여명세서 페이롤 payroll';
+    return keywordMap[pathname] || '';
+  }
+
+  function normalizeDrawerSearch(value) {
+    return String(value || '').toLocaleLowerCase('ko-KR').replace(/[()-]/g, ' ');
+  }
+
+  function setupDrawerMenuSearch() {
+    const input = document.getElementById('drawerMenuSearchInput');
+    const recentContainer = document.getElementById('drawerMenuSearchRecent');
+    const status = document.getElementById('drawerMenuSearchStatus');
+    const recentKey = 'jsec-recent-menu-searches';
+    let recentTerms = [];
+    try {
+      const saved = JSON.parse(localStorage.getItem(recentKey) || '[]');
+      if (Array.isArray(saved)) recentTerms = saved
+        .filter(term => typeof term === 'string' && term.trim())
+        .slice(0, 5);
+    } catch {
+      recentTerms = [];
+    }
+
+    const menuGroups = [...navContainer.querySelectorAll('.drawer-links > .drawer-group:not(#drawerFavoritesGroup)')];
+    menuGroups.forEach(group => {
+      group.querySelectorAll('.drawer-group-items .drawer-item').forEach(anchor => {
+        anchor.dataset.searchKeywords = getDrawerMenuSearchTerms(anchor);
+      });
+    });
+
+    function renderRecentTerms() {
+      recentContainer.replaceChildren();
+      recentContainer.hidden = recentTerms.length === 0;
+      if (!recentTerms.length) return;
+      const label = document.createElement('span');
+      label.className = 'drawer-menu-search-recent-label';
+      label.textContent = '최근 검색';
+      recentContainer.append(label);
+      recentTerms.forEach(term => {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.dataset.recentDrawerSearch = term;
+        button.textContent = term;
+        recentContainer.append(button);
+      });
+    }
+
+    function applySearch() {
+      const tokens = normalizeDrawerSearch(input.value).trim().split(/\s+/).filter(Boolean);
+      let matchCount = 0;
+      menuGroups.forEach(group => {
+        let groupCount = 0;
+        group.querySelectorAll('.drawer-group-items .drawer-item').forEach(anchor => {
+          const searchable = normalizeDrawerSearch([
+            group.querySelector('.drawer-group-title')?.textContent,
+            anchor.textContent,
+            anchor.dataset.searchKeywords
+          ].join(' '));
+          const matches = tokens.every(token => searchable.includes(token));
+          (anchor.closest('.drawer-item-shell') || anchor).hidden = !matches;
+          if (matches) {
+            groupCount += 1;
+            matchCount += 1;
+          }
+        });
+        group.hidden = tokens.length > 0 && groupCount === 0;
+      });
+      status.textContent = tokens.length ? `${matchCount}개 메뉴` : '';
+    }
+
+    function saveRecentSearch(value) {
+      const term = String(value || '').trim().slice(0, 60);
+      if (!term) return;
+      recentTerms = [term, ...recentTerms.filter(item => item !== term)].slice(0, 5);
+      try {
+        localStorage.setItem(recentKey, JSON.stringify(recentTerms));
+      } catch (error) {
+        console.warn('최근 메뉴 검색을 저장하지 못했습니다.', error);
+      }
+      renderRecentTerms();
+    }
+
+    renderRecentTerms();
+    input.addEventListener('input', applySearch);
+    input.addEventListener('keydown', event => {
+      if (event.key !== 'Enter') return;
+      event.preventDefault();
+      saveRecentSearch(input.value);
+    });
+    recentContainer.addEventListener('click', event => {
+      const button = event.target.closest('[data-recent-drawer-search]');
+      if (!button) return;
+      input.value = button.dataset.recentDrawerSearch;
+      applySearch();
+      input.focus();
+    });
+    navContainer.addEventListener('click', event => {
+      if (!event.target.closest('.drawer-item-shell .drawer-item')) return;
+      saveRecentSearch(input.value);
+    });
+  }
+
   setupDrawerMenuFavorites();
+  setupDrawerMenuSearch();
   window.addEventListener('jsec:favorites-changed', () => renderDrawerFavorites());
   navContainer.addEventListener('click', async event => {
     const button = event.target.closest('[data-drawer-favorite]');
