@@ -4,12 +4,23 @@ document.addEventListener('DOMContentLoaded', async () => {
   const annualChart = document.getElementById('annualChart');
   const annualTableWrap = document.getElementById('annualTableWrap');
   const annualTableBody = document.getElementById('annualTableBody');
+  const annualDateControls = document.getElementById('annualDateControls');
+  const annualAsOfDate = document.getElementById('annualAsOfDate');
   const annualSettingsCard = document.getElementById('annualSettingsCard');
   const annualSettingsFields = document.getElementById('annualSettingsFields');
   const annualSettingsForm = document.getElementById('annualSettingsForm');
   const annualLoadError = document.getElementById('annualLoadError');
   const annualSettingsMessage = document.getElementById('annualSettingsMessage');
   const saveButton = document.getElementById('saveAnnualSettings');
+  const annualDeductionsCard = document.getElementById('annualDeductionsCard');
+  const annualDeductionsForm = document.getElementById('annualDeductionsForm');
+  const annualDeductionEmployee = document.getElementById('annualDeductionEmployee');
+  const annualDeductionFields = document.getElementById('annualDeductionFields');
+  const annualDeductionsMessage = document.getElementById('annualDeductionsMessage');
+  const saveDeductionsButton = document.getElementById('saveAnnualDeductions');
+  let annualBalances = [];
+  let employeeDeductions = [];
+  let annualRequestId = 0;
 
   function escapeHtml(value) {
     return String(value ?? '').replace(/[&<>"']/g, character => ({
@@ -48,6 +59,35 @@ document.addEventListener('DOMContentLoaded', async () => {
     }).join('');
   }
 
+  function renderDeductionFields() {
+    const userId = annualDeductionEmployee.value;
+    if (!userId) {
+      annualDeductionFields.replaceChildren();
+      return;
+    }
+    const deductionsByYear = new Map(employeeDeductions
+      .filter(item => item.user_id === userId)
+      .map(item => [Number(item.service_year), Number(item.deduction_days)]));
+    annualDeductionFields.innerHTML = Array.from({ length: 10 }, (_, index) => {
+      const year = index + 1;
+      return `<label class="annual-setting">${year}년차 기본연차 차감 (일)
+        <input type="number" min="0" max="12" step="1" required data-service-year="${year}" value="${deductionsByYear.get(year) ?? 0}">
+      </label>`;
+    }).join('');
+  }
+
+  function renderDeductionEmployees(balances) {
+    const selectedUserId = annualDeductionEmployee.value;
+    annualDeductionEmployee.innerHTML = '<option value="">직원을 선택하세요</option>' +
+      groupByWorkplace(balances).map(([workplace, group]) =>
+        `<optgroup label="${escapeHtml(workplace)}">${group
+          .map(item => `<option value="${escapeHtml(item.user_id)}">${escapeHtml(item.name)}</option>`)
+          .join('')}</optgroup>`
+      ).join('');
+    annualDeductionEmployee.value = balances.some(item => item.user_id === selectedUserId) ? selectedUserId : '';
+    renderDeductionFields();
+  }
+
   function groupByWorkplace(balances) {
     const groups = new Map();
     balances.forEach(balance => {
@@ -59,8 +99,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   function renderBalances(balances, isAdmin) {
+    annualDateControls.hidden = !isAdmin;
     if (!balances.length) {
       annualSummary.innerHTML = '<div class="annual-empty">표시할 직원 연차 현황이 없습니다.</div>';
+      annualChart.replaceChildren();
+      annualTableWrap.hidden = true;
       return;
     }
     const missingAnnualBaseDate = balances.filter(item => !item.service_year);
@@ -93,15 +136,15 @@ document.addEventListener('DOMContentLoaded', async () => {
       const pending = eligibleGroup.reduce((sum, item) => sum + item.pending_days, 0);
       const remaining = eligibleGroup.reduce((sum, item) => sum + item.remaining_days, 0);
       return `<section class="annual-workplace-card">
-        <h3>${escapeHtml(workplace)} <span>${group.length}명</span></h3>
+        <h3><span class="annual-workplace-label">근무지</span>${escapeHtml(workplace)} <span>${group.length}명</span></h3>
         <p>산정 가능 ${eligibleGroup.length}명 · 사용 ${used.toFixed(2)}일 · 대기 ${pending.toFixed(2)}일 · 잔여 ${remaining.toFixed(2)}일</p>
       </section>`;
     }).join('')}</div>${missingAnnualBaseDate.length
       ? `<p class="annual-message">${missingAnnualBaseDate.length}명은 연차 기준일이 없어 연차를 계산하지 못했습니다.</p>`
       : ''}`;
     annualChart.innerHTML = eligible.length
-      ? groupByWorkplace(eligible).map(([workplace, group]) => `<section class="annual-chart-group">
-          <h3>${escapeHtml(workplace)} <span>${group.length}명</span></h3>
+        ? groupByWorkplace(eligible).map(([workplace, group]) => `<section class="annual-chart-group">
+          <h3><span class="annual-workplace-label">근무지</span>${escapeHtml(workplace)} <span>${group.length}명</span></h3>
           ${group.map(item => `<div class="annual-chart-row" title="${escapeHtml(item.name)}: ${item.usage_rate}% 사용">
             <span class="annual-chart-name">${escapeHtml(item.name)}</span>
             <span class="annual-track"><span class="annual-fill" style="display:block;width:${item.usage_rate}%"></span></span>
@@ -110,11 +153,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         </section>`).join('')
       : '<div class="annual-empty">연차 기준일이 등록된 재직 직원이 없습니다.</div>';
     annualTableBody.innerHTML = workplaceGroups.map(([workplace, group]) => `
-      <tr class="annual-workplace-row"><th colspan="10">${escapeHtml(workplace)} · ${group.length}명</th></tr>
+      <tr class="annual-workplace-row"><th colspan="11"><span class="annual-workplace-label">근무지</span>${escapeHtml(workplace)} · ${group.length}명</th></tr>
       ${group.map(item => `<tr>
-        <td class="annual-person">${escapeHtml(item.name)}</td>
+        <td class="annual-person"><span class="annual-person-label">직원</span>${escapeHtml(item.name)}</td>
         <td>${item.service_year ? `${item.service_year}년차` : '연차 기준일 미등록'}</td>
-        <td>${item.base_days}일</td><td>${item.additional_days}일</td>
+        <td>${item.base_days}일</td><td>${item.deduction_days || 0}일</td><td>${item.additional_days}일</td>
         <td>${item.entitled_days == null ? '-' : `${item.entitled_days}일`}</td>
         <td>${item.used_days}일</td><td>${item.pending_days}일</td>
         <td>${item.remaining_days == null ? '-' : `${item.remaining_days}일`}</td>
@@ -123,6 +166,35 @@ document.addEventListener('DOMContentLoaded', async () => {
       </tr>`).join('')}`).join('');
     annualTableWrap.hidden = false;
   }
+
+  async function loadAnnualLeave(asOfDate = '') {
+    const requestId = ++annualRequestId;
+    annualLoadError.textContent = '';
+    try {
+      const path = asOfDate ? `?as_of=${encodeURIComponent(asOfDate)}` : '';
+      const result = await request(path);
+      if (requestId !== annualRequestId) return;
+      annualAsOfDate.value = result.isAdmin ? result.asOfDate : '';
+      annualSettingsCard.hidden = !result.isAdmin;
+      annualDeductionsCard.hidden = !result.isAdmin;
+      annualBalances = result.balances || [];
+      employeeDeductions = result.employeeDeductions || [];
+      renderSettings(result.settings || []);
+      if (result.isAdmin) renderDeductionEmployees(annualBalances);
+      renderBalances(annualBalances, result.isAdmin);
+    } catch (error) {
+      if (requestId !== annualRequestId) return;
+      console.error('연차 관리 화면 초기화 오류:', error);
+      annualSummary.textContent = '연차 현황을 불러오지 못했습니다.';
+      annualLoadError.textContent = error.message || '연차 현황을 불러오지 못했습니다.';
+    }
+  }
+
+  annualAsOfDate.addEventListener('change', () => {
+    if (annualAsOfDate.value) loadAnnualLeave(annualAsOfDate.value);
+  });
+
+  annualDeductionEmployee.addEventListener('change', renderDeductionFields);
 
   annualSettingsForm.addEventListener('submit', async event => {
     event.preventDefault();
@@ -141,8 +213,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       renderSettings(result.settings);
       annualSettingsMessage.textContent = '가산연차 설정을 저장했습니다.';
       annualSettingsMessage.classList.add('success');
-      const refreshed = await request();
-      renderBalances(refreshed.balances, refreshed.isAdmin);
+      await loadAnnualLeave(annualAsOfDate.value);
     } catch (error) {
       console.error('가산연차 설정 저장 오류:', error);
       annualSettingsMessage.textContent = error.message || '설정을 저장하지 못했습니다.';
@@ -152,14 +223,34 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
-  try {
-    const result = await request();
-    renderSettings(result.settings);
-    annualSettingsCard.hidden = !result.isAdmin;
-    renderBalances(result.balances, result.isAdmin);
-  } catch (error) {
-    console.error('연차 관리 화면 초기화 오류:', error);
-    annualSummary.textContent = '연차 현황을 불러오지 못했습니다.';
-    annualLoadError.textContent = error.message || '연차 현황을 불러오지 못했습니다.';
-  }
+  annualDeductionsForm.addEventListener('submit', async event => {
+    event.preventDefault();
+    annualDeductionsMessage.textContent = '';
+    saveDeductionsButton.disabled = true;
+    try {
+      const deductions = Array.from(annualDeductionFields.querySelectorAll('[data-service-year]'))
+        .map(input => ({
+          service_year: Number(input.dataset.serviceYear),
+          deduction_days: Number(input.value)
+        }));
+      const result = await request('/deductions', {
+        method: 'PUT',
+        body: JSON.stringify({ user_id: annualDeductionEmployee.value, deductions })
+      });
+      employeeDeductions = employeeDeductions.filter(item => item.user_id !== annualDeductionEmployee.value)
+        .concat(result.deductions || []);
+      renderDeductionFields();
+      await loadAnnualLeave(annualAsOfDate.value);
+      annualDeductionsMessage.textContent = '직원별 기본연차 차감 설정을 저장했습니다.';
+      annualDeductionsMessage.classList.add('success');
+    } catch (error) {
+      console.error('직원별 연차 차감 설정 저장 오류:', error);
+      annualDeductionsMessage.textContent = error.message || '직원별 차감 설정을 저장하지 못했습니다.';
+      annualDeductionsMessage.classList.remove('success');
+    } finally {
+      saveDeductionsButton.disabled = false;
+    }
+  });
+
+  await loadAnnualLeave();
 });
