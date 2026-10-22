@@ -71,6 +71,9 @@
     .annual-actions { display: flex; justify-content: flex-end; margin-top: 12px; }
     .annual-button { min-height: 40px; padding: 0 15px; border: 1px solid var(--app-border); border-radius: 9px; background: var(--app-surface-raised); color: var(--text-main); font-size: 12px; font-weight: 700; cursor: pointer; }
     .annual-button.primary { border-color: transparent; background: var(--primary); color: #14251c; }
+    html[data-theme="light"] .annual-button.primary { border-color: #145b42; background: #176348; color: #fff; }
+    html[data-theme="light"] .annual-button.primary:hover:not(:disabled) { border-color: #104b37; background: #104b37; }
+    .annual-button:focus-visible { outline: 3px solid color-mix(in srgb, var(--primary) 55%, transparent); outline-offset: 2px; }
     .annual-button:disabled { opacity: .6; cursor: wait; }
     .annual-empty { padding: 18px; color: var(--text-sub); text-align: center; font-size: 13px; }
     [hidden] { display: none !important; }
