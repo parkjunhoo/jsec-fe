@@ -1,6 +1,7 @@
 (() => {
   const API_URL = 'https://jsec-serverless.adobephotoshop.workers.dev/api/corporate-cards';
-  const MAX_RECEIPT_BYTES = 5 * 1024 * 1024;
+  const TARGET_RECEIPT_BYTES = 900 * 1024;
+  const MAX_RECEIPT_BYTES = 1024 * 1024;
   const monthFilter = document.getElementById('monthFilter');
   const searchFilter = document.getElementById('searchFilter');
   const entryRows = document.getElementById('entryRows');
@@ -175,18 +176,24 @@
       const canvas = document.createElement('canvas');
       const context = canvas.getContext('2d', { alpha: false });
       if (!context) throw new Error('사진 압축을 지원하지 않는 기기입니다.');
-      for (let attempt = 0; attempt < 18; attempt += 1) {
-        const scale = Math.min(1, 2200 / Math.max(image.width, image.height)) * (0.88 ** Math.floor(attempt / 3));
+      for (let attempt = 0; attempt < 15; attempt += 1) {
+        const scale = Math.min(1, 2000 / Math.max(image.width, image.height)) *
+          (0.88 ** Math.floor(attempt / 3));
         canvas.width = Math.max(1, Math.round(image.width * scale));
         canvas.height = Math.max(1, Math.round(image.height * scale));
         context.fillStyle = '#fff';
         context.fillRect(0, 0, canvas.width, canvas.height);
         context.drawImage(image.source, 0, 0, canvas.width, canvas.height);
-        const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', [0.86, 0.76, 0.66][attempt % 3]));
+        const blob = await new Promise(resolve => canvas.toBlob(
+          resolve,
+          'image/jpeg',
+          [0.84, 0.76, 0.68][attempt % 3]
+        ));
         if (!blob) throw new Error('사진 압축에 실패했습니다.');
+        if (blob.size <= TARGET_RECEIPT_BYTES) return blob;
         if (blob.size <= MAX_RECEIPT_BYTES) return blob;
       }
-      throw new Error('사진을 5MB 이하로 압축하지 못했습니다.');
+      throw new Error('사진을 1MB 이하로 압축하지 못했습니다.');
     } finally {
       image.close();
     }
