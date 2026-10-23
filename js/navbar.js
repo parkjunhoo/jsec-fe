@@ -593,11 +593,6 @@ document.addEventListener('DOMContentLoaded', async () => {
           <div class="drawer-menu-search-recent" id="drawerMenuSearchRecent" hidden></div>
           <div class="drawer-menu-search-status" id="drawerMenuSearchStatus" role="status" aria-live="polite"></div>
         </div>
-        <button class="large-text-switch" id="nativeBiometricSwitch" type="button" aria-pressed="false" style="display: none;">
-          <span>생체 인증 잠금</span>
-          <span id="nativeBiometricSwitchState" aria-hidden="true">끔</span>
-        </button>
-
         <nav class="drawer-links" aria-label="업무 메뉴">
           <section class="drawer-group" id="drawerFavoritesGroup" aria-labelledby="drawerFavoritesTitle" hidden>
             <h2 class="drawer-group-title" id="drawerFavoritesTitle">즐겨찾기</h2>
@@ -670,6 +665,10 @@ document.addEventListener('DOMContentLoaded', async () => {
           </svg>
           <span>개인정보 처리방침</span>
         </a>
+        <button class="large-text-switch" id="nativeBiometricSwitch" type="button" aria-pressed="false" style="display: none;">
+          <span>생체 인증 잠금</span>
+          <span id="nativeBiometricSwitchState" aria-hidden="true">끔</span>
+        </button>
       </div>
     </div>
     <dialog class="policy-dialog" id="privacyPolicyDialog" aria-labelledby="privacyPolicyDialogTitle">

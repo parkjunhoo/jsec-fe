@@ -117,13 +117,13 @@
     .today-off-label { color: #b8d0d2; font-size: 13px; font-weight: 750; }
     .today-off-count {
       flex: 0 0 auto;
-      padding: 3px 8px;
+      padding: 4px 10px;
       border: 1px solid rgba(118, 212, 179, 0.24);
       border-radius: 999px;
       background: rgba(118, 212, 179, 0.1);
       color: #a8e5c6;
-      font-size: 13px;
-      font-weight: 750;
+      font-size: 14px;
+      font-weight: 800;
     }
     .today-off-names {
       display: grid;
@@ -184,15 +184,15 @@
       display: flex;
       flex-wrap: wrap;
       align-items: center;
-      gap: 5px;
-      margin-top: 4px;
+      gap: 7px;
+      margin-top: 7px;
       color: #edf3fa;
-      font-size: 14px;
-      font-weight: 600;
+      font-size: 15px;
+      font-weight: 700;
       line-height: 1.45;
       overflow-wrap: anywhere;
     }
-    .today-off-person { display: inline-flex; max-width: 100%; align-items: center; padding: 4px 9px; border: 1px solid transparent; border-radius: 999px; font-size: 12px; font-weight: 750; line-height: 1.25; overflow-wrap: anywhere; }
+    .today-off-person { display: inline-flex; max-width: 100%; min-height: 30px; align-items: center; padding: 6px 11px; border: 1px solid transparent; border-radius: 999px; font-size: 13px; font-weight: 800; line-height: 1.25; overflow-wrap: anywhere; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.16); }
     .today-off-none { color: #a9bfce; font-size: 12px; font-weight: 500; }
     .today-off-summary.empty .today-off-group-members { color: #a9bfce; font-weight: 500; }
     .today-off-summary.error .today-off-group-members { color: #fca5a5; font-weight: 500; }
@@ -570,7 +570,7 @@
       .personal-panel { margin-top: 15px; padding: 15px; border-radius: 14px; }
       .personal-heading h2 { font-size: 17px; }
       .personal-heading p, .personal-month { font-size: 11px; }
-      .personal-tab { flex: 1; padding: 0 9px; font-size: 12px; }
+      .personal-tab { flex: 1; min-width: 0; padding: 0 9px; font-size: 12px; }
       .personal-annual-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .personal-stats strong { font-size: 22px; }
       .personal-stats span { font-size: 12px; }
@@ -592,6 +592,21 @@
     @media (max-width: 360px) {
       .menu-grid { grid-template-columns: 1fr; }
       .menu-card { min-height: 126px; }
+    }
+    @media (max-width: 392px) {
+      .personal-tabs {
+        overflow-x: auto;
+        overscroll-behavior-inline: contain;
+        scrollbar-width: thin;
+        scroll-snap-type: x proximity;
+      }
+      .personal-tab {
+        flex: 0 0 auto;
+        min-width: max-content;
+        scroll-snap-align: start;
+      }
+      .personal-tabs::-webkit-scrollbar { height: 4px; }
+      .personal-tabs::-webkit-scrollbar-thumb { border-radius: 4px; background: rgba(190, 211, 239, 0.3); }
     }
     @media (prefers-reduced-motion: reduce) {
       *, *::before, *::after { scroll-behavior: auto !important; transition-duration: 0.01ms !important; }

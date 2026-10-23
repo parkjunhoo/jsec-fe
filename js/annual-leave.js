@@ -1,5 +1,17 @@
 document.addEventListener('DOMContentLoaded', async () => {
   const API_URL = 'https://jsec-serverless.adobephotoshop.workers.dev/api/annual-leave';
+  const ANNUAL_REQUEST_API = 'https://jsec-serverless.adobephotoshop.workers.dev/api/annual-leave-requests';
+  const annualApplicationCard = document.getElementById('annualApplication');
+  const annualApplicationForm = document.getElementById('annualApplicationForm');
+  const annualApplicationType = document.getElementById('annualApplicationType');
+  const annualApplicationStartDate = document.getElementById('annualApplicationStartDate');
+  const annualApplicationStartTime = document.getElementById('annualApplicationStartTime');
+  const annualApplicationEndDate = document.getElementById('annualApplicationEndDate');
+  const annualApplicationEndTime = document.getElementById('annualApplicationEndTime');
+  const annualApplicationDays = document.getElementById('annualApplicationDays');
+  const annualApplicationBalance = document.getElementById('annualApplicationBalance');
+  const annualApplicationMessage = document.getElementById('annualApplicationMessage');
+  const submitAnnualApplication = document.getElementById('submitAnnualApplication');
   const annualSummary = document.getElementById('annualSummary');
   const annualChart = document.getElementById('annualChart');
   const annualTableWrap = document.getElementById('annualTableWrap');
@@ -26,6 +38,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   let annualBalances = [];
   let employeeDeductions = [];
   let annualRequestId = 0;
+  let currentUserId = '';
+  let currentUserRole = 'user';
+  let currentAnnualBalance = null;
 
   function escapeHtml(value) {
     return String(value ?? '').replace(/[&<>"']/g, character => ({
@@ -37,11 +52,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     })[character]);
   }
 
-  async function request(path = '', options = {}) {
+  async function request(path = '', options = {}, baseUrl = API_URL) {
     const { data, error } = await supabaseClient.auth.getSession();
     if (error) throw error;
     if (!data.session?.access_token) throw new Error('로그인이 필요합니다. 다시 로그인해 주세요.');
-    const response = await fetch(`${API_URL}${path}`, {
+    const response = await fetch(`${baseUrl}${path}`, {
       ...options,
       headers: {
         Authorization: `Bearer ${data.session.access_token}`,
@@ -52,6 +67,96 @@ document.addEventListener('DOMContentLoaded', async () => {
     const result = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(result.error || `요청에 실패했습니다. (HTTP ${response.status})`);
     return result;
+  }
+
+  function getKSTDateString(dateObj = new Date()) {
+    const parts = new Intl.DateTimeFormat('ko-KR', {
+      timeZone: 'Asia/Seoul',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
+    }).formatToParts(dateObj);
+    const values = Object.fromEntries(parts.map(part => [part.type, part.value]));
+    return `${values.year}-${values.month}-${values.day}`;
+  }
+
+  function countAnnualWeekdays(startDate, endDate) {
+    if (!startDate || !endDate || endDate < startDate) return 0;
+    const start = new Date(`${startDate}T00:00:00Z`);
+    const end = new Date(`${endDate}T00:00:00Z`);
+    if (end.getTime() - start.getTime() > 366 * 24 * 60 * 60 * 1000) return 0;
+    let count = 0;
+    for (let date = start; date <= end; date.setUTCDate(date.getUTCDate() + 1)) {
+      const day = date.getUTCDay();
+      if (day !== 0 && day !== 6) count += 1;
+    }
+    return count;
+  }
+
+  function calculateAnnualHours() {
+    if (!annualApplicationStartTime.value || !annualApplicationEndTime.value) return 0;
+    const [startHour, startMinute] = annualApplicationStartTime.value.split(':').map(Number);
+    const [endHour, endMinute] = annualApplicationEndTime.value.split(':').map(Number);
+    const minutes = (endHour * 60 + endMinute) - (startHour * 60 + startMinute);
+    return minutes > 0 ? minutes / 60 : 0;
+  }
+
+  function updateAnnualApplicationAmount() {
+    if (annualApplicationType.value === '시간차') {
+      annualApplicationEndDate.value = annualApplicationStartDate.value;
+      annualApplicationEndDate.disabled = true;
+      annualApplicationStartTime.readOnly = false;
+      annualApplicationEndTime.readOnly = false;
+      annualApplicationDays.min = '0.25';
+      annualApplicationDays.max = '24';
+      annualApplicationDays.step = '0.25';
+      document.getElementById('annualApplicationAmountLabel').textContent = '사용 시간 (시간) *';
+      document.getElementById('annualApplicationAmountHint').textContent = '시간차는 하루 안에서 시작·종료 시간을 입력해 주세요. 신청 시간은 자동 계산됩니다. (15분 단위)';
+      annualApplicationDays.value = String(calculateAnnualHours());
+    } else {
+      annualApplicationEndDate.disabled = false;
+      annualApplicationStartTime.value = '00:00';
+      annualApplicationEndTime.value = '00:00';
+      annualApplicationStartTime.readOnly = true;
+      annualApplicationEndTime.readOnly = true;
+      annualApplicationDays.min = '1';
+      annualApplicationDays.max = '31';
+      annualApplicationDays.step = '1';
+      document.getElementById('annualApplicationAmountLabel').textContent = '총 연차 일수 *';
+      document.getElementById('annualApplicationAmountHint').textContent = '기간 내 주말을 제외한 평일 수입니다. 승인 시 해당 평일 일정이 연차로 등록됩니다.';
+      annualApplicationDays.value = String(countAnnualWeekdays(
+        annualApplicationStartDate.value,
+        annualApplicationEndDate.value
+      ));
+    }
+    updateAnnualApplicationBalance();
+  }
+
+  function updateAnnualApplicationBalance() {
+    const balance = currentAnnualBalance;
+    if (!balance || !balance.service_year) {
+      annualApplicationBalance.textContent = '연차 기준일이 등록되어 있지 않아 연차를 신청할 수 없습니다. 관리자에게 문의해 주세요.';
+      annualApplicationBalance.dataset.type = 'error';
+      submitAnnualApplication.disabled = true;
+      return;
+    }
+
+    const requestedDays = annualApplicationType.value === '시간차'
+      ? calculateAnnualHours() / balance.hours_per_day
+      : Number(annualApplicationDays.value) || 0;
+    const datesInCycle = annualApplicationStartDate.value >= balance.cycle_start
+      && annualApplicationEndDate.value <= balance.cycle_end;
+    const canApply = datesInCycle && requestedDays > 0 && requestedDays <= balance.remaining_days;
+    annualApplicationBalance.innerHTML = `현재 <strong>${balance.service_year}년차</strong> · 보유 ${balance.entitled_days}일 · 사용 ${balance.used_days}일 · 신청 대기 ${balance.pending_days}일 · 신청 가능 잔여 <strong>${balance.remaining_days}일</strong><br>기준기간 ${escapeHtml(balance.cycle_start)} ~ ${escapeHtml(balance.cycle_end)} · 현재 근무지는 ${balance.hours_per_day}시간을 연차 1일로 계산합니다.`;
+    annualApplicationBalance.dataset.type = canApply ? '' : 'error';
+    if (!datesInCycle) {
+      annualApplicationBalance.insertAdjacentHTML('beforeend', '<br>신청 기간은 현재 연차 기준기간 안에 있어야 합니다.');
+    } else if (requestedDays <= 0) {
+      annualApplicationBalance.insertAdjacentHTML('beforeend', '<br>신청 가능한 평일 또는 시간을 입력해 주세요.');
+    } else if (requestedDays > balance.remaining_days) {
+      annualApplicationBalance.insertAdjacentHTML('beforeend', '<br>신청 일수가 잔여 연차를 초과합니다.');
+    }
+    submitAnnualApplication.disabled = !canApply;
   }
 
   function renderSettings(settings) {
@@ -284,6 +389,19 @@ document.addEventListener('DOMContentLoaded', async () => {
     const requestId = ++annualRequestId;
     annualLoadError.textContent = '';
     try {
+      if (!currentUserId) {
+        const { data: { session }, error: sessionError } = await supabaseClient.auth.getSession();
+        if (sessionError) throw sessionError;
+        if (!session) throw new Error('로그인이 필요합니다. 다시 로그인해 주세요.');
+        const { data: profile, error: profileError } = await supabaseClient
+          .from('users')
+          .select('role')
+          .eq('id', session.user.id)
+          .maybeSingle();
+        if (profileError) throw profileError;
+        currentUserId = session.user.id;
+        currentUserRole = profile?.role || 'user';
+      }
       const path = asOfDate ? `?as_of=${encodeURIComponent(asOfDate)}` : '';
       const result = await request(path);
       if (requestId !== annualRequestId) return;
@@ -291,8 +409,11 @@ document.addEventListener('DOMContentLoaded', async () => {
       annualAdminActions.hidden = !result.isAdmin;
       annualSettingsCard.hidden = !result.isAdmin;
       annualDeductionsCard.hidden = !result.isAdmin;
+      annualApplicationCard.hidden = currentUserRole === 'guest' || currentUserRole === 'monitor';
       annualBalances = result.balances || [];
       employeeDeductions = result.employeeDeductions || [];
+      currentAnnualBalance = annualBalances.find(balance => balance.user_id === currentUserId) || null;
+      updateAnnualApplicationBalance();
       renderSettings(result.settings || []);
       if (result.isAdmin) renderDeductionEmployees(annualBalances);
       renderBalances(annualBalances, result.isAdmin);
@@ -303,6 +424,60 @@ document.addEventListener('DOMContentLoaded', async () => {
       annualLoadError.textContent = error.message || '연차 현황을 불러오지 못했습니다.';
     }
   }
+
+  annualApplicationType.addEventListener('change', updateAnnualApplicationAmount);
+  annualApplicationStartDate.addEventListener('change', updateAnnualApplicationAmount);
+  annualApplicationEndDate.addEventListener('change', updateAnnualApplicationAmount);
+  annualApplicationStartTime.addEventListener('change', updateAnnualApplicationAmount);
+  annualApplicationEndTime.addEventListener('change', updateAnnualApplicationAmount);
+  annualApplicationForm.addEventListener('submit', async event => {
+    event.preventDefault();
+    annualApplicationMessage.textContent = '';
+    annualApplicationMessage.classList.remove('success');
+    const leaveType = annualApplicationType.value;
+    const hoursUsed = calculateAnnualHours();
+    if (leaveType === '시간차'
+      && (annualApplicationStartDate.value !== annualApplicationEndDate.value
+        || hoursUsed < 0.25
+        || hoursUsed > 24
+        || !Number.isInteger(hoursUsed * 4))) {
+      annualApplicationMessage.textContent = '시간차는 같은 날짜에 15분 단위로 0.25~24시간을 신청해 주세요.';
+      return;
+    }
+
+    submitAnnualApplication.disabled = true;
+    submitAnnualApplication.textContent = '신청 중...';
+    try {
+      const result = await request('', {
+        method: 'POST',
+        body: JSON.stringify({
+          leave_type: leaveType,
+          start_date: annualApplicationStartDate.value,
+          start_time: annualApplicationStartTime.value,
+          end_date: annualApplicationEndDate.value,
+          end_time: annualApplicationEndTime.value,
+          total_days: leaveType === '시간차' ? 1 : Number(annualApplicationDays.value),
+          hours_used: leaveType === '시간차' ? hoursUsed : null,
+          details: document.getElementById('annualApplicationDetails').value.trim()
+        })
+      }, ANNUAL_REQUEST_API);
+      await loadAnnualLeave(annualAsOfDate.value);
+      annualApplicationMessage.textContent = result.notificationWarning
+        || '연차 신청이 접수되었습니다. 관리자 승인 후 휴무 일정에 등록됩니다.';
+      if (!result.notificationWarning) annualApplicationMessage.classList.add('success');
+    } catch (error) {
+      console.error('연차 신청 등록 오류:', error);
+      annualApplicationMessage.textContent = error.message || '연차 신청을 등록하지 못했습니다.';
+    } finally {
+      submitAnnualApplication.textContent = '신청하기';
+      updateAnnualApplicationBalance();
+    }
+  });
+
+  const today = getKSTDateString();
+  annualApplicationStartDate.value = today;
+  annualApplicationEndDate.value = today;
+  updateAnnualApplicationAmount();
 
   annualAsOfDate.addEventListener('change', () => {
     if (annualAsOfDate.value) loadAnnualLeave(annualAsOfDate.value);

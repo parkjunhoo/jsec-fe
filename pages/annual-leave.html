@@ -20,6 +20,20 @@
     .annual-card-description { margin: 6px 0 14px; color: var(--text-sub); font-size: 12px; line-height: 1.55; }
     .annual-message { margin: 12px 0 0; color: var(--danger); font-size: 13px; }
     .annual-message:empty { display: none; }
+    .annual-application-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+    .annual-application-field { display: grid; gap: 6px; min-width: 0; }
+    .annual-application-field.full { grid-column: 1 / -1; }
+    .annual-application-field label { color: var(--text-sub); font-size: 12px; font-weight: 650; }
+    .annual-application-field input, .annual-application-field select, .annual-application-field textarea { width: 100%; min-height: 42px; padding: 9px 11px; border: 1px solid var(--app-border); border-radius: 8px; background: var(--input-bg); color: var(--text-main); font: inherit; font-size: 13px; }
+    .annual-application-field textarea { min-height: 78px; resize: vertical; }
+    .annual-application-hint { margin: -4px 0 0; color: var(--text-sub); font-size: 11px; }
+    .annual-application-balance { grid-column: 1 / -1; padding: 11px 12px; border: 1px solid var(--app-border); border-radius: 9px; background: var(--app-surface-raised); color: var(--text-sub); font-size: 12px; line-height: 1.6; }
+    .annual-application-balance strong { color: var(--primary); }
+    .annual-application-balance[data-type="error"] { color: var(--danger); }
+    .annual-application-actions { display: flex; justify-content: flex-end; margin-top: 12px; }
+    .annual-application-message { margin: 10px 0 0; color: var(--danger); font-size: 13px; }
+    .annual-application-message:empty { display: none; }
+    .annual-application-message.success { color: var(--primary); }
     .annual-message.success { color: var(--primary); }
     .annual-summary-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
     .annual-summary { padding: 13px; border: 1px solid var(--app-border); border-radius: 11px; background: var(--app-surface-raised); }
@@ -99,6 +113,8 @@
       .annual-chart-metrics { gap: 5px; }
       .annual-chart-metrics strong { font-size: 12px; }
       .annual-date-field { width: 100%; }
+      .annual-application-form { grid-template-columns: minmax(0, 1fr); }
+      .annual-application-field.full { grid-column: auto; }
     }
   </style>
 </head>
@@ -109,6 +125,51 @@
       <h1>연차 관리</h1>
       <p id="annualDescription">연차 기준일 기준 근속연차별 연차 보유량과 사용 현황을 확인합니다.</p>
     </header>
+    <section class="annual-card" id="annualApplication" aria-labelledby="annualApplicationTitle">
+      <h2 id="annualApplicationTitle">연차 신청</h2>
+      <p class="annual-card-description">신청한 연차는 관리자 승인 후 휴무 일정에 등록됩니다.</p>
+      <form id="annualApplicationForm">
+        <div class="annual-application-form">
+          <p class="annual-application-balance" id="annualApplicationBalance" role="status" aria-live="polite">연차 잔여 일수를 확인하고 있습니다.</p>
+          <div class="annual-application-field">
+            <label for="annualApplicationType">구분 *</label>
+            <select id="annualApplicationType" required>
+              <option value="연차">종일 연차</option>
+              <option value="시간차">시간차</option>
+            </select>
+          </div>
+          <div class="annual-application-field">
+            <label for="annualApplicationStartDate">신청 시작일 *</label>
+            <input id="annualApplicationStartDate" type="date" required>
+          </div>
+          <div class="annual-application-field">
+            <label for="annualApplicationStartTime">시작 시간 *</label>
+            <input id="annualApplicationStartTime" type="time" value="00:00" step="900" readonly required>
+          </div>
+          <div class="annual-application-field">
+            <label for="annualApplicationEndDate">신청 종료일 *</label>
+            <input id="annualApplicationEndDate" type="date" required>
+          </div>
+          <div class="annual-application-field">
+            <label for="annualApplicationEndTime">종료 시간 *</label>
+            <input id="annualApplicationEndTime" type="time" value="00:00" step="900" readonly required>
+          </div>
+          <div class="annual-application-field full">
+            <label for="annualApplicationDays" id="annualApplicationAmountLabel">총 연차 일수 *</label>
+            <input id="annualApplicationDays" type="number" min="1" max="31" step="1" readonly required>
+            <p class="annual-application-hint" id="annualApplicationAmountHint">기간 내 주말을 제외한 평일 수입니다. 승인 시 해당 평일 일정이 연차로 등록됩니다.</p>
+          </div>
+          <div class="annual-application-field full">
+            <label for="annualApplicationDetails">세부 사항</label>
+            <textarea id="annualApplicationDetails" maxlength="2000" placeholder="신청 사유나 전달할 내용을 적어 주세요."></textarea>
+          </div>
+        </div>
+        <p class="annual-application-message" id="annualApplicationMessage" role="alert"></p>
+        <div class="annual-application-actions">
+          <button class="annual-button primary" id="submitAnnualApplication" type="submit">신청하기</button>
+        </div>
+      </form>
+    </section>
     <section class="annual-card" aria-labelledby="annualOverviewTitle">
       <h2 id="annualOverviewTitle">연차 사용 현황</h2>
       <p class="annual-card-description" id="annualPeriodDescription">승인된 연차와 신청 대기 중인 연차를 함께 반영합니다. 시간차는 근무지에 따라 8시간 또는 12시간을 연차 1일로 계산합니다.</p>
