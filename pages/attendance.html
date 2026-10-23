@@ -21,10 +21,13 @@
     .attendance-description { margin: 6px 0 14px; color: var(--text-sub); font-size: 12px; line-height: 1.6; }
     .attendance-alert { margin: 10px 0 0; color: var(--danger); font-size: 13px; line-height: 1.5; }
     .attendance-alert:empty { display: none; }
-    .attendance-status { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 14px 0; padding: 13px; border: 1px solid var(--app-border); border-radius: 10px; background: var(--app-surface-raised); }
-    .attendance-status strong { font-size: 14px; }
-    .attendance-status span { color: var(--text-sub); font-size: 12px; text-align: right; }
+    .attendance-date-line { display: flex; justify-content: space-between; align-items: center; margin: 18px 0 8px; color: var(--text-sub); font-size: 13px; font-weight: 650; }
+    .attendance-date-line time { color: var(--text-main); font-size: 15px; font-weight: 800; }
+    .attendance-status { display: flex; flex-direction: column; gap: 5px; margin: 0 0 14px; padding: 15px; border: 1px solid var(--app-border); border-radius: 12px; background: var(--app-surface-raised); }
+    .attendance-status strong { font-size: 18px; }
+    .attendance-status span { color: var(--text-sub); font-size: 12px; line-height: 1.5; }
     .attendance-control-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; }
+    .attendance-auto-site { grid-column: 1 / -1; padding: 11px; border: 1px solid var(--app-border); border-radius: 8px; background: var(--app-surface-raised); color: var(--text-sub); font-size: 12px; line-height: 1.5; }
     .attendance-field { display: grid; gap: 6px; min-width: 0; color: var(--text-sub); font-size: 12px; font-weight: 650; }
     .attendance-field input, .attendance-field select, .attendance-field textarea { width: 100%; min-height: 42px; padding: 9px 11px; border: 1px solid var(--app-border); border-radius: 8px; background: var(--input-bg); color: var(--text-main); font: inherit; font-size: 13px; }
     .attendance-field textarea { min-height: 68px; resize: vertical; }
@@ -34,7 +37,22 @@
     .attendance-button.primary { border-color: transparent; background: var(--primary); color: #14251c; }
     html[data-theme="light"] .attendance-button.primary { background: #176348; color: #fff; }
     .attendance-button:disabled { opacity: .55; cursor: wait; }
-    .attendance-filter-row { display: grid; grid-template-columns: minmax(150px, 220px) minmax(180px, 1fr) auto; align-items: end; gap: 10px; margin-bottom: 12px; }
+    .attendance-punch-button { width: 100%; min-height: 68px; border-radius: 36px; font-size: 20px; letter-spacing: .02em; }
+    .attendance-history-nav { display: grid; grid-template-columns: 42px minmax(130px, 220px) 42px minmax(180px, 1fr) auto; align-items: end; gap: 8px; margin-bottom: 12px; }
+    .attendance-history-nav .attendance-button { padding: 0 9px; font-size: 18px; }
+    .attendance-personal-summary { margin: 0 0 10px; color: var(--text-sub); font-size: 12px; line-height: 1.5; }
+    .attendance-personal-records { display: grid; gap: 9px; }
+    .attendance-personal-record { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 7px 12px; padding: 13px; border: 1px solid var(--app-border); border-radius: 11px; background: var(--app-surface-raised); }
+    .attendance-personal-record-heading { display: flex; align-items: center; flex-wrap: wrap; gap: 7px; font-size: 14px; font-weight: 800; }
+    .attendance-personal-record-site { color: var(--text-sub); font-size: 11px; }
+    .attendance-personal-record-duration { align-self: center; color: var(--text-main); font-size: 14px; font-weight: 800; text-align: right; }
+    .attendance-personal-record-times { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; color: var(--text-sub); font-size: 11px; line-height: 1.5; }
+    .attendance-personal-record-times strong { display: block; color: var(--text-main); font-size: 12px; }
+    .attendance-record-status { display: inline-flex; align-items: center; gap: 5px; color: var(--primary); font-size: 11px; font-weight: 750; }
+    .attendance-record-status::before { width: 7px; height: 7px; border-radius: 50%; background: currentColor; content: ""; }
+    .attendance-record-status.open { color: #d18a17; }
+    .attendance-record-status.missing { color: var(--danger); }
+    .attendance-history-empty { padding: 24px 12px; border: 1px solid var(--app-border); border-radius: 10px; color: var(--text-sub); font-size: 13px; text-align: center; }
     .attendance-filter-row .attendance-field[hidden] { display: none; }
     .attendance-table-wrap { overflow-x: auto; border: 1px solid var(--app-border); border-radius: 10px; }
     .attendance-table { width: 100%; border-collapse: collapse; font-size: 12px; }
@@ -42,6 +60,8 @@
     .attendance-table th { background: var(--app-surface-raised); color: var(--text-sub); font-size: 11px; }
     .attendance-table tbody tr:last-child td { border-bottom: 0; }
     .attendance-table .attendance-secondary { display: block; margin-top: 3px; color: var(--text-sub); font-size: 10px; white-space: normal; }
+    .attendance-record-gps { display: grid; gap: 5px; }
+    .attendance-record-gps .attendance-button { min-height: 30px; padding: 0 7px; font-size: 10px; }
     .attendance-empty { padding: 20px 12px; color: var(--text-sub); font-size: 12px; text-align: center; }
     .attendance-site-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 270px), 1fr)); gap: 11px; }
     .attendance-site { min-width: 0; padding: 13px; border: 1px solid var(--app-border); border-radius: 10px; background: var(--app-surface-raised); }
@@ -60,16 +80,24 @@
     .attendance-dialog-form { display: grid; gap: 12px; }
     .attendance-dialog-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; }
     .attendance-map-dialog { width: min(760px, calc(100% - 24px)); }
+    .attendance-map-search { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; margin: 0 0 8px; }
+    .attendance-map-search input { min-width: 0; min-height: 42px; padding: 9px 11px; border: 1px solid var(--app-border); border-radius: 8px; background: var(--input-bg); color: var(--text-main); font: inherit; font-size: 13px; }
+    .attendance-map-results { display: grid; gap: 6px; max-height: 150px; overflow: auto; margin: 0 0 10px; padding: 0; list-style: none; }
+    .attendance-map-results button { width: 100%; padding: 9px 11px; border: 1px solid var(--app-border); border-radius: 8px; background: var(--app-surface-raised); color: var(--text-main); font: inherit; font-size: 12px; text-align: left; cursor: pointer; }
     .attendance-map { height: min(55vh, 440px); min-height: 280px; overflow: hidden; border: 1px solid var(--app-border); border-radius: 10px; }
+    .attendance-record-map-details { margin: 0 0 12px; color: var(--text-sub); font-size: 12px; line-height: 1.6; }
     [hidden] { display: none !important; }
     @media (max-width: 760px) { .attendance-site-grid { grid-template-columns: 1fr; } }
     @media (max-width: 520px) {
       .attendance-shell { padding: 18px 13px; }
       .attendance-card { padding: 14px; }
-      .attendance-control-grid, .attendance-filter-row { grid-template-columns: 1fr; }
+      .attendance-control-grid { grid-template-columns: 1fr; }
+      .attendance-history-nav { grid-template-columns: 42px minmax(0, 1fr) 42px; }
+      .attendance-history-nav #attendanceUserFilterField, .attendance-history-nav #attendanceReload { grid-column: span 3; }
       .attendance-field.full { grid-column: auto; }
-      .attendance-filter-row .attendance-field[hidden] { display: none; }
+      .attendance-history-nav .attendance-field[hidden] { display: none; }
       .attendance-actions > .attendance-button { flex: 1; }
+      .attendance-punch-button { min-height: 64px; }
     }
   </style>
 </head>
@@ -78,25 +106,27 @@
   <main class="attendance-shell">
     <header class="attendance-heading">
       <h1>근태 관리</h1>
-      <p>테스트중..</p>
+      <p>출퇴근 등록은 Android 앱에서만 가능합니다. 웹에서는 근태 기록을 조회할 수 있으며, 관리자 기능은 권한에 따라 표시됩니다. 출근·퇴근 시에만 현재 위치와 기기 모델·Android 버전을 기록하며 관리자만 확인할 수 있습니다. 백그라운드 위치 추적은 하지 않으며, 기기에서 전화번호를 읽거나 근태 기록에 저장하지 않습니다.</p>
     </header>
     <section class="attendance-card" id="attendancePunchCard" aria-labelledby="attendancePunchTitle">
       <h2 id="attendancePunchTitle">오늘 출퇴근</h2>
+      <div class="attendance-date-line"><span>오늘</span><time id="attendanceTodayDate"></time></div>
       <div class="attendance-status" id="attendanceTodayStatus" aria-live="polite">
         <strong>근태 상태 확인 중</strong><span></span>
       </div>
-      <div class="attendance-control-grid">
-        <label class="attendance-field" for="attendanceSiteSelect">출근지 선택
-          <select id="attendanceSiteSelect" required><option value="">출근지 설정을 불러오는 중</option></select>
-        </label>
-        <label class="attendance-field" for="attendanceNote">메모 (선택)
-          <input id="attendanceNote" type="text" maxlength="500" placeholder="예: 외근 후 복귀">
-        </label>
-      </div>
-      <p class="attendance-location-help">출근과 퇴근은 같은 출근지에서 등록해야 합니다. GPS 정확도가 100m보다 낮으면 위치를 새로 확인해 주세요.</p>
-      <div class="attendance-actions">
-        <button class="attendance-button primary" id="attendanceCheckIn" type="button">현재 위치로 출근</button>
-        <button class="attendance-button" id="attendanceCheckOut" type="button">현재 위치로 퇴근</button>
+      <p class="attendance-description" id="attendanceWebPunchNotice">출퇴근 등록은 Android 앱에서만 가능합니다. 웹 화면에서는 근태 기록을 조회해 주세요.</p>
+      <div id="attendanceAppPunchControls" hidden>
+        <div class="attendance-control-grid">
+          <div class="attendance-auto-site">출근지는 GPS로 자동 판별합니다. 등록된 출근지 반경 안에서 출근할 수 있으며, 출근과 퇴근은 같은 출근지에서 해야 합니다.</div>
+          <label class="attendance-field" for="attendanceNote">메모 (선택)
+            <input id="attendanceNote" type="text" maxlength="500" placeholder="예: 외근 후 복귀">
+          </label>
+        </div>
+        <p class="attendance-location-help">출근과 퇴근은 같은 출근지에서 등록해야 합니다. GPS 정확도가 100m보다 낮으면 위치를 새로 확인해 주세요.</p>
+        <div class="attendance-actions">
+          <button class="attendance-button primary attendance-punch-button" id="attendanceCheckIn" type="button">현재 위치로 출근하기</button>
+          <button class="attendance-button primary attendance-punch-button" id="attendanceCheckOut" type="button">현재 위치로 퇴근하기</button>
+        </div>
       </div>
       <p class="attendance-alert" id="attendancePunchMessage" role="alert"></p>
     </section>
@@ -104,27 +134,33 @@
     <section class="attendance-card" aria-labelledby="attendanceHistoryTitle">
       <h2 id="attendanceHistoryTitle">출퇴근 기록</h2>
       <p class="attendance-description">본인의 기록을 확인할 수 있습니다. 관리자에게는 전체 직원 기록과 수정 기능이 표시됩니다.</p>
-      <div class="attendance-filter-row">
+      <div class="attendance-history-nav">
+        <button class="attendance-button" id="attendancePrevMonth" type="button" aria-label="이전 달">‹</button>
         <label class="attendance-field" for="attendanceMonth">조회 월
           <input id="attendanceMonth" type="month">
         </label>
+        <button class="attendance-button" id="attendanceNextMonth" type="button" aria-label="다음 달">›</button>
         <label class="attendance-field" id="attendanceUserFilterField" for="attendanceUserFilter" hidden>직원
           <select id="attendanceUserFilter"><option value="">전체 직원</option></select>
         </label>
         <button class="attendance-button" id="attendanceReload" type="button">새로고침</button>
       </div>
       <p class="attendance-alert" id="attendanceHistoryMessage" role="alert"></p>
-      <div class="attendance-table-wrap">
+      <div id="attendancePersonalHistory" hidden>
+        <p class="attendance-personal-summary" id="attendancePersonalSummary"></p>
+        <div class="attendance-personal-records" id="attendancePersonalRecords"></div>
+      </div>
+      <div class="attendance-table-wrap" id="attendanceAdminRecordsTable">
         <table class="attendance-table">
-          <thead><tr><th>날짜 / 직원</th><th>출근지</th><th>출근</th><th>퇴근</th><th>상태</th><th id="attendanceActionHeading" hidden>관리</th></tr></thead>
-          <tbody id="attendanceRecords"><tr><td class="attendance-empty" colspan="6">기록을 불러오는 중입니다.</td></tr></tbody>
+          <thead><tr><th>날짜 / 직원</th><th>출근지</th><th>출근</th><th>퇴근</th><th>상태</th><th id="attendanceGpsHeading" hidden>GPS 위치 (관리자)</th><th id="attendanceDeviceHeading" hidden>사용 기기 (관리자)</th><th id="attendanceActionHeading" hidden>관리</th></tr></thead>
+          <tbody id="attendanceRecords"><tr><td class="attendance-empty" colspan="7">기록을 불러오는 중입니다.</td></tr></tbody>
         </table>
       </div>
     </section>
 
     <section class="attendance-card" id="attendanceSiteSettings" aria-labelledby="attendanceSiteSettingsTitle" hidden>
       <h2 id="attendanceSiteSettingsTitle">출근지 및 반경 설정</h2>
-      <p class="attendance-description">출근지를 추가·수정할 수 있습니다. 지도에서 위치를 선택하거나 현재 위치로 지정하고, 반경은 20~1000m에서 설정하세요. 삭제한 지점은 과거 출퇴근 기록 보존을 위해 보관 처리됩니다.</p>
+      <p class="attendance-description">출근지를 추가·수정할 수 있습니다. 지도에서 위치를 선택하거나 현재 위치로 지정하고, 반경은 20~1000m에서 설정하세요. 삭제한 출근지는 설정 목록에서 제거되며 기존 근태 기록은 보존됩니다.</p>
       <form id="attendanceSiteForm">
         <div class="attendance-site-grid" id="attendanceSiteFields"></div>
         <div class="attendance-actions">
@@ -138,12 +174,26 @@
 
   <dialog class="attendance-dialog attendance-map-dialog" id="attendanceMapDialog" aria-labelledby="attendanceMapTitle">
     <h2 id="attendanceMapTitle">지도에서 출근지 선택</h2>
-    <p class="attendance-description">지도를 이동·확대하고 출근지 위치를 클릭하세요. 지도 자료 © OpenStreetMap 기여자</p>
+    <p class="attendance-description">주소나 장소명을 검색해 지도를 이동한 뒤, 정확한 위치를 클릭해 선택하세요. 검색 및 지도 자료는 <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a>을 이용합니다.</p>
+    <form class="attendance-map-search" id="attendanceMapSearchForm" role="search">
+      <input id="attendanceMapSearchInput" type="search" maxlength="120" placeholder="주소 또는 장소명 검색" aria-label="출근지 위치 검색" required>
+      <button class="attendance-button" id="attendanceMapSearchButton" type="submit">검색</button>
+    </form>
+    <ul class="attendance-map-results" id="attendanceMapSearchResults" aria-label="지도 검색 결과"></ul>
     <div class="attendance-map" id="attendanceMap" role="application" aria-label="출근지 위치 지도"></div>
     <p class="attendance-alert" id="attendanceMapMessage" role="status"></p>
     <div class="attendance-dialog-actions">
       <button class="attendance-button" type="button" id="attendanceMapCancel">취소</button>
       <button class="attendance-button primary" type="button" id="attendanceMapConfirm" disabled>이 위치 선택</button>
+    </div>
+  </dialog>
+
+  <dialog class="attendance-dialog attendance-map-dialog" id="attendanceRecordMapDialog" aria-labelledby="attendanceRecordMapTitle">
+    <h2 id="attendanceRecordMapTitle">출퇴근 GPS 위치</h2>
+    <p class="attendance-record-map-details" id="attendanceRecordMapDetails"></p>
+    <div class="attendance-map" id="attendanceRecordMap" role="application" aria-label="출퇴근 기록 위치 지도"></div>
+    <div class="attendance-dialog-actions">
+      <button class="attendance-button" type="button" id="attendanceRecordMapClose">닫기</button>
     </div>
   </dialog>
 

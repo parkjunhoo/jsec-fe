@@ -204,6 +204,30 @@
     .service-group-heading { margin: 0 2px 11px; }
     .service-group-heading h3 { margin: 0; font-size: 14px; font-weight: 750; letter-spacing: -0.02em; }
     .service-group-heading p { margin: 4px 0 0; color: var(--muted); font-size: 11px; line-height: 1.5; }
+    .home-weather { margin: 16px 0 24px; padding: 16px; border: 1px solid var(--line); border-radius: 15px; background: linear-gradient(145deg, rgba(20, 36, 54, .96), rgba(15, 25, 39, .96)); box-shadow: var(--shadow); }
+    .home-weather-header { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+    .home-weather-title { min-width: 0; }
+    .home-weather-title h2 { margin: 0; font-size: 15px; }
+    .home-weather-title p { margin: 4px 0 0; color: var(--muted); font-size: 10px; }
+    .home-weather-refresh { flex: 0 0 auto; width: 34px; height: 34px; border: 1px solid var(--line); border-radius: 9px; background: rgba(255, 255, 255, .04); color: var(--ink); font-size: 16px; cursor: pointer; }
+    .home-weather-refresh:disabled { opacity: .55; cursor: wait; }
+    .home-weather-current { display: flex; align-items: center; gap: 15px; margin-top: 12px; }
+    .home-weather-icon { font-size: 44px; line-height: 1; }
+    .home-weather-temperature { font-size: clamp(34px, 8vw, 46px); font-weight: 750; letter-spacing: -.06em; line-height: 1; }
+    .home-weather-condition { margin-top: 5px; color: #c7d6e5; font-size: 13px; }
+    .home-weather-updated { margin-left: auto; color: var(--muted); font-size: 10px; text-align: right; }
+    .home-weather-details { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: 13px; }
+    .home-weather-detail { min-width: 0; padding: 9px 10px; border: 1px solid rgba(190, 211, 239, .08); border-radius: 9px; background: rgba(255, 255, 255, .035); }
+    .home-weather-detail span { display: block; color: var(--muted); font-size: 9px; }
+    .home-weather-detail strong { display: block; margin-top: 4px; font-size: 12px; }
+    .home-weather-forecast { display: flex; gap: 7px; margin-top: 12px; padding-bottom: 3px; overflow-x: auto; scrollbar-width: thin; }
+    .home-weather-hour { display: grid; flex: 1 0 62px; justify-items: center; gap: 5px; padding: 9px 5px; border-radius: 9px; background: rgba(255, 255, 255, .035); text-align: center; }
+    .home-weather-hour time { color: var(--muted); font-size: 10px; }
+    .home-weather-hour-icon { font-size: 19px; }
+    .home-weather-hour strong { font-size: 12px; }
+    .home-weather-error { margin: 12px 0 0; color: #fca5a5; font-size: 11px; line-height: 1.5; }
+    .home-weather-error:empty { display: none; }
+    .home-weather-source { margin: 9px 0 0; color: var(--muted); font-size: 9px; }
     .service-count {
       display: inline-flex;
       align-items: center;
@@ -656,6 +680,29 @@
       </div>
     </section>
 
+    <section class="home-weather" id="homeWeather" aria-labelledby="homeWeatherTitle" aria-busy="true">
+      <header class="home-weather-header">
+        <div class="home-weather-title">
+          <h2 id="homeWeatherTitle">지산 리조트 날씨</h2>
+          <p>기상청 실시간 관측 및 시간별 예보</p>
+        </div>
+        <button class="home-weather-refresh" id="homeWeatherRefresh" type="button" aria-label="날씨 새로고침" title="새로고침">↻</button>
+      </header>
+      <div class="home-weather-current" id="homeWeatherCurrent" aria-live="polite">
+        <span class="home-weather-icon" aria-hidden="true">⛅</span>
+        <div><div class="home-weather-temperature">--°</div><div class="home-weather-condition">날씨를 불러오는 중입니다.</div></div>
+        <div class="home-weather-updated" id="homeWeatherUpdated"></div>
+      </div>
+      <div class="home-weather-details" id="homeWeatherDetails">
+        <div class="home-weather-detail"><span>습도</span><strong>--</strong></div>
+        <div class="home-weather-detail"><span>바람</span><strong>--</strong></div>
+        <div class="home-weather-detail"><span>강수</span><strong>--</strong></div>
+      </div>
+      <div class="home-weather-forecast" id="homeWeatherForecast" aria-label="시간별 날씨 예보"></div>
+      <p class="home-weather-error" id="homeWeatherError" role="alert"></p>
+      <p class="home-weather-source" id="homeWeatherSource">기상청 동네예보 · 자료 제공 지연이 있을 수 있습니다.</p>
+    </section>
+
     <section class="personal-panel" aria-labelledby="personalTitle">
       <div class="personal-heading">
         <div>
@@ -861,6 +908,7 @@
   <script src="/js/user-preferences.js"></script>
   <script src="/js/navbar.js"></script>
   <script src="/js/main-personal.js"></script>
+  <script src="/js/main-weather.js"></script>
   <script>
     // 메인 페이지 전용 추가 세션 체크 (필요시)
     document.addEventListener('DOMContentLoaded', async () => {
