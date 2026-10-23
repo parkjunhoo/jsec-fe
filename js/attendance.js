@@ -17,6 +17,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   const siteForm = document.getElementById('attendanceSiteForm');
   const siteMessage = document.getElementById('attendanceSiteMessage');
   const saveSitesButton = document.getElementById('attendanceSaveSites');
+  const addSiteButton = document.getElementById('attendanceAddSite');
+  const mapDialog = document.getElementById('attendanceMapDialog');
+  const mapMessage = document.getElementById('attendanceMapMessage');
+  const mapConfirmButton = document.getElementById('attendanceMapConfirm');
   const editDialog = document.getElementById('attendanceEditDialog');
   const editForm = document.getElementById('attendanceEditForm');
   const editMessage = document.getElementById('attendanceEditMessage');
@@ -27,6 +31,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   let todayRecord = null;
   let currentUserId = '';
   let busy = false;
+  let mapPicker = null;
+  let mapMarker = null;
+  let mapRadius = null;
+  let mapTargetCard = null;
+  let mapSelection = null;
 
   function escapeHtml(value) {
     return String(value ?? '').replace(/[&<>"']/g, character => ({
@@ -113,8 +122,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (availableSites.some(site => site.id === currentSelection)) siteSelect.value = currentSelection;
     if (isAdmin) {
       document.getElementById('attendanceEditSite').innerHTML = sites
-        .filter(site => site.enabled)
-        .map(site => `<option value="${escapeHtml(site.id)}">${escapeHtml(site.name)}</option>`)
+        .map(site => `<option value="${escapeHtml(site.id)}">${escapeHtml(site.name)}${site.enabled ? '' : ' (보관됨)'}</option>`)
         .join('');
     }
     checkInButton.disabled = busy || !availableSites.length;
@@ -167,9 +175,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   function renderSiteSettings() {
-    siteFields.innerHTML = sites.map(site => `
-      <article class="attendance-site" data-site-number="${site.site_number}">
-        <h3>출근지 ${site.site_number}</h3>
+    siteFields.innerHTML = sites.length ? sites.map((site, index) => `
+      <article class="attendance-site ${site.enabled ? '' : 'archived'}" data-site-index="${index}">
+        <h3>${site.site_number ? `출근지 ${site.site_number}` : '새 출근지'}</h3>
+        ${site.enabled ? '' : '<p class="attendance-site-status">보관됨 · 과거 출퇴근 기록은 유지됩니다.</p>'}
         <div class="attendance-site-fields">
           <label class="attendance-field">출근지 이름
             <input type="text" maxlength="80" required data-site-name value="${escapeHtml(site.name)}">
@@ -185,12 +194,77 @@ document.addEventListener('DOMContentLoaded', async () => {
           <label class="attendance-field">반경 (m, 20~1000)
             <input type="number" min="20" max="1000" step="1" required data-site-radius value="${site.radius_m}">
           </label>
-          <label class="attendance-site-enable"><input type="checkbox" data-site-enabled ${site.enabled ? 'checked' : ''}> 직원이 선택할 수 있는 출근지</label>
+          <button class="attendance-button" type="button" data-open-site-map>지도에서 위치 선택</button>
           <button class="attendance-button" type="button" data-set-current-location>이 기기의 현재 위치로 지정</button>
           <p class="attendance-location-help" data-location-message>${site.latitude == null ? '위치 미설정' : `위도 ${site.latitude}, 경도 ${site.longitude}`}</p>
+          ${site.id ? `<button class="attendance-button" type="button" data-toggle-site>${site.enabled ? '삭제 (기록 보존)' : '출근지 복구'}</button>` : '<button class="attendance-button" type="button" data-remove-new-site>추가 취소</button>'}
         </div>
       </article>
-    `).join('');
+    `).join('') : '<p class="attendance-empty">등록된 출근지가 없습니다. 출근지를 추가해 주세요.</p>';
+  }
+
+  function updateMapPreview(latitude, longitude, radius) {
+    if (!window.L || !mapPicker) return;
+    const point = [latitude, longitude];
+    if (!mapMarker) mapMarker = window.L.marker(point).addTo(mapPicker);
+    else mapMarker.setLatLng(point);
+    if (!mapRadius) {
+      mapRadius = window.L.circle(point, { radius, color: '#197a52', fillOpacity: 0.12 }).addTo(mapPicker);
+    } else {
+      mapRadius.setLatLng(point);
+      mapRadius.setRadius(radius);
+    }
+  }
+
+  function openSiteMap(card) {
+    mapTargetCard = card;
+    mapMessage.textContent = '';
+    mapSelection = null;
+    mapConfirmButton.disabled = true;
+    mapDialog.showModal();
+    if (!window.L) {
+      mapMessage.textContent = '지도를 불러오지 못했습니다. 위도와 경도를 직접 입력해 주세요.';
+      return;
+    }
+
+    const latitudeValue = card.querySelector('[data-site-latitude]').value;
+    const longitudeValue = card.querySelector('[data-site-longitude]').value;
+    const latitude = Number(latitudeValue);
+    const longitude = Number(longitudeValue);
+    const hasCoordinates = latitudeValue !== '' && longitudeValue !== ''
+      && Number.isFinite(latitude) && Number.isFinite(longitude);
+    if (!mapPicker) {
+      mapPicker = window.L.map('attendanceMap').setView(
+        hasCoordinates ? [latitude, longitude] : [36.5, 127.5],
+        hasCoordinates ? 16 : 7
+      );
+      window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+      }).addTo(mapPicker);
+      mapPicker.on('click', event => {
+        mapSelection = event.latlng;
+        updateMapPreview(event.latlng.lat, event.latlng.lng, Number(mapTargetCard?.querySelector('[data-site-radius]').value) || 100);
+        mapMessage.textContent = `선택한 좌표: ${event.latlng.lat.toFixed(6)}, ${event.latlng.lng.toFixed(6)}`;
+        mapConfirmButton.disabled = false;
+      });
+    }
+    mapPicker.setView(hasCoordinates ? [latitude, longitude] : [36.5, 127.5], hasCoordinates ? 16 : 7);
+    if (hasCoordinates) {
+      mapSelection = { lat: latitude, lng: longitude };
+      updateMapPreview(latitude, longitude, Number(card.querySelector('[data-site-radius]').value) || 100);
+      mapMessage.textContent = `현재 좌표: ${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
+      mapConfirmButton.disabled = false;
+    } else if (mapMarker) {
+      mapPicker.removeLayer(mapMarker);
+      mapMarker = null;
+      if (mapRadius) {
+        mapPicker.removeLayer(mapRadius);
+        mapRadius = null;
+      }
+    }
+
+    window.setTimeout(() => mapPicker.invalidateSize(), 0);
   }
 
   function getCurrentPosition() {
@@ -211,7 +285,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   async function getVerifiedPosition() {
-    if (!window.isSecureContext) throw new Error('GPS 출퇴근은 HTTPS 연결에서만 사용할 수 있습니다.');
+    if (!window.isSecureContext) throw new Error('근태 관리의 위치 기능은 HTTPS 연결에서만 사용할 수 있습니다.');
     const position = await getCurrentPosition();
     if (position.coords.accuracy > 100) {
       throw new Error(`GPS 정확도가 ${Math.round(position.coords.accuracy)}m입니다. 100m 이내가 되도록 다시 확인해 주세요.`);
@@ -321,7 +395,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (profileError) throw profileError;
     if (!profile || ['guest', 'monitor'].includes(profile.role)) {
       document.getElementById('attendancePunchCard').hidden = true;
-      document.querySelector('.attendance-heading p').textContent = '이 계정은 GPS 근태 기능을 사용할 수 없습니다.';
+      document.querySelector('.attendance-heading p').textContent = '이 계정은 근태 기능을 사용할 수 없습니다.';
       historyMessage.textContent = '근태 기능을 사용할 권한이 없습니다.';
       return;
     }
@@ -341,8 +415,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     await Promise.all([loadRecords(), loadTodayRecord()]);
   } catch (error) {
-    console.error('GPS 출퇴근 화면 초기화 오류:', error);
-    historyMessage.textContent = error.message || 'GPS 출퇴근 화면을 불러오지 못했습니다.';
+    console.error('근태 관리 화면 초기화 오류:', error);
+    historyMessage.textContent = error.message || '근태 관리 화면을 불러오지 못했습니다.';
     punchMessage.textContent = error.message || '출근지 설정을 불러오지 못했습니다.';
   }
 
@@ -354,12 +428,49 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
   userFilter.addEventListener('change', loadRecords);
 
+  addSiteButton.addEventListener('click', () => {
+    sites.push({
+      id: null,
+      site_number: null,
+      name: `출근지 ${sites.length + 1}`,
+      latitude: null,
+      longitude: null,
+      radius_m: 100,
+      enabled: true
+    });
+    renderSiteSettings();
+    siteMessage.textContent = '';
+  });
+
   siteFields.addEventListener('click', async event => {
-    const button = event.target.closest('[data-set-current-location]');
-    if (!button) return;
-    const card = button.closest('[data-site-number]');
+    const card = event.target.closest('[data-site-index]');
+    if (!card) return;
+    const siteIndex = Number(card.dataset.siteIndex);
+    const site = sites[siteIndex];
+    if (!site) return;
+
+    const mapButton = event.target.closest('[data-open-site-map]');
+    if (mapButton) {
+      openSiteMap(card);
+      return;
+    }
+    const toggleButton = event.target.closest('[data-toggle-site]');
+    if (toggleButton) {
+      if (site.enabled && !window.confirm('이 출근지를 보관 처리할까요? 과거 출퇴근 기록은 유지됩니다.')) return;
+      site.enabled = !site.enabled;
+      renderSiteSettings();
+      return;
+    }
+    const removeButton = event.target.closest('[data-remove-new-site]');
+    if (removeButton) {
+      sites.splice(siteIndex, 1);
+      renderSiteSettings();
+      return;
+    }
+    const locationButton = event.target.closest('[data-set-current-location]');
+    if (!locationButton) return;
     const message = card.querySelector('[data-location-message]');
-    button.disabled = true;
+    locationButton.disabled = true;
     message.textContent = '현재 위치 확인 중...';
     try {
       if (!window.isSecureContext) throw new Error('현재 위치 지정은 HTTPS 연결에서만 사용할 수 있습니다.');
@@ -373,21 +484,34 @@ document.addEventListener('DOMContentLoaded', async () => {
     } catch (error) {
       message.textContent = error.message;
     } finally {
-      button.disabled = false;
+      locationButton.disabled = false;
     }
+  });
+
+  mapConfirmButton.addEventListener('click', () => {
+    if (!mapTargetCard || !mapSelection) return;
+    mapTargetCard.querySelector('[data-site-latitude]').value = mapSelection.lat.toFixed(6);
+    mapTargetCard.querySelector('[data-site-longitude]').value = mapSelection.lng.toFixed(6);
+    mapTargetCard.querySelector('[data-location-message]').textContent =
+      `지도에서 지정 · 위도 ${mapSelection.lat.toFixed(6)}, 경도 ${mapSelection.lng.toFixed(6)}`;
+    mapDialog.close();
+  });
+  document.getElementById('attendanceMapCancel').addEventListener('click', () => mapDialog.close());
+  mapDialog.addEventListener('click', event => {
+    if (event.target === mapDialog) mapDialog.close();
   });
 
   siteForm.addEventListener('submit', async event => {
     event.preventDefault();
     siteMessage.textContent = '';
     saveSitesButton.disabled = true;
-    const newSites = [...siteFields.querySelectorAll('[data-site-number]')].map(card => ({
-      site_number: Number(card.dataset.siteNumber),
+    const newSites = [...siteFields.querySelectorAll('[data-site-index]')].map(card => ({
+      id: sites[Number(card.dataset.siteIndex)].id,
       name: card.querySelector('[data-site-name]').value.trim(),
       latitude: card.querySelector('[data-site-latitude]').value === '' ? null : Number(card.querySelector('[data-site-latitude]').value),
       longitude: card.querySelector('[data-site-longitude]').value === '' ? null : Number(card.querySelector('[data-site-longitude]').value),
       radius_m: Number(card.querySelector('[data-site-radius]').value),
-      enabled: card.querySelector('[data-site-enabled]').checked
+      enabled: sites[Number(card.dataset.siteIndex)].enabled
     }));
     try {
       await request('/sites', { method: 'PUT', body: JSON.stringify({ sites: newSites }) });

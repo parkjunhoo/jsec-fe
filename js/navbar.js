@@ -522,11 +522,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   let pageTitle = '지산리조트 보안팀';
   if (currentPath.includes('main.html')) pageTitle = '메인 메뉴';
-  else if (currentPath.includes('attendance.html')) pageTitle = 'GPS 출퇴근';
+  else if (currentPath.includes('attendance.html')) pageTitle = '근태 관리';
   else if (currentPath.includes('item-requests.html')) pageTitle = '물품 신청';
   else if (currentPath.includes('annual-leave.html')) pageTitle = '연차 관리';
   else if (currentPath.includes('users.html')) pageTitle = '회원 조회 및 관리';
-  else if (currentPath.includes('vehicle.html')) pageTitle = '지산 차량조회';
+  else if (currentPath.includes('vehicle.html')) pageTitle = '차량조회';
   else if (currentPath.includes('calendar.html')) pageTitle = '휴무 캘린더';
   else if (currentPath.includes('manuals.html')) pageTitle = '업무 매뉴얼';
   else if (currentPath.includes('phonebook.html')) pageTitle = '지산 연락망';
@@ -615,13 +615,13 @@ document.addEventListener('DOMContentLoaded', async () => {
                 <span class="drawer-item-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 11h18"/><path d="m9 16 2 2 4-4"/></svg></span><span class="drawer-item-label">휴무 일정</span>
               </a>
               <a href="/pages/attendance.html" class="drawer-item ${currentPath.includes('attendance.html') ? 'active' : ''}" ${currentPath.includes('attendance.html') ? 'aria-current="page"' : ''}>
-                <span class="drawer-item-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7v5l3 2M4 4l2 2m12 12 2 2"/></svg></span><span class="drawer-item-label">GPS 출퇴근</span>
+                <span class="drawer-item-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7v5l3 2M4 4l2 2m12 12 2 2"/></svg></span><span class="drawer-item-label">근태 관리</span>
               </a>
               <a href="/pages/annual-leave.html" class="drawer-item ${currentPath.includes('annual-leave.html') ? 'active' : ''}" ${currentPath.includes('annual-leave.html') ? 'aria-current="page"' : ''}>
                 <span class="drawer-item-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 19V5m0 14h16"/><path d="m7 15 4-4 3 2 5-6"/></svg></span><span class="drawer-item-label">연차 관리</span>
               </a>
               <a href="https://www.ibro.co.kr/PayRoll/JOBWITH/index.asp" class="drawer-item" target="_blank" rel="noopener noreferrer">
-                <span class="drawer-item-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18M7 15h4m4 0h2M8 2v3m8-3v3"/></svg></span><span class="drawer-item-label">급여 조회 ↗</span>
+                <span class="drawer-item-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18M7 15h4m4 0h2M8 2v3m8-3v3"/></svg></span><span class="drawer-item-label">급여 조회</span>
               </a>
             </div>
           </section>
@@ -643,7 +643,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 <span class="drawer-item-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 5h16v14H4z"/><path d="M8 9h8M8 13h8M8 17h5"/><path d="m5 4 2-2m10 2 2-2"/></svg></span><span class="drawer-item-label">주간 식단표</span>
               </a>
               <a href="/pages/vehicle.html" class="drawer-item ${currentPath.includes('vehicle.html') ? 'active' : ''}" ${currentPath.includes('vehicle.html') ? 'aria-current="page"' : ''}>
-                <span class="drawer-item-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m5 11 1.5-4.5A2 2 0 0 1 8.4 5h7.2a2 2 0 0 1 1.9 1.5L19 11"/><path d="M3 11h18v8H3z"/><path d="M6 19v2m12-2v2M6 15h.01M18 15h.01M3 13l-1-2m19 2 1-2"/></svg></span><span class="drawer-item-label">지산 차량조회</span>
+                <span class="drawer-item-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m5 11 1.5-4.5A2 2 0 0 1 8.4 5h7.2a2 2 0 0 1 1.9 1.5L19 11"/><path d="M3 11h18v8H3z"/><path d="M6 19v2m12-2v2M6 15h.01M18 15h.01M3 13l-1-2m19 2 1-2"/></svg></span><span class="drawer-item-label">차량조회</span>
               </a>
               <a href="/pages/manuals.html" class="drawer-item ${currentPath.includes('manuals.html') ? 'active' : ''}" ${currentPath.includes('manuals.html') ? 'aria-current="page"' : ''}>
                 <span class="drawer-item-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-11V5l-8-3-8 3v6c0 7 8 11 8 11Z"/><path d="m9 12 2 2 4-4"/></svg></span><span class="drawer-item-label">업무 매뉴얼</span>
@@ -792,7 +792,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const keywordMap = {
       '/pages/main.html': '홈 메인 시작 대시보드',
       '/pages/calendar.html': '휴무 일정 캘린더 달력 근무표 스케줄 휴가 공가 시간차 연차 신청',
-      '/pages/attendance.html': 'GPS 출퇴근 근태관리 출근 퇴근 위치 반경',
+      '/pages/attendance.html': '근태 관리 출퇴근 출근 퇴근 위치 반경 GPS',
       '/pages/annual-leave.html': '연차 휴가 잔여 소진 근속 가산 차감 기준일 직원',
       '/pages/users.html': '회원 명부 직원 사원 사용자 계정 권한 인사 재직자',
       '/pages/item-requests.html': '물품 신청 비품 구매 소모품 장비 물건 요청 승인',
