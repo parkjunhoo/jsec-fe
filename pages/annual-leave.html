@@ -6,6 +6,7 @@
   <meta name="theme-color" content="#111815">
   <title>지산리조트 보안팀 - 연차 관리</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <link rel="stylesheet" href="/lib/sw2/sweetalert2.min.css">
   <link rel="stylesheet" href="/css/app-theme.css">
   <style>
     * { box-sizing: border-box; }
@@ -34,6 +35,33 @@
     .annual-application-message { margin: 10px 0 0; color: var(--danger); font-size: 13px; }
     .annual-application-message:empty { display: none; }
     .annual-application-message.success { color: var(--primary); }
+    .annual-request-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 0 0 12px; }
+    .annual-request-filter { min-height: 36px; padding: 0 9px; border: 1px solid var(--app-border); border-radius: 8px; background: var(--app-surface-raised); color: var(--text-main); font: inherit; font-size: 12px; }
+    .annual-request-list { display: grid; gap: 9px; }
+    .annual-request-item { min-width: 0; padding: 13px; border: 1px solid var(--app-border); border-radius: 11px; background: var(--app-surface-raised); }
+    .annual-request-item-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+    .annual-request-item-title { margin: 0; color: var(--text-main); font-size: 14px; font-weight: 750; }
+    .annual-request-item-meta, .annual-request-item-details { margin: 5px 0 0; color: var(--text-sub); font-size: 12px; line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere; }
+    .annual-request-status { flex: 0 0 auto; padding: 4px 8px; border: 1px solid var(--app-border); border-radius: 999px; color: var(--text-sub); font-size: 11px; font-weight: 750; }
+    .annual-request-status.pending { border-color: rgba(190, 132, 40, 0.35); color: #a66a08; }
+    .annual-request-status.approved { border-color: rgba(49, 132, 83, 0.35); color: #287348; }
+    .annual-request-status.rejected { border-color: rgba(185, 59, 69, 0.35); color: #b83c45; }
+    .annual-request-review { display: grid; gap: 8px; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--app-border); }
+    .annual-request-review textarea { width: 100%; min-height: 54px; padding: 8px 10px; border: 1px solid var(--app-border); border-radius: 8px; background: var(--input-bg); color: var(--text-main); font: inherit; font-size: 12px; resize: vertical; }
+    .annual-request-review-actions, .annual-request-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 7px; margin-top: 10px; }
+    .annual-request-action { min-height: 33px; padding: 0 10px; border: 1px solid var(--app-border); border-radius: 8px; background: transparent; color: var(--text-main); font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; }
+    .annual-request-review-actions [data-request-review="approved"] { border-color: rgba(49, 132, 83, 0.35); color: #287348; }
+    .annual-request-review-actions [data-request-review="rejected"], .annual-request-delete { border-color: rgba(185, 59, 69, 0.35); color: #b83c45; }
+    .annual-request-download { color: var(--primary); }
+    html:not([data-theme="light"]) .annual-request-status.pending,
+    html:not([data-theme="light"]) .annual-request-review-actions [data-request-review="rejected"],
+    html:not([data-theme="light"]) .annual-request-delete { color: #f08c92; }
+    html:not([data-theme="light"]) .annual-request-status.approved,
+    html:not([data-theme="light"]) .annual-request-review-actions [data-request-review="approved"] { color: #79cf98; }
+    html:not([data-theme="light"]) .annual-request-status.rejected { color: #f08c92; }
+    .annual-request-message { margin: 10px 0 0; color: var(--danger); font-size: 12px; }
+    .annual-request-message:empty { display: none; }
+    .annual-request-empty { padding: 15px 10px; border: 1px dashed var(--app-border); border-radius: 9px; color: var(--text-sub); font-size: 12px; text-align: center; }
     .annual-message.success { color: var(--primary); }
     .annual-summary-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
     .annual-summary { padding: 13px; border: 1px solid var(--app-border); border-radius: 11px; background: var(--app-surface-raised); }
@@ -170,6 +198,23 @@
         </div>
       </form>
     </section>
+    <section class="annual-card" id="annualRequests" aria-labelledby="annualRequestsTitle">
+      <h2 id="annualRequestsTitle">연차 신청 내역</h2>
+      <p class="annual-card-description" id="annualRequestsDescription">내 신청 내역을 확인하고, 관리자는 신청을 검토할 수 있습니다.</p>
+      <div class="annual-request-toolbar">
+        <span></span>
+        <select class="annual-request-filter" id="annualRequestStatusFilter" aria-label="연차 신청 상태 필터" hidden>
+          <option value="">전체 신청</option>
+          <option value="pending">승인 대기</option>
+          <option value="approved">승인</option>
+          <option value="rejected">반려</option>
+        </select>
+      </div>
+      <p class="annual-request-message" id="annualRequestMessage" role="alert"></p>
+      <div class="annual-request-list" id="annualRequestList" aria-live="polite">
+        <div class="annual-request-empty">연차 신청 내역을 불러오는 중입니다.</div>
+      </div>
+    </section>
     <section class="annual-card" aria-labelledby="annualOverviewTitle">
       <h2 id="annualOverviewTitle">연차 사용 현황</h2>
       <p class="annual-card-description" id="annualPeriodDescription">승인된 연차와 신청 대기 중인 연차를 함께 반영합니다. 시간차는 근무지에 따라 8시간 또는 12시간을 연차 1일로 계산합니다.</p>
@@ -223,5 +268,8 @@
   <script src="/js/user-preferences.js"></script>
   <script src="/js/navbar.js"></script>
   <script src="/js/annual-leave.js"></script>
+  <script src="/lib/sw2/sweetalert2.min.js"></script>
+  <script>window.Swal = window.Sweetalert2;</script>
+  <script src="/js/annual-leave-requests.js"></script>
 </body>
 </html>

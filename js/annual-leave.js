@@ -462,6 +462,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         })
       }, ANNUAL_REQUEST_API);
       await loadAnnualLeave(annualAsOfDate.value);
+      window.dispatchEvent(new Event('annual-leave:requests-refresh'));
       annualApplicationMessage.textContent = result.notificationWarning
         || '연차 신청이 접수되었습니다. 관리자 승인 후 휴무 일정에 등록됩니다.';
       if (!result.notificationWarning) annualApplicationMessage.classList.add('success');
@@ -482,6 +483,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   annualAsOfDate.addEventListener('change', () => {
     if (annualAsOfDate.value) loadAnnualLeave(annualAsOfDate.value);
   });
+  window.addEventListener('annual-leave:updated', () => loadAnnualLeave(annualAsOfDate.value));
 
   annualDeductionEmployee.addEventListener('change', renderDeductionFields);
 

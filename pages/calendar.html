@@ -480,29 +480,8 @@
     .annual-leave-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
     .annual-leave-heading h3 { margin: 0; color: var(--text-main); font-size: 16px; }
     .annual-leave-heading p { margin: 5px 0 0; color: var(--text-sub); font-size: 12px; }
-    .annual-leave-actions, .annual-leave-filters { display: flex; align-items: center; gap: 8px; }
+    .annual-leave-actions { display: flex; align-items: center; gap: 8px; }
     .annual-leave-apply-link { display: inline-flex; align-items: center; justify-content: center; min-height: 38px; padding: 0 13px; border: 1px solid #34734c; border-radius: 9px; background: #367b51; color: #fff; font-size: 13px; font-weight: 700; text-decoration: none; }
-    .annual-leave-filter { min-height: 36px; padding: 0 9px; border: 1px solid var(--app-border); border-radius: 8px; background: var(--app-surface-raised); color: var(--text-main); font: inherit; font-size: 12px; }
-    .annual-leave-list { display: grid; gap: 9px; margin-top: 13px; }
-    .annual-leave-item { min-width: 0; padding: 13px; border: 1px solid var(--app-border); border-radius: 11px; background: var(--app-surface-raised); }
-    .annual-leave-item-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
-    .annual-leave-item-title { margin: 0; color: var(--text-main); font-size: 14px; font-weight: 750; }
-    .annual-leave-item-meta, .annual-leave-item-details { margin: 5px 0 0; color: var(--text-sub); font-size: 12px; line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere; }
-    .annual-leave-status { flex: 0 0 auto; padding: 4px 8px; border: 1px solid var(--app-border); border-radius: 999px; color: var(--text-sub); font-size: 11px; font-weight: 750; }
-    .annual-leave-status.pending { border-color: rgba(190, 132, 40, 0.35); color: #a66a08; }
-    .annual-leave-status.approved { border-color: rgba(49, 132, 83, 0.35); color: #287348; }
-    .annual-leave-status.rejected { border-color: rgba(185, 59, 69, 0.35); color: #b83c45; }
-    .annual-leave-review { display: grid; gap: 8px; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--app-border); }
-    .annual-leave-review textarea { width: 100%; min-height: 54px; padding: 8px 10px; border: 1px solid var(--app-border); border-radius: 8px; background: var(--input-bg); color: var(--text-main); font: inherit; font-size: 12px; resize: vertical; }
-    .annual-leave-review-actions { display: flex; justify-content: flex-end; gap: 7px; }
-    .annual-leave-review-actions button, .annual-leave-download { min-height: 33px; padding: 0 10px; border: 1px solid var(--app-border); border-radius: 8px; background: transparent; color: var(--text-main); font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; }
-    .annual-leave-review-actions [data-annual-review="approved"] { border-color: rgba(49, 132, 83, 0.35); color: #287348; }
-    .annual-leave-review-actions [data-annual-review="rejected"] { border-color: rgba(185, 59, 69, 0.35); color: #b83c45; }
-    .annual-leave-item-actions { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 10px; }
-    .annual-leave-download { color: var(--primary); }
-    .annual-leave-delete { border-color: rgba(185, 59, 69, 0.35) !important; color: #b83c45 !important; }
-    .annual-leave-error { margin: 10px 0 0; color: var(--danger); font-size: 12px; }
-    .annual-leave-empty { padding: 15px 10px; border: 1px dashed var(--app-border); border-radius: 9px; color: var(--text-sub); font-size: 12px; text-align: center; }
     @media (max-width: 480px) {
       .annual-leave-section { padding: 13px; }
       .annual-leave-heading { align-items: flex-start; flex-direction: column; }
@@ -558,25 +537,15 @@
       </div>
     </div>
 
-    <section class="annual-leave-section" aria-labelledby="annualLeaveTitle">
+    <section class="annual-leave-section" id="annualLeaveApplyNotice" aria-labelledby="annualLeaveTitle">
       <div class="annual-leave-heading">
         <div>
-          <h3 id="annualLeaveTitle">연차 신청 내역</h3>
-          <p id="annualLeaveDescription">연차 관리 페이지에서 연차를 신청할 수 있습니다.</p>
+          <h3 id="annualLeaveTitle">연차 신청</h3>
+          <p id="annualLeaveDescription">연차 신청과 신청 내역 확인은 연차 관리 페이지에서 할 수 있습니다.</p>
         </div>
         <div class="annual-leave-actions">
-          <select class="annual-leave-filter" id="annualLeaveStatusFilter" aria-label="연차 신청 상태 필터" hidden>
-            <option value="">전체 신청</option>
-            <option value="pending">승인 대기</option>
-            <option value="approved">승인</option>
-            <option value="rejected">반려</option>
-          </select>
           <a class="annual-leave-apply-link" id="annualLeaveApplyLink" href="/pages/annual-leave.html#annualApplication">연차 신청하러 가기</a>
         </div>
-      </div>
-      <p class="annual-leave-error" id="annualLeaveListError" role="alert" hidden></p>
-      <div class="annual-leave-list" id="annualLeaveRequestList" aria-live="polite">
-        <div class="annual-leave-empty">연차 신청 내역을 불러오는 중입니다.</div>
       </div>
     </section>
 

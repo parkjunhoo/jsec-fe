@@ -441,7 +441,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         adminPendingLeaveList,
         adminPendingLeaveCount,
         pendingLeaves,
-        item => `<a class="admin-menu-row" href="/pages/calendar.html">
+        item => `<a class="admin-menu-row" href="/pages/annual-leave.html#annualRequests">
           <span class="admin-menu-row-main"><strong>${escapeHtml(item.username || '이름 없음')} · ${escapeHtml(item.leave_type || '연차')}</strong>
           <span>${formatAdminDate(item.start_date)}${item.end_date !== item.start_date ? ` ~ ${formatAdminDate(item.end_date)}` : ''} · 신청 ${formatAdminDate(item.created_at)}</span></span>
           <span class="admin-menu-row-value">${item.leave_type === '시간차'

@@ -522,6 +522,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   let pageTitle = '지산리조트 보안팀';
   if (currentPath.includes('main.html')) pageTitle = '메인 메뉴';
+  else if (currentPath.includes('attendance.html')) pageTitle = 'GPS 출퇴근';
   else if (currentPath.includes('item-requests.html')) pageTitle = '물품 신청';
   else if (currentPath.includes('annual-leave.html')) pageTitle = '연차 관리';
   else if (currentPath.includes('users.html')) pageTitle = '회원 조회 및 관리';
@@ -612,6 +613,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             <div class="drawer-group-items">
               <a href="/pages/calendar.html" class="drawer-item ${currentPath.includes('calendar.html') ? 'active' : ''}" ${currentPath.includes('calendar.html') ? 'aria-current="page"' : ''}>
                 <span class="drawer-item-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 11h18"/><path d="m9 16 2 2 4-4"/></svg></span><span class="drawer-item-label">휴무 일정</span>
+              </a>
+              <a href="/pages/attendance.html" class="drawer-item ${currentPath.includes('attendance.html') ? 'active' : ''}" ${currentPath.includes('attendance.html') ? 'aria-current="page"' : ''}>
+                <span class="drawer-item-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7v5l3 2M4 4l2 2m12 12 2 2"/></svg></span><span class="drawer-item-label">GPS 출퇴근</span>
               </a>
               <a href="/pages/annual-leave.html" class="drawer-item ${currentPath.includes('annual-leave.html') ? 'active' : ''}" ${currentPath.includes('annual-leave.html') ? 'aria-current="page"' : ''}>
                 <span class="drawer-item-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 19V5m0 14h16"/><path d="m7 15 4-4 3 2 5-6"/></svg></span><span class="drawer-item-label">연차 관리</span>
@@ -788,6 +792,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const keywordMap = {
       '/pages/main.html': '홈 메인 시작 대시보드',
       '/pages/calendar.html': '휴무 일정 캘린더 달력 근무표 스케줄 휴가 공가 시간차 연차 신청',
+      '/pages/attendance.html': 'GPS 출퇴근 근태관리 출근 퇴근 위치 반경',
       '/pages/annual-leave.html': '연차 휴가 잔여 소진 근속 가산 차감 기준일 직원',
       '/pages/users.html': '회원 명부 직원 사원 사용자 계정 권한 인사 재직자',
       '/pages/item-requests.html': '물품 신청 비품 구매 소모품 장비 물건 요청 승인',
