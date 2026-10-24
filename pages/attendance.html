@@ -210,6 +210,19 @@
     .attendance-section-heading p { margin: 5px 0 0; color: #858b95; font-size: 12px; }
     .attendance-section-icon { display: grid; width: 40px; height: 40px; place-items: center; border-radius: 12px; background: #fff0eb; color: #ff5b3d; font-size: 19px; }
     .attendance-admin-card { padding: 0 0 20px; }
+    .attendance-admin-subtabs { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin: 14px 0 2px; padding: 5px; border-radius: 13px; background: #e9edf2; }
+    .attendance-admin-subtab { min-height: 42px; border: 0; border-radius: 9px; background: transparent; color: #7a828d; font-size: 13px; font-weight: 800; cursor: pointer; }
+    .attendance-admin-subtab[aria-selected="true"] { background: #fff; color: #172033; box-shadow: 0 3px 10px rgba(31, 39, 52, .1); }
+    .attendance-admin-subpanel[hidden] { display: none; }
+    body.attendance-admin-view .attendance-profile { display: none; }
+    body.attendance-admin-view .attendance-heading { padding-bottom: 8px; }
+    .attendance-history-nav:not(.attendance-admin-toolbar) { grid-template-columns: 44px minmax(0, 1fr) 44px 44px; align-items: center; gap: 10px; padding: 14px; }
+    .attendance-history-nav:not(.attendance-admin-toolbar) .attendance-button { width: 44px; height: 44px; padding: 0; border: 0; border-radius: 50%; background: #eef1f5; color: #59616d; font-size: 23px; }
+    .attendance-history-nav:not(.attendance-admin-toolbar) .attendance-field { display: grid; place-items: center; }
+    .attendance-history-nav:not(.attendance-admin-toolbar) .attendance-field::before { margin-bottom: 3px; color: #9299a3; content: "조회 월"; font-size: 10px; font-weight: 750; }
+    .attendance-history-nav:not(.attendance-admin-toolbar) input[type="month"] { min-height: 42px; padding: 0 4px; border: 0; background: transparent; color: #17191d; font-size: 22px; font-weight: 850; text-align: center; }
+    .attendance-history-nav:not(.attendance-admin-toolbar) .attendance-refresh { background: #fff0eb; color: #f05a3d; font-size: 20px; }
+    .attendance-history-nav:not(.attendance-admin-toolbar) .attendance-button:hover { background: #dfe5ec; }
     .attendance-site-grid { display: grid; gap: 10px; }
     .attendance-site { padding: 15px; border: 1px solid #e3e6eb; border-radius: 14px; background: #fff; box-shadow: 0 5px 16px rgba(31, 39, 52, .06); }
     .attendance-site h3 { margin-bottom: 12px; color: #272b32; font-size: 15px; }
@@ -272,7 +285,6 @@
     </section>
 
     <section class="attendance-history-panel" id="attendanceHistoryPanel" role="tabpanel" hidden>
-    <header class="attendance-section-heading"><div><span class="attendance-eyebrow">ATTENDANCE LOG</span><h2>근무기록</h2><p>월별 출퇴근 기록과 근로시간을 확인합니다.</p></div><span class="attendance-section-icon" aria-hidden="true">☷</span></header>
     <section class="attendance-card" aria-labelledby="attendanceHistoryTitle">
       <h2 id="attendanceHistoryTitle">출퇴근 기록</h2>
       <p class="attendance-description">본인의 기록을 확인할 수 있습니다. 관리자는 직원별 기록을 추가·수정·삭제할 수 있으며, 처리 내역은 감사 기록에 보관됩니다.</p>
@@ -306,8 +318,12 @@
     </section>
 
     <section class="attendance-admin-panel" id="attendanceAdminPanel" hidden>
+      <div class="attendance-admin-subtabs" role="tablist" aria-label="관리자 기능">
+        <button class="attendance-admin-subtab" type="button" data-admin-view="records" aria-selected="true">근무기록관리</button>
+        <button class="attendance-admin-subtab" type="button" data-admin-view="sites" aria-selected="false">출근지관리</button>
+      </div>
+      <section class="attendance-admin-subpanel" id="attendanceAdminRecordsPanel" aria-labelledby="attendanceAdminRecordsTitle">
       <section class="attendance-admin-card" aria-labelledby="attendanceAdminRecordsTitle">
-        <header class="attendance-section-heading"><div><span class="attendance-eyebrow">RECORD MANAGEMENT</span><h2 id="attendanceAdminRecordsTitle">근무기록관리</h2><p>직원을 선택해 출퇴근 기록을 조회하고 관리합니다.</p></div><span class="attendance-section-icon" aria-hidden="true">⌘</span></header>
         <div class="attendance-history-nav attendance-admin-toolbar">
           <label class="attendance-field" id="attendanceUserFilterField" for="attendanceUserFilter">직원
             <select id="attendanceUserFilter"><option value="">전체 직원</option></select>
@@ -320,8 +336,9 @@
           <div class="attendance-admin-record-list" id="attendanceRecords"><div class="attendance-empty">기록을 불러오는 중입니다.</div></div>
         </div>
       </section>
+      </section>
+      <section class="attendance-admin-subpanel" id="attendanceAdminSitesPanel" aria-labelledby="attendanceSiteSettingsTitle" hidden>
       <section class="attendance-admin-card" id="attendanceSiteSettings" aria-labelledby="attendanceSiteSettingsTitle" hidden>
-        <header class="attendance-section-heading"><div><span class="attendance-eyebrow">ADMIN CONSOLE</span><h2 id="attendanceSiteSettingsTitle">관리자 메뉴</h2><p>출근지와 GPS 반경을 관리합니다.</p></div><span class="attendance-section-icon" aria-hidden="true">⚙</span></header>
         <form id="attendanceSiteForm">
           <div class="attendance-site-grid" id="attendanceSiteFields"></div>
           <div class="attendance-actions">
@@ -330,6 +347,7 @@
           </div>
         </form>
         <p class="attendance-alert" id="attendanceSiteMessage" role="status"></p>
+      </section>
       </section>
     </section>
   </main>

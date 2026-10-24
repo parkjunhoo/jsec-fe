@@ -719,10 +719,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   function populateAdminUserFilter(users) {
     adminUsers = users.filter(user =>
-      !['guest', 'monitor'].includes(user.role) && user.status !== '퇴직' && user.id !== currentUserId
+      !['guest', 'monitor'].includes(user.role) && user.status !== '퇴직'
     );
     userFilter.innerHTML = '<option value="">전체 직원</option>' + users
-      .filter(user => !['guest', 'monitor'].includes(user.role) && user.id !== currentUserId)
+      .filter(user => !['guest', 'monitor'].includes(user.role))
       .map(user => `<option value="${escapeHtml(user.id)}">${escapeHtml(user.name || user.username || '이름 없음')}</option>`)
       .join('');
     createUser.innerHTML = '<option value="">직원 선택</option>' + adminUsers
@@ -1081,17 +1081,31 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   const attendanceHomePanel = document.getElementById('attendanceHomePanel');
   const attendanceHistoryPanel = document.getElementById('attendanceHistoryPanel');
+  const attendanceAdminRecordsPanel = document.getElementById('attendanceAdminRecordsPanel');
+  const attendanceAdminSitesPanel = document.getElementById('attendanceAdminSitesPanel');
+  const attendanceAdminSubtabs = [...document.querySelectorAll('[data-admin-view]')];
   const attendanceViewButtons = [...document.querySelectorAll('[data-attendance-view]')];
+  function showAdminView(view) {
+    const isSites = view === 'sites';
+    attendanceAdminRecordsPanel.hidden = isSites;
+    attendanceAdminSitesPanel.hidden = !isSites;
+    siteSettings.hidden = !isSites;
+    attendanceAdminSubtabs.forEach(button => button.setAttribute('aria-selected', String(button.dataset.adminView === view)));
+  }
   function showAttendanceView(view) {
     const isHistory = view === 'history';
     const isAdminView = view === 'admin';
     document.body.classList.toggle('attendance-home-active', view === 'home');
+    document.body.classList.toggle('attendance-admin-view', isAdminView);
     attendanceHomePanel.hidden = isHistory || isAdminView;
     attendanceHistoryPanel.hidden = !isHistory;
     attendanceAdminPanel.hidden = !isAdminView;
+    if (isAdminView) showAdminView('records');
     attendanceViewButtons.forEach(button => button.setAttribute('aria-selected', String(button.dataset.attendanceView === view)));
     if (isHistory || isAdminView) window.scrollTo({ top: 0, behavior: 'smooth' });
   }
   attendanceViewButtons.forEach(button => button.addEventListener('click', () => showAttendanceView(button.dataset.attendanceView)));
+  attendanceAdminSubtabs.forEach(button => button.addEventListener('click', () => showAdminView(button.dataset.adminView)));
+  showAdminView('records');
   showAttendanceView('home');
 });

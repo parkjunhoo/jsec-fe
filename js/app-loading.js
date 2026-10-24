@@ -48,7 +48,7 @@
     overlay.id = 'appLoading';
     overlay.className = 'app-loading';
     overlay.setAttribute('aria-hidden', 'true');
-    overlay.innerHTML = '<div class="app-loading-panel" role="status"><span class="app-loading-spinner" aria-hidden="true"></span><span>데이터를 불러오는 중...</span></div>';
+    overlay.innerHTML = '<div class="app-loading-panel" role="status"><img class="app-loading-logo" src="/logo.png" alt=""><span>데이터를 불러오는 중...</span><span class="app-loading-progress" aria-hidden="true"></span></div>';
     document.body.appendChild(overlay);
     return overlay;
   }
