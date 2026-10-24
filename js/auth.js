@@ -1,5 +1,6 @@
 document.addEventListener('DOMContentLoaded', async () => {
   const sessionReason = new URLSearchParams(window.location.search).get('session');
+  const showLoginScreen = () => document.body.classList.remove('auth-checking');
   try {
     const { data: { session }, error } = await supabaseClient.auth.getSession();
     if (error) throw error;
@@ -13,6 +14,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   } catch (err) {
     console.error('세션 확인 오류:', err);
   }
+
+  showLoginScreen();
 
   const loginForm = document.getElementById('loginForm');
   const loginBtn = document.getElementById('loginBtn');
