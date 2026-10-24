@@ -146,6 +146,112 @@
   object-fit: contain;
 }
 
+.jsec-ai-chat-weather {
+  width: min(100%, 360px);
+  max-width: 100%;
+  padding: 11px;
+}
+
+.jsec-ai-chat-weather-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.jsec-ai-chat-weather-heading strong {
+  min-width: 0;
+  font-size: 12px;
+}
+
+.jsec-ai-chat-weather-controls {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 5px;
+}
+
+.jsec-ai-chat-weather-controls button {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  border: 1px solid var(--ai-widget-border);
+  border-radius: 7px;
+  background: var(--ai-widget-bg);
+  color: var(--ai-widget-text);
+  font: inherit;
+  font-size: 19px;
+  cursor: pointer;
+}
+
+.jsec-ai-chat-weather-controls button:focus-visible {
+  outline: 2px solid var(--ai-widget-primary);
+  outline-offset: 2px;
+}
+
+.jsec-ai-chat-weather-track {
+  display: flex;
+  gap: 7px;
+  margin-top: 8px;
+  padding-bottom: 5px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scroll-behavior: smooth;
+  scrollbar-width: thin;
+  -webkit-overflow-scrolling: touch;
+}
+
+.jsec-ai-chat-weather-hour {
+  display: grid;
+  flex: 0 0 82px;
+  justify-items: center;
+  gap: 5px;
+  padding: 8px 5px;
+  border: 1px solid var(--ai-widget-border);
+  border-radius: 9px;
+  background: var(--ai-widget-bg);
+  text-align: center;
+  scroll-snap-align: start;
+}
+
+.jsec-ai-chat-weather-hour time,
+.jsec-ai-chat-weather-detail,
+.jsec-ai-chat-weather-condition,
+.jsec-ai-chat-weather-note,
+.jsec-ai-chat-weather-empty {
+  color: var(--ai-widget-sub);
+  font-size: 10px;
+  line-height: 1.4;
+}
+
+.jsec-ai-chat-weather-icon {
+  font-size: 20px;
+}
+
+.jsec-ai-chat-weather-hour strong {
+  font-size: 14px;
+}
+
+.jsec-ai-chat-weather-condition {
+  min-height: 14px;
+}
+
+.jsec-ai-chat-weather-detail {
+  width: 100%;
+  overflow-wrap: anywhere;
+  font-size: 9px;
+}
+
+.jsec-ai-chat-weather-note {
+  display: block;
+  margin-top: 7px;
+  font-size: 9px;
+}
+
+.jsec-ai-chat-weather-empty {
+  margin: 8px 0 0;
+}
+
 .jsec-ai-chat-settings-link {
   display: inline-block;
   margin-top: 8px;
@@ -153,6 +259,12 @@
   font-weight: 750;
   text-decoration: underline;
   text-underline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .jsec-ai-chat-weather-track {
+    scroll-behavior: auto;
+  }
 }
 
 .jsec-ai-chat-pending {

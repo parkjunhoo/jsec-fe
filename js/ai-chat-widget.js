@@ -156,6 +156,114 @@
     messages.scrollTop = messages.scrollHeight;
   }
 
+  function appendWeatherForecast(weather) {
+    const forecastItems = Array.isArray(weather.hourly) ? weather.hourly : [];
+    const message = document.createElement('section');
+    message.className = 'jsec-ai-chat-message jsec-ai-chat-weather';
+    message.setAttribute('aria-label', '시간별 날씨 예보');
+
+    const heading = document.createElement('div');
+    heading.className = 'jsec-ai-chat-weather-heading';
+    const title = document.createElement('strong');
+    title.textContent = `${weather.location || '리조트'} 시간별 날씨`;
+    const controls = document.createElement('div');
+    controls.className = 'jsec-ai-chat-weather-controls';
+    controls.setAttribute('role', 'group');
+    controls.setAttribute('aria-label', '시간별 날씨 이동');
+
+    const track = document.createElement('div');
+    track.className = 'jsec-ai-chat-weather-track';
+    track.setAttribute('aria-label', '한국시간 기준 시간별 예보');
+    const makeControl = (label, direction) => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.setAttribute('aria-label', label);
+      button.textContent = direction < 0 ? '‹' : '›';
+      button.addEventListener('click', () => {
+        const card = track.querySelector('.jsec-ai-chat-weather-hour');
+        const distance = card ? (card.getBoundingClientRect().width + 7) * 3 : track.clientWidth * 0.8;
+        track.scrollBy({
+          left: direction * distance,
+          behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth'
+        });
+      });
+      return button;
+    };
+    controls.append(makeControl('이전 시간별 예보', -1), makeControl('다음 시간별 예보', 1));
+    heading.append(title, controls);
+
+    if (!forecastItems.length) {
+      const empty = document.createElement('p');
+      empty.className = 'jsec-ai-chat-weather-empty';
+      empty.textContent = '시간별 예보가 없습니다.';
+      message.append(heading, empty);
+      messages.append(message);
+      messages.scrollTop = messages.scrollHeight;
+      return;
+    }
+
+    forecastItems.forEach(item => {
+      const card = document.createElement('article');
+      card.className = 'jsec-ai-chat-weather-hour';
+      const date = String(item.date || '');
+      const time = String(item.time || '');
+      const dateLabel = /^\d{8}$/.test(date)
+        ? `${date.slice(0, 4)}-${date.slice(4, 6)}-${date.slice(6, 8)}`
+        : date;
+      const timeLabel = /^\d{4}$/.test(time) ? `${time.slice(0, 2)}:${time.slice(2, 4)}` : item.label || '';
+      const timeElement = document.createElement('time');
+      timeElement.textContent = item.label || timeLabel;
+      if (/^\d{8}$/.test(date) && /^\d{4}$/.test(time)) {
+        timeElement.dateTime = `${dateLabel}T${timeLabel}:00+09:00`;
+        timeElement.setAttribute('aria-label', `${dateLabel} ${timeLabel} 한국시간`);
+      }
+      const icon = document.createElement('span');
+      icon.className = 'jsec-ai-chat-weather-icon';
+      icon.setAttribute('aria-hidden', 'true');
+      icon.textContent = item.icon || '🌥️';
+      const temperature = document.createElement('strong');
+      temperature.textContent = item.temperature == null ? '--' : `${item.temperature}°`;
+      const condition = document.createElement('span');
+      condition.className = 'jsec-ai-chat-weather-condition';
+      condition.textContent = item.condition || '날씨 정보 없음';
+      const precipitation = document.createElement('span');
+      precipitation.className = 'jsec-ai-chat-weather-detail';
+      precipitation.textContent = `강수 ${item.precipitation ?? '--'}`;
+      const probability = document.createElement('span');
+      probability.className = 'jsec-ai-chat-weather-detail';
+      probability.textContent = `확률 ${item.precipitationProbability == null ? '--' : `${item.precipitationProbability}%`}`;
+      card.append(timeElement, icon, temperature, condition, precipitation, probability);
+      track.append(card);
+    });
+
+    const note = document.createElement('small');
+    note.className = 'jsec-ai-chat-weather-note';
+    note.textContent = '기상청 예보 · 한국시간';
+    message.append(heading, track, note);
+    messages.append(message);
+    messages.scrollTop = messages.scrollHeight;
+  }
+
+  function getWeatherToolArguments(args) {
+    if (Number.isFinite(args.latitude) && Number.isFinite(args.longitude)) return args;
+    try {
+      const location = JSON.parse(localStorage.getItem('jsec-weather-location') || 'null');
+      if (Number.isFinite(location?.latitude) && location.latitude >= 32 && location.latitude <= 40
+        && Number.isFinite(location?.longitude) && location.longitude >= 123 && location.longitude <= 133
+        && typeof location.name === 'string' && location.name.trim()) {
+        return {
+          ...args,
+          latitude: location.latitude,
+          longitude: location.longitude,
+          location_name: location.name.slice(0, 100)
+        };
+      }
+    } catch (error) {
+      console.warn('저장된 날씨 위치를 챗봇에서 읽지 못했습니다. 기본 위치를 사용합니다.', error);
+    }
+    return args;
+  }
+
   function updateControls() {
     const blocked = busy || Boolean(pendingCalls);
     input.disabled = blocked || !apiKey;
@@ -655,9 +763,12 @@
   }
 
   async function runMcpTool(functionCall) {
+    const args = functionCall.name === 'get_resort_weather'
+      ? getWeatherToolArguments(functionCall.args || {})
+      : functionCall.args || {};
     const result = await mcpRequest('tools/call', {
       name: functionCall.name,
-      arguments: functionCall.args || {}
+      arguments: args
     });
     const value = parseToolValue(result);
     if (value?.isError) {
@@ -678,6 +789,7 @@
     if (imageBase64) {
       parts.push({ inlineData: { mimeType: value.mimeType || 'image/jpeg', data: imageBase64 } });
     }
+    if (functionCall.name === 'get_resort_weather') appendWeatherForecast(value);
     return parts;
   }
 
