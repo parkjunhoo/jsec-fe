@@ -8,6 +8,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   const current = document.getElementById('homeWeatherCurrent');
   const details = document.getElementById('homeWeatherDetails');
   const forecast = document.getElementById('homeWeatherForecast');
+  const forecastHeading = document.querySelector('.home-weather-forecast-heading');
+  const skeleton = document.getElementById('homeWeatherSkeleton');
   const forecastDateLabel = document.getElementById('homeWeatherForecastDate');
   const forecastPrevious = document.getElementById('homeWeatherForecastPrevious');
   const forecastNext = document.getElementById('homeWeatherForecastNext');
@@ -88,6 +90,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   function renderWeather(weather) {
+    skeleton.hidden = true;
+    current.hidden = false;
+    details.hidden = false;
+    forecast.hidden = false;
+    forecastHeading.hidden = false;
     document.getElementById('homeWeatherTitle').textContent = `${selectedLocation.name} 날씨`;
     current.querySelector('.home-weather-icon').textContent = weather.current.icon || '🌥️';
     current.querySelector('.home-weather-temperature').textContent =
@@ -95,7 +102,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     current.querySelector('.home-weather-condition').textContent = weather.current.condition || '날씨 정보 없음';
     setDetail('습도', formatValue(weather.current.humidity, '%'));
     setDetail('바람', `${formatValue(weather.current.wind)} m/s`);
-    setDetail('강수', formatPrecipitation(weather.current.precipitation));
+    setDetail('강수량', formatPrecipitation(weather.current.precipitation));
     setDetail('강수확률', formatValue(weather.current.precipitationProbability, '%'));
 
     const observedAt = weather.observedAt || '';
@@ -150,6 +157,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     refreshButton.disabled = true;
     widget.setAttribute('aria-busy', 'true');
     errorMessage.textContent = '';
+    skeleton.hidden = false;
+    current.hidden = true;
+    details.hidden = true;
+    forecast.hidden = true;
+    forecastHeading.hidden = true;
     try {
       const { data, error } = await supabaseClient.auth.getSession();
       if (error) throw error;
@@ -177,6 +189,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     } catch (error) {
       if (error.name === 'AbortError' || requestId !== activeRequestId || !weatherExpanded) return;
       console.error('메인 날씨 조회 오류:', error);
+      skeleton.hidden = true;
+      current.hidden = false;
+      details.hidden = false;
+      forecast.hidden = false;
+      forecastHeading.hidden = false;
       errorMessage.textContent = `날씨 정보를 불러오지 못했습니다: ${error.message}`;
     } finally {
       if (requestId === activeRequestId) {

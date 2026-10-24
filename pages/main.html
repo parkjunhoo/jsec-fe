@@ -250,6 +250,55 @@
     .home-weather-location-message { color: var(--muted); }
     .home-weather-error:empty { display: none; }
     .home-weather-source { margin: 9px 0 0; color: var(--muted); font-size: 9px; }
+    .home-weather-header { padding: 4px; border: 1px solid rgba(131, 207, 255, .14); border-radius: 13px; background: rgba(255, 255, 255, .045); }
+    .home-weather-toggle { min-height: 58px; padding: 0 12px; }
+    .home-weather-toggle:hover { background: rgba(131, 207, 255, .08); border-radius: 9px; }
+    .home-weather-toggle:focus-visible { outline-offset: 1px; }
+    .home-weather-title-heading { font-size: 18px; }
+    .home-weather-title-description { margin-top: 6px; font-size: 12px; }
+    .home-weather-toggle-icon { display: grid; width: 34px; height: 34px; place-items: center; border: 1px solid rgba(131, 207, 255, .24); border-radius: 50%; background: rgba(131, 207, 255, .12); font-size: 24px; }
+    .home-weather-action { min-height: 40px; padding: 0 13px; font-size: 13px; }
+    .home-weather-refresh { width: 40px; font-size: 19px; }
+    .home-weather-location-form input { min-height: 43px; font-size: 14px; }
+    .home-weather-location-results button { font-size: 13px; }
+    .home-weather-location-attribution { font-size: 11px; }
+    .home-weather-current { gap: 18px; margin-top: 18px; }
+    .home-weather-icon { font-size: 52px; }
+    .home-weather-temperature { font-size: clamp(42px, 10vw, 58px); }
+    .home-weather-condition { font-size: 15px; }
+    .home-weather-updated { font-size: 12px; }
+    .home-weather-details { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-top: 18px; }
+    .home-weather-detail { min-height: 70px; padding: 12px 13px; }
+    .home-weather-detail span { font-size: 12px; }
+    .home-weather-detail strong { margin-top: 6px; font-size: 18px; }
+    .home-weather-detail.precipitation { border-color: rgba(91, 190, 232, .35); background: rgba(50, 157, 207, .14); }
+    .home-weather-detail.probability { border-color: rgba(241, 190, 91, .42); background: rgba(241, 190, 91, .12); }
+    .home-weather-detail.precipitation strong { color: #8bdcff; }
+    .home-weather-detail.probability strong { color: #ffd889; }
+    .home-weather-forecast-heading { margin-top: 21px; }
+    .home-weather-forecast-heading strong { font-size: 15px; }
+    .home-weather-forecast-date { font-size: 12px; }
+    .home-weather-forecast-controls button { width: 36px; height: 36px; font-size: 22px; }
+    .home-weather-forecast { gap: 9px; margin-top: 10px; }
+    .home-weather-hour { flex-basis: 108px; gap: 7px; padding: 12px 7px; border-radius: 11px; }
+    .home-weather-hour time { font-size: 12px; }
+    .home-weather-hour-icon { font-size: 24px; }
+    .home-weather-hour strong { font-size: 15px; }
+    .home-weather-hour-precipitation, .home-weather-hour-probability { width: 100%; padding: 4px 3px; border-radius: 5px; font-size: 11px; line-height: 1.35; }
+    .home-weather-hour-precipitation { background: rgba(50, 157, 207, .14); color: #8bdcff; }
+    .home-weather-hour-probability { background: rgba(241, 190, 91, .12); color: #ffd889; }
+    .home-weather-error { font-size: 13px; }
+    .home-weather-source { font-size: 11px; }
+    .home-weather-skeleton { display: grid; gap: 12px; margin-top: 18px; }
+    .home-weather-skeleton[hidden] { display: none; }
+    .home-weather-skeleton-block { height: 18px; border-radius: 8px; background: linear-gradient(105deg, rgba(255,255,255,.07) 30%, rgba(255,255,255,.18) 45%, rgba(255,255,255,.07) 60%); background-size: 220% 100%; animation: home-weather-shimmer 1.25s linear infinite; }
+    .home-weather-skeleton-block.large { width: 46%; height: 70px; }
+    .home-weather-skeleton-block.medium { width: 72%; }
+    .home-weather-skeleton-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+    .home-weather-skeleton-grid .home-weather-skeleton-block { height: 70px; }
+    @keyframes home-weather-shimmer { to { background-position-x: -220%; } }
+    .home-weather[aria-busy="true"] .home-weather-action { pointer-events: none; }
+    @media (prefers-reduced-motion: reduce) { .home-weather-skeleton-block { animation: none; } }
     html[data-theme="light"] .home-weather {
       border-color: #dce6df;
       background: linear-gradient(145deg, #ffffff, #f1f7f3);
@@ -739,6 +788,18 @@
     @media (prefers-reduced-motion: reduce) {
       *, *::before, *::after { scroll-behavior: auto !important; transition-duration: 0.01ms !important; }
     }
+    .service-group-heading h3 { font-size: 16px; }
+    .service-group-heading p { font-size: 13px; }
+    .section-heading h2 { font-size: 21px; }
+    .section-heading p { font-size: 13px; }
+    .menu-title { font-size: 17px; }
+    .menu-desc { font-size: 13px; }
+    .personal-heading h2 { font-size: 21px; }
+    .personal-heading p { font-size: 14px; }
+    .personal-tab { font-size: 13px; }
+    .personal-row-title, .personal-row-value { font-size: 14px; }
+    .personal-row-detail { font-size: 13px; }
+    .personal-empty, .personal-error, .personal-annual-error { font-size: 14px; }
   </style>
   <link rel="stylesheet" href="/css/app-theme.css">
 </head>
@@ -875,7 +936,7 @@
             <span class="home-weather-title-heading" id="homeWeatherTitle">지산 리조트 날씨</span>
             <span class="home-weather-title-description">날씨 정보를 보려면 눌러서 펼치세요</span>
           </span>
-          <span class="home-weather-toggle-icon" aria-hidden="true">⌄</span>
+            <span class="home-weather-toggle-icon" aria-hidden="true">⌄</span>
         </button>
       </header>
       <div id="homeWeatherContent" hidden>
@@ -891,6 +952,11 @@
         <ul class="home-weather-location-results" id="homeWeatherLocationResults" aria-label="날씨 위치 검색 결과"></ul>
         <p class="home-weather-error home-weather-location-message" id="homeWeatherLocationMessage" role="status"></p>
         <p class="home-weather-location-attribution">장소 검색: 카카오맵</p>
+        <div class="home-weather-skeleton" id="homeWeatherSkeleton" role="status" aria-label="날씨 정보를 불러오는 중" hidden>
+          <div class="home-weather-skeleton-block large"></div>
+          <div class="home-weather-skeleton-block medium"></div>
+          <div class="home-weather-skeleton-grid"><div class="home-weather-skeleton-block"></div><div class="home-weather-skeleton-block"></div></div>
+        </div>
         <div class="home-weather-current" id="homeWeatherCurrent" aria-live="polite">
           <span class="home-weather-icon" aria-hidden="true">⛅</span>
           <div><div class="home-weather-temperature">--°</div><div class="home-weather-condition">펼치면 날씨 정보를 불러옵니다.</div></div>
@@ -899,8 +965,8 @@
         <div class="home-weather-details" id="homeWeatherDetails">
           <div class="home-weather-detail"><span>습도</span><strong>--</strong></div>
           <div class="home-weather-detail"><span>바람</span><strong>--</strong></div>
-          <div class="home-weather-detail"><span>현재 강수량</span><strong>--</strong></div>
-          <div class="home-weather-detail"><span>강수확률</span><strong>--</strong></div>
+          <div class="home-weather-detail precipitation"><span>강수량</span><strong>--</strong></div>
+          <div class="home-weather-detail probability"><span>강수확률</span><strong>--</strong></div>
         </div>
         <div class="home-weather-forecast-heading">
           <strong>시간별 날씨</strong>
