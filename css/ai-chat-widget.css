@@ -133,6 +133,15 @@
   color: var(--danger, #ef6262);
 }
 
+.jsec-ai-chat-settings-link {
+  display: inline-block;
+  margin-top: 8px;
+  color: var(--primary, #197254);
+  font-weight: 750;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
 .jsec-ai-chat-pending {
   max-width: 95%;
   padding: 12px;

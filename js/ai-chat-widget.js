@@ -76,7 +76,12 @@
 
   function renderNoKeyMessage() {
     messages.replaceChildren();
-    appendMessage('설정에서 Gemini API 키를 먼저 등록해 주세요.');
+    const message = appendMessage('Gemini API 키가 등록되어 있지 않습니다. 설정에서 API 키를 등록해 주세요.');
+    const settingsLink = document.createElement('a');
+    settingsLink.className = 'jsec-ai-chat-settings-link';
+    settingsLink.href = '/pages/settings.html#geminiApiKey';
+    settingsLink.textContent = '설정에서 API 키 등록하기';
+    message.append(document.createElement('br'), settingsLink);
     form.hidden = true;
   }
 
