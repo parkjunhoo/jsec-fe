@@ -318,6 +318,7 @@
 
   async function loadTools() {
     if (tools.length) return;
+    statusText.textContent = '업무 도구에 연결하고 있습니다.';
     const initialized = await mcpRequest('initialize', {
       protocolVersion: MCP_VERSION,
       capabilities: {},
@@ -348,6 +349,7 @@
 
   async function callGemini() {
     if (!geminiModels.length) {
+      statusText.textContent = '사용 가능한 Gemini 모델을 확인하고 있습니다.';
       const modelsResponse = await fetch('https://generativelanguage.googleapis.com/v1beta/models?pageSize=1000', {
         headers: { 'x-goog-api-key': apiKey },
         ...(activeController ? { signal: activeController.signal } : {})
@@ -377,6 +379,9 @@
     const modelOrder = [geminiModel, ...geminiModels.filter(model => model !== geminiModel)];
     let lastOverloadMessage = '';
     for (const model of modelOrder) {
+      if (!statusText.textContent.includes('다시 시도')) {
+        statusText.textContent = 'Gemini가 답변을 생성하고 있습니다.';
+      }
       const response = await fetch(
         `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,
         {
@@ -578,12 +583,12 @@
       && conversation.at(-1)?.parts?.some(part => typeof part.text === 'string');
     let timedOut = false;
     let timeoutId;
-    const timeoutPromise = new Promise((resolve, reject) => {
+    const timeoutPromise = new Promise((_, reject) => {
       timeoutId = window.setTimeout(() => {
         timedOut = true;
         controller.abort();
-        reject(new Error('응답 시간이 초과되었습니다.'));
-      }, 45000);
+        reject(new Error('답변 대기 시간이 초과되었습니다.'));
+      }, 20000);
     });
     updateControls();
     try {
@@ -631,7 +636,7 @@
       if (controller.signal.aborted) {
         if (timedOut) {
           console.error('AI 챗봇 요청 시간 초과:', error);
-          appendMessage('응답 시간이 초과되었습니다. 잠시 후 다시 시도해 주세요.', 'assistant', true);
+          appendMessage('20초 안에 답변을 받지 못했습니다. Gemini 사용량이 많을 수 있으니 잠시 후 다시 시도해 주세요.', 'assistant', true);
         } else {
           appendMessage('답변 생성을 중지했습니다.');
         }
