@@ -10,6 +10,7 @@
     'create_my_days_off',
     'update_my_day_off',
     'delete_my_day_off',
+    'delete_my_days_off',
     'create_employee_days_off',
     'update_employee_day_off',
     'delete_employee_day_off'
@@ -308,6 +309,32 @@
     return { dates };
   }
 
+  function parseRandomLeaveRequest(text) {
+    if (!/(휴무|휴가|쉬는\s*날)/.test(text)
+      || !/(등록|추가|잡아|신청|넣어)/.test(text)
+      || !/(랜덤|무작위|임의)/.test(text)
+      || !/골프장/.test(text)
+      || !/야간/.test(text)
+      || !/황치웅/.test(text)) return null;
+
+    const monthMatch = text.match(/(?:(20\d{2})\s*년\s*)?(1[0-2]|[1-9])\s*월/);
+    const countMatch = text.match(/(\d+)\s*개/);
+    if (!monthMatch || !countMatch) {
+      return { error: '연도와 월, 필요한 휴무 개수를 함께 알려 주세요.' };
+    }
+    const today = getTodayKst();
+    const [currentYear, currentMonth] = today.split('-').map(Number);
+    const month = Number(monthMatch[2]);
+    const year = monthMatch[1]
+      ? Number(monthMatch[1])
+      : month < currentMonth ? currentYear + 1 : currentYear;
+    const count = Number(countMatch[1]);
+    if (count < 1 || count > 31) {
+      return { error: '한 번에 1~31일의 휴무만 추천할 수 있습니다.' };
+    }
+    return { year, month, count, excludeName: '황치웅' };
+  }
+
   function toGeminiSchema(schema) {
     const allowedKeys = ['type', 'description', 'enum', 'required', 'properties', 'items', 'format'];
     return Object.fromEntries(Object.entries(schema || {})
@@ -366,7 +393,7 @@
       '관리자 도구에 list_employees가 있으면 "회사원 목록", "직원 명단" 요청에 반드시 해당 도구를 사용한다. search_employees는 이름으로 일부 직원 검색할 때만 사용한다.',
       '날씨·차량·연락망·식단 이미지 등 요청에 맞는 도구를 사용한다. 도구 오류는 숨기지 말고 간단히 알린다.',
       '휴무 날짜는 자연어를 해석한다. 월이 없으면 아래 오늘 기준 가장 가까운 미래 날짜를 사용하고, 불명확한 경우에만 한 번 묻는다.',
-      '등록·수정·삭제는 도구를 호출해 화면의 확인 버튼으로 한 번 승인받는다. 채팅으로 추가 확인을 요구하지 않는다.',
+      '등록·수정·삭제는 도구를 호출해 화면의 확인 버튼으로 한 번 승인받는다. 여러 일정 삭제는 기간 삭제 도구를 사용한다. 채팅으로 추가 확인을 요구하지 않는다.',
       '식단 이미지는 이미지에서 확인되는 메뉴만 답한다.',
       `오늘(대한민국 서울 기준)은 ${getTodayKst()}이다.`
     ].join('\n');
@@ -383,11 +410,69 @@
     return history.slice(userTurnStarts[userTurnStarts.length - maxUserTurns]);
   }
 
+  function getGroqToolsForRequest(text) {
+    const query = text.toLowerCase();
+    const names = new Set();
+    const add = (...toolNames) => toolNames.forEach(name => names.add(name));
+    const isAdminRequest = /(직원|사원|회사원|다른\s*사람|다른\s*직원|(?:씨|님)\b)/.test(query);
+    const isDelete = /(삭제|취소|지워)/.test(query);
+    const isBulkDelete = isDelete && /(다\s*삭제|전부|전체|모두|한꺼번에|한\s*달|한달)/.test(query);
+    const isUpdate = /(수정|변경)/.test(query);
+    const isMutation = /(등록|추가|신청|잡아|넣어|수정|변경|삭제|취소|지워)/.test(query);
+
+    if (/(날씨|기온|강수|비\s*(?:와|오|오나)|눈\s*(?:와|오|오나))/.test(query)) {
+      add('get_resort_weather');
+    }
+    if (/(차량|자동차|차량번호|차번호|번호판)/.test(query)) add('search_vehicles');
+    if (/(연락처|전화번호|연락망|전화|내선번호)/.test(query)) add('search_phonebook');
+    if (/(식단표|식단|메뉴표|점심\s*메뉴|저녁\s*메뉴)/.test(query)) add('get_weekly_meal_plan');
+    if (/(근태|출근|퇴근|출퇴근)/.test(query)) {
+      add(isAdminRequest ? 'get_employee_attendance' : 'get_my_attendance');
+    }
+    if (/(연차|잔여\s*일수|남은\s*휴가)/.test(query)) add('get_my_annual_leave_balance');
+    if (/(휴무|휴가|쉬는\s*날)/.test(query)) {
+      if (isAdminRequest) {
+        if (isDelete) add('delete_employee_day_off');
+        else if (isUpdate) add('update_employee_day_off');
+        else if (isMutation) add('create_employee_days_off');
+        else add('list_employee_days_off');
+      } else if (isBulkDelete) {
+        add('delete_my_days_off');
+      } else if (isDelete) {
+        add('delete_my_day_off');
+      } else if (isUpdate) {
+        add('update_my_day_off');
+      } else if (isMutation) {
+        add('create_my_days_off');
+      } else {
+        add('list_my_days_off', 'list_team_days_off');
+      }
+    }
+    if (/(직원|사원|회사원|직원들|회사\s*사람)/.test(query)) {
+      if (/(목록|명단|리스트|전체|모두)/.test(query)) add('list_employees');
+      else add('search_employees');
+    }
+    return tools.filter(tool => names.has(tool.name));
+  }
+
+  function compactGroqSchema(schema) {
+    if (!schema || typeof schema !== 'object' || Array.isArray(schema)) return schema;
+    return Object.fromEntries(Object.entries(schema)
+      .filter(([key]) => key !== 'description' && key !== 'minLength' && key !== 'maxLength'
+        && key !== 'minItems' && key !== 'maxItems')
+      .map(([key, value]) => [key, key === 'properties'
+        ? Object.fromEntries(Object.entries(value).map(([name, property]) => [name, compactGroqSchema(property)]))
+        : key === 'items' ? compactGroqSchema(value) : value]));
+  }
+
   function toGroqMessages(history) {
-    const messages = [{ role: 'system', content: getSystemPrompt() }];
+    const messages = [{
+      role: 'system',
+      content: `지산리조트 보안팀 챗봇. 한국어로 짧게 답한다. 일반 질문에도 답한다. 내부 정보는 도구 결과만 사용한다. 관리자 전용 도구가 없으면 다른 직원 개인정보·업무를 조회하지 않는다. 변경은 확인 버튼으로 승인한다. 오늘 서울 날짜: ${getTodayKst()}.`
+    }];
     const pendingToolIds = new Map();
     let generatedToolId = 0;
-    for (const item of getRecentConversation(history)) {
+    for (const item of getRecentConversation(history, 1)) {
       if (item.role === 'model') {
         const calls = item.parts.filter(part => part.functionCall?.name).map(part => {
           const call = part.functionCall;
@@ -449,6 +534,11 @@
 
   async function callGroq() {
     statusText.textContent = 'Groq에서 답변을 생성하고 있습니다.';
+    const requestHistory = getRecentConversation(conversation, 1);
+    const latestUserText = [...requestHistory].reverse()
+      .find(item => item.role === 'user' && item.parts?.some(part => typeof part.text === 'string'))
+      ?.parts.filter(part => typeof part.text === 'string').map(part => part.text).join('\n') || '';
+    const relevantTools = getGroqToolsForRequest(latestUserText);
     const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -458,16 +548,16 @@
       ...(activeController ? { signal: activeController.signal } : {}),
       body: JSON.stringify({
         model: GROQ_MODEL,
-        messages: toGroqMessages(conversation),
-        tools: tools.map(tool => ({
+        messages: toGroqMessages(requestHistory),
+        ...(relevantTools.length ? { tools: relevantTools.map(tool => ({
           type: 'function',
           function: {
             name: tool.name,
-            description: tool.description,
-            parameters: tool.inputSchema
+            description: tool.title || tool.name,
+            parameters: compactGroqSchema(tool.inputSchema)
           }
-        })),
-        tool_choice: 'auto',
+        })) } : {}),
+        ...(relevantTools.length ? { tool_choice: 'auto' } : {}),
         temperature: 0.2,
         max_completion_tokens: 1000
       })
@@ -639,12 +729,15 @@
   function describeMutation(call) {
     const args = call.args || {};
     const target = args.employee_name || '본인';
-    const dates = args.dates || [args.date || args.old_date].filter(Boolean);
+    const dates = args.dates || [args.start && args.end
+      ? `${args.start} ~ ${args.end}`
+      : args.date || args.old_date].filter(Boolean);
     const dateLabel = dates.map(displayDate).join(', ');
     const labels = {
       create_my_days_off: '휴무 등록',
       update_my_day_off: '휴무 수정',
       delete_my_day_off: '휴무 삭제',
+      delete_my_days_off: '기간 내 휴무 일괄 삭제',
       create_employee_days_off: '직원 휴무 등록',
       update_employee_day_off: '직원 휴무 수정',
       delete_employee_day_off: '직원 휴무 삭제'
@@ -841,7 +934,8 @@
   }
 
   function isTeamLeaveQuery(text) {
-    return /(휴무자|휴무.*누구|누구.*휴무|쉬는\s*사람|누가\s*쉬)/.test(text);
+    return /(휴무자|휴무.*누구|누구.*휴무|쉬는\s*사람|누가\s*쉬)/.test(text)
+      && !/(등록|추가|잡아|신청|넣어|예약|수정|변경|삭제|취소)/.test(text);
   }
 
   function isMealPlanQuery(text) {
@@ -1069,6 +1163,66 @@
     }
   }
 
+  async function runRandomLeaveSuggestion(requestDetails) {
+    busy = true;
+    const controller = new AbortController();
+    activeController = controller;
+    let timedOut = false;
+    let timeoutId;
+    const timeoutPromise = new Promise((_, reject) => {
+      timeoutId = window.setTimeout(() => {
+        timedOut = true;
+        controller.abort();
+        reject(new Error('휴무 후보 날짜 조회 시간이 초과되었습니다.'));
+      }, 30000);
+    });
+    updateControls();
+    try {
+      await Promise.race([
+        (async () => {
+          const result = await mcpRequest('tools/call', {
+            name: 'suggest_my_days_off',
+            arguments: {
+              year: requestDetails.year,
+              month: requestDetails.month,
+              count: requestDetails.count,
+              exclude_name: requestDetails.excludeName
+            }
+          });
+          const suggestion = parseToolValue(result);
+          if (suggestion?.isError) {
+            throw new Error(typeof suggestion.error === 'string'
+              ? suggestion.error
+              : JSON.stringify(suggestion.error));
+          }
+          if (!Array.isArray(suggestion?.dates) || suggestion.dates.length !== requestDetails.count) {
+            throw new Error('조건에 맞는 휴무 후보 날짜를 확인할 수 없습니다.');
+          }
+          appendMessage(`${suggestion.month} 골프장 야간 근무자와 ${requestDetails.excludeName}의 휴무, 본인 기존 휴무를 피한 날짜 ${suggestion.dates.length}개를 골랐습니다. 확인 후 등록해 주세요.`);
+          showConfirmation([{
+            name: 'create_my_days_off',
+            args: { dates: suggestion.dates },
+            id: `random-${Date.now()}`
+          }], true);
+        })(),
+        timeoutPromise
+      ]);
+    } catch (error) {
+      console.error('랜덤 휴무 후보 조회 실패:', error);
+      const message = controller.signal.aborted
+        ? timedOut
+          ? '휴무 후보 날짜 조회 시간이 초과되었습니다. 잠시 후 다시 시도해 주세요.'
+          : '휴무 후보 날짜 조회를 중지했습니다.'
+        : error.message || '휴무 후보 날짜를 조회하지 못했습니다.';
+      appendMessage(message, 'assistant', true);
+    } finally {
+      window.clearTimeout(timeoutId);
+      if (activeController === controller) activeController = null;
+      busy = false;
+      updateControls();
+    }
+  }
+
   function formatWeatherAnswer(weather) {
     const current = weather.current || {};
     const details = [
@@ -1206,6 +1360,16 @@
     const quickReply = getQuickReply(text);
     if (quickReply) {
       appendMessage(quickReply);
+      return;
+    }
+
+    const randomLeaveRequest = parseRandomLeaveRequest(text);
+    if (randomLeaveRequest?.error) {
+      appendMessage(randomLeaveRequest.error, 'assistant', true);
+      return;
+    }
+    if (randomLeaveRequest) {
+      await runRandomLeaveSuggestion(randomLeaveRequest);
       return;
     }
 
