@@ -892,15 +892,14 @@ document.addEventListener('DOMContentLoaded', async () => {
           location_id: createSite.value,
           check_in_at: document.getElementById('attendanceCreateCheckIn').value,
           check_out_at: document.getElementById('attendanceCreateCheckOut').value || null,
-          note: document.getElementById('attendanceCreateNote').value,
-          reason: document.getElementById('attendanceCreateReason').value
+          note: document.getElementById('attendanceCreateNote').value
         })
       });
       createDialog.close();
       userFilter.value = userId;
       monthInput.value = document.getElementById('attendanceCreateCheckIn').value.slice(0, 7);
       await loadRecords();
-      historyMessage.textContent = '관리자 근태 기록을 추가했습니다. 추가 사유와 변경 내용은 감사 기록에 보관되었습니다.';
+      historyMessage.textContent = '관리자 근태 기록을 추가했습니다.';
       historyMessage.style.color = 'var(--primary)';
       if (userId === currentUserId) await loadTodayRecord();
     } catch (error) {
