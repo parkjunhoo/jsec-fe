@@ -1,6 +1,5 @@
 document.addEventListener('DOMContentLoaded', async () => {
   const API_URL = 'https://jsec-serverless.adobephotoshop.workers.dev/api/attendance';
-  const noteInput = document.getElementById('attendanceNote');
   const todayStatus = document.getElementById('attendanceTodayStatus');
   const punchMessage = document.getElementById('attendancePunchMessage');
   const punchButton = document.getElementById('attendancePunchToggle');
@@ -24,6 +23,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   const recordsBody = document.getElementById('attendanceRecords');
   const historyMessage = document.getElementById('attendanceHistoryMessage');
   const siteSettings = document.getElementById('attendanceSiteSettings');
+  const attendanceAdminPanel = document.getElementById('attendanceAdminPanel');
+  const attendanceAdminTab = document.getElementById('attendanceAdminTab');
   const siteFields = document.getElementById('attendanceSiteFields');
   const siteForm = document.getElementById('attendanceSiteForm');
   const siteMessage = document.getElementById('attendanceSiteMessage');
@@ -277,7 +278,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   function setBusy(nextBusy) {
     busy = nextBusy;
     punchButton.disabled = busy;
-    noteInput.disabled = busy;
   }
 
   function renderSites() {
@@ -683,8 +683,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         method: 'POST',
         body: JSON.stringify({
           ...position,
-          device: attendanceDevice,
-          note: noteInput.value.trim()
+          device: attendanceDevice
         })
       });
       punchMessage.textContent = action === 'check-in' ? '출근이 기록되었습니다.' : '퇴근이 기록되었습니다.';
@@ -815,7 +814,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     profileName.textContent = profile.name || profile.username || '사용자';
     profileMeta.textContent = [profile.job_title, profile.work_location].filter(Boolean).join(' · ') || '근무지 미등록';
     isAdmin = profile.role === 'admin';
-    siteSettings.hidden = !isAdmin;
+    document.body.classList.toggle('attendance-admin-available', isAdmin);
+    attendanceAdminTab.hidden = !isAdmin;
+    attendanceAdminPanel.hidden = !isAdmin;
+    siteSettings.hidden = false;
     userFilterField.hidden = !isAdmin;
     await loadSites();
     if (isAdmin) {
@@ -1061,10 +1063,14 @@ document.addEventListener('DOMContentLoaded', async () => {
   const attendanceViewButtons = [...document.querySelectorAll('[data-attendance-view]')];
   function showAttendanceView(view) {
     const isHistory = view === 'history';
-    attendanceHomePanel.hidden = isHistory;
+    const isAdminView = view === 'admin';
+    document.body.classList.toggle('attendance-home-active', view === 'home');
+    attendanceHomePanel.hidden = isHistory || isAdminView;
     attendanceHistoryPanel.hidden = !isHistory;
+    attendanceAdminPanel.hidden = !isAdminView;
     attendanceViewButtons.forEach(button => button.setAttribute('aria-selected', String(button.dataset.attendanceView === view)));
-    if (isHistory) window.scrollTo({ top: 0, behavior: 'smooth' });
+    if (isHistory || isAdminView) window.scrollTo({ top: 0, behavior: 'smooth' });
   }
   attendanceViewButtons.forEach(button => button.addEventListener('click', () => showAttendanceView(button.dataset.attendanceView)));
+  showAttendanceView('home');
 });

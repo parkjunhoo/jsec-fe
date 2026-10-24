@@ -23,6 +23,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   const errorMessage = document.getElementById('homeWeatherError');
   const source = document.getElementById('homeWeatherSource');
   const updated = document.getElementById('homeWeatherUpdated');
+  const precipitationMeter = document.getElementById('homeWeatherPrecipitationMeter');
+  const probabilityMeter = document.getElementById('homeWeatherProbabilityMeter');
   const locationStorageKey = 'jsec-weather-location';
   const defaultLocation = { name: '지산컨트리클럽', latitude: 37.2137, longitude: 127.34099 };
   let selectedLocation = defaultLocation;
@@ -62,6 +64,23 @@ document.addEventListener('DOMContentLoaded', async () => {
       return amount === 0 ? '강수 없음' : `${text} mm`;
     }
     return text.replace(/\s*mm\b/i, ' mm').replace(/\s+/g, ' ').trim();
+  }
+
+  function getMeasurementValue(value) {
+    const match = String(value ?? '').match(/\d+(?:\.\d+)?/);
+    return match ? Number(match[0]) : 0;
+  }
+
+  function getMeterPercent(value, maximum) {
+    const number = Number(value);
+    if (!Number.isFinite(number) || number <= 0) return 0;
+    return Math.min(100, Math.round(number / maximum * 100));
+  }
+
+  function setMeter(element, value, maximum) {
+    if (!element) return;
+    element.style.width = `${getMeterPercent(value, maximum)}%`;
+    element.setAttribute('aria-valuenow', String(Math.max(0, Number(value) || 0)));
   }
 
   function formatForecastDate(value) {
@@ -104,6 +123,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     setDetail('바람', `${formatValue(weather.current.wind)} m/s`);
     setDetail('강수량', formatPrecipitation(weather.current.precipitation));
     setDetail('강수확률', formatValue(weather.current.precipitationProbability, '%'));
+    setMeter(precipitationMeter, getMeasurementValue(weather.current.precipitation), 10);
+    setMeter(probabilityMeter, Number(weather.current.precipitationProbability), 100);
 
     const observedAt = weather.observedAt || '';
     updated.textContent = observedAt.length >= 13
@@ -140,7 +161,21 @@ document.addEventListener('DOMContentLoaded', async () => {
         const probability = document.createElement('span');
         probability.className = 'home-weather-hour-probability';
         probability.textContent = `확률 ${formatValue(item.precipitationProbability, '%')}`;
-        hour.append(time, icon, temperature, condition, precipitation, probability);
+        const precipitationMeter = document.createElement('span');
+        precipitationMeter.className = 'home-weather-hour-meter';
+        precipitationMeter.setAttribute('aria-hidden', 'true');
+        const precipitationFill = document.createElement('span');
+        precipitationFill.className = 'home-weather-hour-meter-fill precipitation';
+        precipitationFill.style.width = `${getMeterPercent(getMeasurementValue(item.precipitation), 10)}%`;
+        precipitationMeter.append(precipitationFill);
+        const probabilityMeter = document.createElement('span');
+        probabilityMeter.className = 'home-weather-hour-meter';
+        probabilityMeter.setAttribute('aria-hidden', 'true');
+        const probabilityFill = document.createElement('span');
+        probabilityFill.className = 'home-weather-hour-meter-fill probability';
+        probabilityFill.style.width = `${getMeterPercent(item.precipitationProbability, 100)}%`;
+        probabilityMeter.append(probabilityFill);
+        hour.append(time, icon, temperature, condition, precipitation, precipitationMeter, probability, probabilityMeter);
         forecast.append(hour);
       });
       updateForecastDate();

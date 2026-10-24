@@ -275,6 +275,11 @@
     .home-weather-detail.probability { border-color: rgba(241, 190, 91, .42); background: rgba(241, 190, 91, .12); }
     .home-weather-detail.precipitation strong { color: #8bdcff; }
     .home-weather-detail.probability strong { color: #ffd889; }
+    .home-weather-detail-meter { height: 7px; margin-top: 10px; overflow: hidden; border-radius: 99px; background: rgba(255, 255, 255, .12); }
+    .home-weather-detail-meter-fill { display: block; width: 0; height: 100%; border-radius: inherit; transition: width 350ms ease; }
+    .home-weather-detail.precipitation .home-weather-detail-meter-fill { background: linear-gradient(90deg, #48b8e6, #9be8ff); }
+    .home-weather-detail.probability .home-weather-detail-meter-fill { background: linear-gradient(90deg, #e8a93e, #ffe39a); }
+    .home-weather-detail-meter-label { display: block; margin-top: 5px; color: rgba(255, 255, 255, .58); font-size: 10px; }
     .home-weather-forecast-heading { margin-top: 21px; }
     .home-weather-forecast-heading strong { font-size: 15px; }
     .home-weather-forecast-date { font-size: 12px; }
@@ -287,6 +292,10 @@
     .home-weather-hour-precipitation, .home-weather-hour-probability { width: 100%; padding: 4px 3px; border-radius: 5px; font-size: 11px; line-height: 1.35; }
     .home-weather-hour-precipitation { background: rgba(50, 157, 207, .14); color: #8bdcff; }
     .home-weather-hour-probability { background: rgba(241, 190, 91, .12); color: #ffd889; }
+    .home-weather-hour-meter { width: 100%; height: 5px; margin-top: -3px; overflow: hidden; border-radius: 99px; background: rgba(255, 255, 255, .1); }
+    .home-weather-hour-meter-fill { display: block; width: 0; height: 100%; border-radius: inherit; }
+    .home-weather-hour-meter-fill.precipitation { background: #5cc9ed; }
+    .home-weather-hour-meter-fill.probability { background: #f5c45c; }
     .home-weather-error { font-size: 13px; }
     .home-weather-source { font-size: 11px; }
     .home-weather-skeleton { display: grid; gap: 12px; margin-top: 18px; }
@@ -965,8 +974,8 @@
         <div class="home-weather-details" id="homeWeatherDetails">
           <div class="home-weather-detail"><span>습도</span><strong>--</strong></div>
           <div class="home-weather-detail"><span>바람</span><strong>--</strong></div>
-          <div class="home-weather-detail precipitation"><span>강수량</span><strong>--</strong></div>
-          <div class="home-weather-detail probability"><span>강수확률</span><strong>--</strong></div>
+          <div class="home-weather-detail precipitation"><span>강수량</span><strong>--</strong><div class="home-weather-detail-meter" aria-hidden="true"><span class="home-weather-detail-meter-fill" id="homeWeatherPrecipitationMeter"></span></div><small class="home-weather-detail-meter-label">0~10mm 기준</small></div>
+          <div class="home-weather-detail probability"><span>강수확률</span><strong>--</strong><div class="home-weather-detail-meter" aria-hidden="true"><span class="home-weather-detail-meter-fill" id="homeWeatherProbabilityMeter"></span></div><small class="home-weather-detail-meter-label">확률 0~100%</small></div>
         </div>
         <div class="home-weather-forecast-heading">
           <strong>시간별 날씨</strong>
