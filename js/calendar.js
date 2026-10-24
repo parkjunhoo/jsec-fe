@@ -52,6 +52,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const dateDetailsTitle = document.getElementById('dateDetailsTitle');
   const dateDetailsList = document.getElementById('dateDetailsList');
   const closeDateDetailsBtn = document.getElementById('closeDateDetailsBtn');
+  const addVacationFromDetailsBtn = document.getElementById('addVacationFromDetailsBtn');
   const addAllMonthEventsBtn = document.getElementById('addAllMonthEventsBtn');
   const openModalBtn = document.getElementById('openModalBtn');
   const closeModalBtn = document.getElementById('closeModalBtn');
@@ -632,6 +633,9 @@ document.addEventListener('DOMContentLoaded', async () => {
       : '<div class="date-details-empty">등록된 휴가나 메모가 없습니다.</div>';
     dateDetailsModal.classList.add('active');
     dateDetailsModal.setAttribute('aria-hidden', 'false');
+    if (addVacationFromDetailsBtn) {
+      addVacationFromDetailsBtn.hidden = userRole === 'guest' || userRole === 'monitor';
+    }
   }
 
   async function deleteVacationFromDetails(vacation) {
@@ -919,6 +923,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (dateDetailsModal) {
     dateDetailsModal.addEventListener('click', event => {
       if (event.target === dateDetailsModal) closeDateDetails();
+    });
+  }
+  if (addVacationFromDetailsBtn) {
+    addVacationFromDetailsBtn.addEventListener('click', () => {
+      const date = dateDetailsModal?.dataset.date || '';
+      closeDateDetails();
+      openAddModal(date);
     });
   }
   if (dateDetailsList) {
@@ -1780,57 +1791,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       const dateStr = cell.getAttribute('data-date');
       if (!dateStr) return;
 
-      let longPressTimer;
-      let longPressTriggered = false;
-      let pointerStartX = 0;
-      let pointerStartY = 0;
-
-      function cancelLongPress() {
-        window.clearTimeout(longPressTimer);
-      }
-
-      cell.addEventListener('pointerdown', event => {
-        if (event.pointerType === 'mouse' && event.button !== 0) return;
-        longPressTriggered = false;
-        pointerStartX = event.clientX;
-        pointerStartY = event.clientY;
-        cancelLongPress();
-        longPressTimer = window.setTimeout(() => {
-          longPressTriggered = true;
-          openDateDetails(dateStr);
-        }, 550);
-      });
-      cell.addEventListener('pointermove', event => {
-        if (Math.abs(event.clientX - pointerStartX) > 12 || Math.abs(event.clientY - pointerStartY) > 12) {
-          cancelLongPress();
-        }
-      });
-      cell.addEventListener('pointerup', cancelLongPress);
-      cell.addEventListener('pointercancel', () => {
-        cancelLongPress();
-        longPressTriggered = false;
-      });
-      cell.addEventListener('pointerleave', cancelLongPress);
-
-      cell.addEventListener('click', (e) => {
-        if (longPressTriggered) {
-          longPressTriggered = false;
-          e.preventDefault();
-          return;
-        }
-        if (e.target.closest('.calendar-note-indicator, .calendar-note-text')) {
-          openCalendarNoteModal(dateStr);
-          return;
-        }
-        const pill = e.target.closest('.event-pill');
-        if (pill) {
-          const evId = pill.getAttribute('data-id');
-          const targetEv = allVacations.find(v => v.id == evId);
-          if (targetEv) openEditModal(targetEv);
-          return;
-        }
-        openAddModal(dateStr);
-      });
+      cell.addEventListener('click', () => openDateDetails(dateStr));
     });
   }
 

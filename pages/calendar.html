@@ -510,6 +510,8 @@
     .date-detail-meta, .date-detail-memo, .date-detail-note { margin-top: 6px; color: var(--text-sub); font-size: 13px; line-height: 1.5; overflow-wrap: anywhere; white-space: pre-wrap; }
     .date-detail-actions { display: flex; flex: 0 0 auto; gap: 6px; }
     .date-detail-action { min-height: 32px; padding: 0 10px; border: 1px solid var(--app-border); border-radius: 7px; background: var(--app-surface); color: var(--text-main); font-size: 12px; font-weight: 650; cursor: pointer; }
+    .date-details-footer { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--app-border); }
+    .date-details-footer .date-detail-action.add { width: 100%; min-height: 42px; border-color: transparent; border-radius: 10px; background: var(--primary); color: #fff; font-size: 13px; font-weight: 750; }
     .date-detail-action.delete { border-color: rgba(239, 133, 133, 0.38); color: var(--danger); }
     .date-details-empty { padding: 20px 12px; color: var(--text-sub); font-size: 13px; text-align: center; }
     .calendar-cell { -webkit-touch-callout: none; touch-action: pan-y; }
@@ -641,6 +643,9 @@
         <button class="btn-close-modal" id="closeDateDetailsBtn" type="button" aria-label="닫기">&times;</button>
       </div>
       <div class="date-details-list" id="dateDetailsList"></div>
+      <div class="date-details-footer">
+        <button class="date-detail-action add" id="addVacationFromDetailsBtn" type="button">+ 이 날짜에 휴무 등록</button>
+      </div>
     </section>
   </div>
 
