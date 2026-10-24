@@ -221,7 +221,9 @@
     .attendance-history-nav:not(.attendance-admin-toolbar) { grid-template-columns: 44px minmax(0, 1fr) 44px 44px; align-items: center; gap: 10px; padding: 14px; }
     .attendance-history-nav:not(.attendance-admin-toolbar) .attendance-button { width: 44px; height: 44px; padding: 0; border: 0; border-radius: 50%; background: #eef1f5; color: #59616d; font-size: 23px; }
     .attendance-history-nav:not(.attendance-admin-toolbar) .attendance-field { display: grid; place-items: center; }
-    .attendance-history-nav:not(.attendance-admin-toolbar) input[type="month"] { min-height: 42px; padding: 0 4px; border: 0; background: transparent; color: #17191d; font-size: 22px; font-weight: 850; text-align: center; }
+    .attendance-history-nav:not(.attendance-admin-toolbar) .attendance-month-field { position: relative; min-width: 0; }
+    .attendance-history-nav:not(.attendance-admin-toolbar) .attendance-month-field > span { display: block; max-width: 100%; overflow: hidden; color: #17191d; font-size: 22px; font-weight: 850; letter-spacing: -.05em; text-overflow: ellipsis; white-space: nowrap; }
+    .attendance-history-nav:not(.attendance-admin-toolbar) input[type="month"] { position: absolute; inset: 0; width: 100%; height: 100%; min-width: 0; padding: 0; border: 0; opacity: 0; cursor: pointer; }
     .attendance-history-nav:not(.attendance-admin-toolbar) .attendance-refresh { background: #fff0eb; color: #f05a3d; font-size: 20px; }
     .attendance-history-nav:not(.attendance-admin-toolbar) .attendance-button:hover { background: #dfe5ec; }
     .attendance-personal-records { overflow-x: auto; padding-bottom: 4px; }
@@ -300,8 +302,9 @@
       <p class="attendance-description">본인의 기록을 확인할 수 있습니다. 관리자는 직원별 기록을 추가·수정·삭제할 수 있으며, 처리 내역은 감사 기록에 보관됩니다.</p>
       <div class="attendance-history-nav">
         <button class="attendance-button" id="attendancePrevMonth" type="button" aria-label="이전 달">‹</button>
-        <label class="attendance-field" for="attendanceMonth">조회 월
-          <input id="attendanceMonth" type="month">
+        <label class="attendance-field attendance-month-field" for="attendanceMonth">조회 월
+          <span id="attendanceMonthDisplay">2026년 10월</span>
+          <input id="attendanceMonth" type="month" aria-label="조회 월">
         </label>
         <button class="attendance-button" id="attendanceNextMonth" type="button" aria-label="다음 달">›</button>
         <button class="attendance-button attendance-refresh" id="attendanceReload" type="button" aria-label="기록 새로고침" title="새로고침">↻</button>

@@ -15,6 +15,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const profileName = document.getElementById('attendanceProfileName');
   const profileMeta = document.getElementById('attendanceProfileMeta');
   const monthInput = document.getElementById('attendanceMonth');
+  const monthDisplay = document.getElementById('attendanceMonthDisplay');
   const personalHistory = document.getElementById('attendancePersonalHistory');
   const personalSummary = document.getElementById('attendancePersonalSummary');
   const personalRecords = document.getElementById('attendancePersonalRecords');
@@ -148,6 +149,12 @@ document.addEventListener('DOMContentLoaded', async () => {
   function getCurrentMonth() {
     const { year, month } = getKstParts();
     return `${year}-${month}`;
+  }
+
+  function renderMonthDisplay() {
+    if (!monthDisplay || !monthInput.value) return;
+    const [year, month] = monthInput.value.split('-');
+    monthDisplay.textContent = `${year}년 ${Number(month)}월`;
   }
 
   function getKoreaDateTimeInput() {
@@ -818,6 +825,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   appPunchControls.hidden = !attendanceDevice;
   webPunchNotice.hidden = Boolean(attendanceDevice);
   monthInput.value = getCurrentMonth();
+  renderMonthDisplay();
   const { data: sessionData, error: sessionError } = await supabaseClient.auth.getSession();
   if (sessionError || !sessionData.session) {
     window.location.replace('/index.html');
@@ -909,12 +917,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     const [year, month] = monthInput.value.split('-').map(Number);
     const date = new Date(Date.UTC(year, month - 1 + offset, 1));
     monthInput.value = `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}`;
+    renderMonthDisplay();
     reloadRecords();
   };
   document.getElementById('attendancePrevMonth').addEventListener('click', () => changeMonth(-1));
   document.getElementById('attendanceNextMonth').addEventListener('click', () => changeMonth(1));
   monthInput.addEventListener('change', () => {
-    if (monthInput.value) reloadRecords();
+    if (monthInput.value) {
+      renderMonthDisplay();
+      reloadRecords();
+    }
   });
   userFilter.addEventListener('change', loadRecords);
 
