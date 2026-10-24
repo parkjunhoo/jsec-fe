@@ -14,6 +14,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const punchLabel = document.getElementById('attendancePunchLabel');
   const profileName = document.getElementById('attendanceProfileName');
   const profileMeta = document.getElementById('attendanceProfileMeta');
+  const profileMark = document.getElementById('attendanceProfileMark');
   const monthInput = document.getElementById('attendanceMonth');
   const monthDisplay = document.getElementById('attendanceMonthDisplay');
   const personalHistory = document.getElementById('attendancePersonalHistory');
@@ -846,7 +847,9 @@ document.addEventListener('DOMContentLoaded', async () => {
       historyMessage.textContent = '근태 기능을 사용할 권한이 없습니다.';
       return;
     }
-    profileName.textContent = profile.name || profile.username || '사용자';
+    const displayName = profile.name || profile.username || '사용자';
+    profileName.textContent = displayName;
+    profileMark.textContent = Array.from(displayName.trim())[0] || '사';
     profileMeta.textContent = [profile.job_title, profile.work_location].filter(Boolean).join(' · ') || '근무지 미등록';
     isAdmin = profile.role === 'admin';
     document.body.classList.toggle('attendance-admin-available', isAdmin);

@@ -6,6 +6,8 @@
   --primary-hover: #b1e5ca;
   --text-main: #edf4ef;
   --text-sub: #a4b4aa;
+  --push-save-bg: #43594b;
+  --push-save-hover-bg: #34483b;
   --border-color: rgba(195, 220, 204, 0.14);
   --input-bg: #141e19;
   --danger: #ef8585;
@@ -283,6 +285,8 @@ html:not([data-theme="light"]) .menu-arrow { color: #a5b2a8; }
 
 html[data-theme="light"] {
   color-scheme: light;
+  --push-save-bg: #197254;
+  --push-save-hover-bg: #115b42;
   --bg-main: #f2f5f1;
   --card-bg: #fff;
   --primary: #197254;
@@ -412,6 +416,28 @@ html[data-theme="light"] .allowance-export-button:focus-visible { outline-color:
 html[data-theme="light"] .app-card { background: #fff; }
 html[data-theme="light"] main > div[class~="bg-slate-800/80"] { background: #fff; }
 html[data-theme="light"] main > div[class~="bg-slate-800/80"] section[class~="bg-slate-900/60"] { background: #f4f7f3; }
+html[data-theme="light"] .push-settings-card {
+  border-color: #c5d0c7;
+  background: #f4f7f3;
+  color: #1b2922;
+}
+html[data-theme="light"] .push-settings-card .text-slate-200 { color: #263a2d; }
+html[data-theme="light"] .push-settings-card .text-slate-400,
+html[data-theme="light"] .push-settings-card .text-slate-500 { color: #56695c; }
+html[data-theme="light"] .push-settings-card fieldset { border-color: #b7c5ba; }
+html[data-theme="light"] .push-settings-card input[type="time"] {
+  border-color: #a9b8ad;
+  background-color: #fff;
+  color: #1b2922;
+  color-scheme: light;
+}
+.push-settings-card .push-save-button {
+  border: 1px solid #145c40;
+  background-color: var(--push-save-bg);
+  color: #fff;
+}
+.push-settings-card .push-save-button:hover:not(:disabled) { background-color: var(--push-save-hover-bg); }
+.push-settings-card .push-save-button:disabled { opacity: .65; }
 html[data-theme="light"] #settingsForm label { color: #43594b; }
 html[data-theme="light"] #settingsForm input {
   border-color: #a9b8ad;

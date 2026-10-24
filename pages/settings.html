@@ -43,7 +43,7 @@
         <p class="text-sm text-slate-400 mt-1">비밀번호 및 연락처 정보를 변경할 수 있습니다.</p>
       </div>
 
-      <section class="mb-6 rounded-xl border border-slate-700 bg-slate-900/60 p-4" aria-labelledby="pushPreferenceTitle">
+      <section class="push-settings-card mb-6 rounded-xl border border-slate-700 bg-slate-900/60 p-4" aria-labelledby="pushPreferenceTitle">
         <div class="flex items-center justify-between gap-4">
           <div>
             <h3 id="pushPreferenceTitle" class="text-sm font-semibold text-white">이 기기 푸시 알림</h3>
@@ -56,7 +56,7 @@
         </div>
       </section>
 
-      <section class="mb-6 rounded-xl border border-slate-700 bg-slate-900/60 p-4" aria-labelledby="pushDetailTitle">
+      <section class="push-settings-card mb-6 rounded-xl border border-slate-700 bg-slate-900/60 p-4" aria-labelledby="pushDetailTitle">
         <div class="mb-4">
           <h3 id="pushDetailTitle" class="text-sm font-semibold text-white">알림 종류 및 시간</h3>
           <p class="mt-1 text-xs text-slate-400">받고 싶은 알림 대상과 알림을 쉬게 할 시간을 설정합니다.</p>
@@ -87,7 +87,7 @@
               <label class="text-xs text-slate-400">종료<input id="pushQuietHoursEnd" type="time" value="07:00" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white"></label>
             </div>
           </div>
-          <button type="button" id="savePushSettings" class="w-full rounded-lg bg-slate-700 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-600">알림 설정 저장</button>
+          <button type="button" id="savePushSettings" class="push-save-button w-full rounded-lg px-4 py-2.5 text-sm font-semibold text-white transition">알림 설정 저장</button>
           <p id="pushSettingsStatus" class="text-xs text-slate-400" role="status"></p>
         </div>
       </section>
