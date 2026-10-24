@@ -14,9 +14,102 @@ document.addEventListener('DOMContentLoaded', async () => {
   const pushNotificationToggle = document.getElementById('pushNotificationToggle');
   const pushPreferenceStatus = document.getElementById('pushPreferenceStatus');
   const PUSH_PREFERENCE_API = 'https://jsec-serverless.adobephotoshop.workers.dev/api/push/preference';
+  const PUSH_SETTINGS_API = 'https://jsec-serverless.adobephotoshop.workers.dev/api/push/settings';
+  const pushVacationAll = document.getElementById('pushVacationAll');
+  const pushVacationMembers = document.getElementById('pushVacationMembers');
+  const pushVacationMemberList = document.getElementById('pushVacationMemberList');
+  const pushAdminNotifications = document.getElementById('pushAdminNotifications');
+  const pushQuietHoursEnabled = document.getElementById('pushQuietHoursEnabled');
+  const pushQuietHoursFields = document.getElementById('pushQuietHoursFields');
+  const pushQuietHoursStart = document.getElementById('pushQuietHoursStart');
+  const pushQuietHoursEnd = document.getElementById('pushQuietHoursEnd');
+  const savePushSettings = document.getElementById('savePushSettings');
+  const pushSettingsStatus = document.getElementById('pushSettingsStatus');
   const currentUserId = session.user.id;
   const UPDATE_PROFILE_API = `https://jsec-serverless.adobephotoshop.workers.dev/api/users/${encodeURIComponent(currentUserId)}`;
   let pushToken = '';
+
+  function setPushSettingsStatus(message) {
+    if (pushSettingsStatus) pushSettingsStatus.textContent = message;
+  }
+
+  function syncPushSettingsControls() {
+    if (pushVacationMembers) pushVacationMembers.disabled = pushVacationAll.checked;
+    if (pushQuietHoursFields) {
+      pushQuietHoursFields.classList.toggle('opacity-50', !pushQuietHoursEnabled.checked);
+      pushQuietHoursStart.disabled = !pushQuietHoursEnabled.checked;
+      pushQuietHoursEnd.disabled = !pushQuietHoursEnabled.checked;
+    }
+  }
+
+  async function loadPushSettings() {
+    if (!pushVacationAll) return;
+    setPushSettingsStatus('세부 알림 설정을 불러오는 중...');
+    try {
+      const response = await fetch(PUSH_SETTINGS_API, { headers: { Authorization: `Bearer ${session.access_token}` } });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(result.error || `HTTP ${response.status}`);
+      const settings = result.settings || {};
+      pushVacationAll.checked = settings.push_vacation_all === true;
+      pushAdminNotifications.checked = settings.push_admin_notifications === true;
+      pushQuietHoursEnabled.checked = settings.push_quiet_hours_enabled === true;
+      pushQuietHoursStart.value = String(settings.push_quiet_hours_start || '22:00').slice(0, 5);
+      pushQuietHoursEnd.value = String(settings.push_quiet_hours_end || '07:00').slice(0, 5);
+      pushVacationMemberList.replaceChildren();
+      const selectedIds = new Set(settings.push_vacation_user_ids || []);
+      (result.members || []).forEach(member => {
+        const label = document.createElement('label');
+        label.className = 'flex items-center gap-2 text-sm text-slate-200';
+        const input = document.createElement('input');
+        input.type = 'checkbox';
+        input.className = 'h-4 w-4 accent-sky-500';
+        input.value = member.id;
+        input.checked = selectedIds.has(member.id);
+        const text = document.createElement('span');
+        text.textContent = `${member.name || member.username || '이름 없음'}${member.work_location ? ` · ${member.work_location}` : ''}`;
+        label.append(input, text);
+        pushVacationMemberList.append(label);
+      });
+      if (!pushVacationMemberList.childElementCount) pushVacationMemberList.innerHTML = '<span class="text-xs text-slate-500">선택 가능한 회원이 없습니다.</span>';
+      syncPushSettingsControls();
+      setPushSettingsStatus('세부 알림 설정을 불러왔습니다.');
+    } catch (error) {
+      setPushSettingsStatus('세부 알림 설정을 불러오지 못했습니다.');
+      console.error('세부 푸시 설정 조회 실패:', error);
+    }
+  }
+
+  async function savePushSettingsChanges() {
+    savePushSettings.disabled = true;
+    setPushSettingsStatus('알림 설정을 저장하는 중...');
+    try {
+      const response = await fetch(PUSH_SETTINGS_API, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+        body: JSON.stringify({
+          push_vacation_all: pushVacationAll.checked,
+          push_vacation_user_ids: [...pushVacationMemberList.querySelectorAll('input:checked')].map(input => input.value),
+          push_admin_notifications: pushAdminNotifications.checked,
+          push_quiet_hours_enabled: pushQuietHoursEnabled.checked,
+          push_quiet_hours_start: pushQuietHoursStart.value,
+          push_quiet_hours_end: pushQuietHoursEnd.value
+        })
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(result.error || `HTTP ${response.status}`);
+      setPushSettingsStatus('알림 설정을 저장했습니다.');
+    } catch (error) {
+      setPushSettingsStatus('알림 설정을 저장하지 못했습니다.');
+      await Swal.fire({ icon: 'error', text: `세부 푸시 설정 저장 실패: ${error.message}` });
+    } finally {
+      savePushSettings.disabled = false;
+    }
+  }
+
+  pushVacationAll?.addEventListener('change', syncPushSettingsControls);
+  pushQuietHoursEnabled?.addEventListener('change', syncPushSettingsControls);
+  savePushSettings?.addEventListener('click', savePushSettingsChanges);
+  await loadPushSettings();
 
   function setPushPreferenceStatus(message) {
     if (pushPreferenceStatus) pushPreferenceStatus.textContent = message;

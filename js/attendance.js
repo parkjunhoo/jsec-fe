@@ -1,6 +1,7 @@
 document.addEventListener('DOMContentLoaded', async () => {
   const API_URL = 'https://jsec-serverless.adobephotoshop.workers.dev/api/attendance';
   const todayStatus = document.getElementById('attendanceTodayStatus');
+  const todayDuration = document.getElementById('attendanceTodayDuration');
   const punchMessage = document.getElementById('attendancePunchMessage');
   const punchButton = document.getElementById('attendancePunchToggle');
   const appPunchControls = document.getElementById('attendanceAppPunchControls');
@@ -58,6 +59,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   let adminUsers = [];
   let sites = [];
   let records = [];
+  let personalRecordsData = [];
   let weeklyRecords = [];
   let todayRecord = null;
   let currentUserId = '';
@@ -221,7 +223,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   function getTotalWorkMinutes() {
-    return records.reduce((total, record) => {
+    const sourceRecords = isAdmin ? personalRecordsData : records;
+    return sourceRecords.reduce((total, record) => {
       const end = record.check_out_at ? new Date(record.check_out_at).getTime() : Date.now();
       const start = new Date(record.check_in_at).getTime();
       return total + (Number.isFinite(start) && Number.isFinite(end)
@@ -309,14 +312,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (!record) {
       title.textContent = '출근 전';
       detail.textContent = '현재 위치를 확인해 출근을 등록해 주세요.';
+      todayDuration.textContent = '';
     } else if (!record.check_out_at) {
       title.textContent = '근무 중';
       const elapsed = formatWorkDuration(record.check_in_at, now);
-      detail.textContent = `${record.location_name} · 출근 ${formatDateTime(record.check_in_at)}${record.work_date !== getKstDate() ? ' (전날 출근)' : ''} · 퇴근 시 예상 ${elapsed}`;
+      detail.textContent = `${record.location_name} · 출근 ${formatDateTime(record.check_in_at)}${record.work_date !== getKstDate() ? ' (전날 출근)' : ''}`;
+      todayDuration.textContent = `현재까지 근무시간 ${elapsed}`;
     } else {
       const duration = formatWorkDuration(record.check_in_at, record.check_out_at);
       title.textContent = '근무 완료 · 다음 출근 가능';
       detail.textContent = `${record.location_name} · ${formatDateTime(record.check_in_at)} ~ ${formatDateTime(record.check_out_at)} · 근무 ${duration}`;
+      todayDuration.textContent = '';
     }
     const isCheckingOut = Boolean(record && !record.check_out_at);
     punchButton.dataset.action = isCheckingOut ? 'check-out' : 'check-in';
@@ -328,20 +334,16 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   function renderRecords() {
-    personalHistory.hidden = isAdmin;
+    personalHistory.hidden = false;
     adminRecordsTable.hidden = !isAdmin;
     addRecordButton.hidden = !isAdmin;
     renderPersonalMetrics();
-    const completedCount = records.filter(record => record.check_out_at).length;
-    const inProgressCount = records.length - completedCount;
-    personalSummary.textContent = `${monthInput.value.replace('-', '.')} · ${records.length}건 · 퇴근 완료 ${completedCount} · 근무 중 ${inProgressCount} · 휴게시간 미차감`;
-    if (!records.length) {
-      recordsBody.innerHTML = '<div class="attendance-empty">해당 기간의 출퇴근 기록이 없습니다.</div>';
-      personalRecords.innerHTML = '<div class="attendance-history-empty">해당 월의 출퇴근 기록이 없습니다.</div>';
-      return;
-    }
+    const displayRecords = isAdmin ? personalRecordsData : records;
+    const completedCount = displayRecords.filter(record => record.check_out_at).length;
+    const inProgressCount = displayRecords.length - completedCount;
+    personalSummary.textContent = `${monthInput.value.replace('-', '.')} · ${displayRecords.length}건 · 퇴근 완료 ${completedCount} · 근무 중 ${inProgressCount} · 휴게시간 미차감`;
     const currentTime = Date.now();
-    personalRecords.innerHTML = records.map(record => {
+    personalRecords.innerHTML = displayRecords.length ? displayRecords.map(record => {
       const status = record.check_out_at ? '퇴근 완료' : '근무 중';
       const duration = record.check_out_at
         ? formatWorkDuration(record.check_in_at, record.check_out_at)
@@ -361,8 +363,15 @@ document.addEventListener('DOMContentLoaded', async () => {
             <div>퇴근<strong>${escapeHtml(formatPunchTime(record.check_out_at, record.work_date))}</strong></div>
           </div>
         </article>`;
-    }).join('');
-    recordsBody.innerHTML = records.map(record => {
+    }).join('') : '<div class="attendance-history-empty">해당 월의 출퇴근 기록이 없습니다.</div>';
+    const adminDisplayRecords = isAdmin && !userFilter.value
+      ? records.filter(record => record.user_id !== currentUserId)
+      : records;
+    if (!adminDisplayRecords.length) {
+      recordsBody.innerHTML = '<div class="attendance-empty">해당 기간의 출퇴근 기록이 없습니다.</div>';
+      return;
+    }
+    recordsBody.innerHTML = adminDisplayRecords.map(record => {
       const status = record.check_out_at ? '퇴근 완료' : '근무 중';
       const duration = formatWorkDuration(record.check_in_at, record.check_out_at || currentTime);
       const checkInLocation = record.check_in_latitude == null
@@ -623,6 +632,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
+  async function loadPersonalRecords() {
+    const { start, end } = getMonthRange(monthInput.value);
+    const params = new URLSearchParams({ start, end });
+    if (isAdmin) params.set('user_id', currentUserId);
+    const result = await request(`/records?${params}`);
+    personalRecordsData = result.records || [];
+    renderRecords();
+  }
+
   async function loadWeeklyRecords() {
     const { start, end } = getCurrentWeekRange();
     const params = new URLSearchParams({ start, end });
@@ -701,10 +719,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   function populateAdminUserFilter(users) {
     adminUsers = users.filter(user =>
-      !['guest', 'monitor'].includes(user.role) && user.status !== '퇴직'
+      !['guest', 'monitor'].includes(user.role) && user.status !== '퇴직' && user.id !== currentUserId
     );
     userFilter.innerHTML = '<option value="">전체 직원</option>' + users
-      .filter(user => !['guest', 'monitor'].includes(user.role))
+      .filter(user => !['guest', 'monitor'].includes(user.role) && user.id !== currentUserId)
       .map(user => `<option value="${escapeHtml(user.id)}">${escapeHtml(user.name || user.username || '이름 없음')}</option>`)
       .join('');
     createUser.innerHTML = '<option value="">직원 선택</option>' + adminUsers
@@ -830,7 +848,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (!response.ok) throw new Error(users.error || '직원 목록을 불러오지 못했습니다.');
       populateAdminUserFilter(users);
     }
-    await Promise.all([loadRecords(), loadTodayRecord(), loadWeeklyRecords(), loadAnnualLeaveBalance()]);
+    await Promise.all([loadRecords(), loadPersonalRecords(), loadTodayRecord(), loadWeeklyRecords(), loadAnnualLeaveBalance()]);
     window.setInterval(renderTodayStatus, 1000);
     if (!isAdmin) window.setInterval(renderPersonalMetrics, 60 * 1000);
   } catch (error) {
@@ -876,17 +894,19 @@ document.addEventListener('DOMContentLoaded', async () => {
       createSaveButton.disabled = false;
     }
   });
-  document.getElementById('attendanceReload').addEventListener('click', loadRecords);
+  const reloadRecords = () => Promise.all([loadRecords(), loadPersonalRecords()]);
+  document.getElementById('attendanceReload').addEventListener('click', reloadRecords);
+  document.getElementById('attendanceAdminReload').addEventListener('click', loadRecords);
   const changeMonth = offset => {
     const [year, month] = monthInput.value.split('-').map(Number);
     const date = new Date(Date.UTC(year, month - 1 + offset, 1));
     monthInput.value = `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}`;
-    loadRecords();
+    reloadRecords();
   };
   document.getElementById('attendancePrevMonth').addEventListener('click', () => changeMonth(-1));
   document.getElementById('attendanceNextMonth').addEventListener('click', () => changeMonth(1));
   monthInput.addEventListener('change', () => {
-    if (monthInput.value) loadRecords();
+    if (monthInput.value) reloadRecords();
   });
   userFilter.addEventListener('change', loadRecords);
 

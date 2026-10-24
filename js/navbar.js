@@ -439,6 +439,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       border-bottom: 1px solid rgba(255, 255, 255, 0.1);
     }
     .notification-dialog-title { font-size: 17px; font-weight: 700; }
+    .notification-retention-note { margin-top: 4px; color: #94a3b8; font-size: 10px; font-weight: 500; }
     .notification-header-actions { display: flex; align-items: center; gap: 10px; }
     .notification-text-btn, .notification-close-btn {
       border: 0;
@@ -571,7 +572,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     <div class="notification-overlay" id="notificationOverlay">
       <section class="notification-dialog" role="dialog" aria-modal="true" aria-labelledby="notificationDialogTitle">
         <header class="notification-dialog-header">
-          <h2 class="notification-dialog-title" id="notificationDialogTitle">알림</h2>
+          <div><h2 class="notification-dialog-title" id="notificationDialogTitle">알림</h2><p class="notification-retention-note">알림은 7일간만 보관됩니다.</p></div>
           <div class="notification-header-actions">
             <button class="notification-text-btn" id="markAllNotificationsRead" type="button">모두 읽음</button>
             <button class="notification-delete-all-btn" id="deleteAllNotifications" type="button">모두 삭제</button>
