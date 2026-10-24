@@ -134,6 +134,28 @@
     return message;
   }
 
+  function appendMealPlanImage(mealPlan) {
+    if (!/^[A-Za-z0-9+/]+={0,2}$/.test(mealPlan.imageBase64 || '')) {
+      throw new Error('식단표 이미지 데이터가 올바르지 않습니다.');
+    }
+    const mimeType = ['image/jpeg', 'image/png', 'image/webp'].includes(mealPlan.mimeType)
+      ? mealPlan.mimeType
+      : 'image/jpeg';
+    const venue = mealPlan.venue === 'ski' ? '스키장' : '골프장';
+    const message = document.createElement('div');
+    message.className = 'jsec-ai-chat-message jsec-ai-chat-meal-plan';
+    const heading = document.createElement('strong');
+    heading.textContent = `${venue} 주간 식단표 (${displayDate(mealPlan.weekStart)} 주)`;
+    const image = document.createElement('img');
+    image.className = 'jsec-ai-chat-meal-plan-image';
+    image.src = `data:${mimeType};base64,${mealPlan.imageBase64}`;
+    image.alt = `${venue} 주간 식단표 이미지`;
+    image.loading = 'lazy';
+    message.append(heading, image);
+    messages.append(message);
+    messages.scrollTop = messages.scrollHeight;
+  }
+
   function updateControls() {
     const blocked = busy || Boolean(pendingCalls);
     input.disabled = blocked || !apiKey;
@@ -341,6 +363,7 @@
     return [
       '지산리조트 보안팀 챗봇. 한국어로 간결하게 답한다. 인사·일상 대화·일반 지식도 답하고, 서비스 내부 정보는 도구 결과 없이 추측하지 않는다.',
       '일반 사용자는 본인 정보와 팀 휴무자(이름·날짜·종류)만 조회한다. 다른 직원의 연락처·근태·연차 및 직원 휴무 관리는 관리자 도구가 제공될 때만 가능하다. GPS·기기 정보·비밀 정보는 노출하지 않는다.',
+      '관리자 도구에 list_employees가 있으면 "회사원 목록", "직원 명단" 요청에 반드시 해당 도구를 사용한다. search_employees는 이름으로 일부 직원 검색할 때만 사용한다.',
       '날씨·차량·연락망·식단 이미지 등 요청에 맞는 도구를 사용한다. 도구 오류는 숨기지 말고 간단히 알린다.',
       '휴무 날짜는 자연어를 해석한다. 월이 없으면 아래 오늘 기준 가장 가까운 미래 날짜를 사용하고, 불명확한 경우에만 한 번 묻는다.',
       '등록·수정·삭제는 도구를 호출해 화면의 확인 버튼으로 한 번 승인받는다. 채팅으로 추가 확인을 요구하지 않는다.',
@@ -821,6 +844,142 @@
     return /(휴무자|휴무.*누구|누구.*휴무|쉬는\s*사람|누가\s*쉬)/.test(text);
   }
 
+  function isMealPlanQuery(text) {
+    return /(식단표|식단|오늘\s*(?:점심|저녁|메뉴)|(?:점심|저녁)\s*메뉴|메뉴표)/.test(text);
+  }
+
+  function getMealPlanArguments(text) {
+    let date = getTodayKst();
+    const monthOnly = text.match(/(?:(20\d{2})\s*년\s*)?(1[0-2]|[1-9])\s*월/);
+    if (monthOnly && !/일/.test(text)) {
+      const year = Number(monthOnly[1] || getTodayKst().slice(0, 4));
+      const month = Number(monthOnly[2]);
+      date = `${year}-${String(month).padStart(2, '0')}-01`;
+    } else if (/내일/.test(text)) {
+      date = getTeamLeaveQueryRange('내일').start;
+    } else if (/모레/.test(text)) {
+      date = getTeamLeaveQueryRange('모레').start;
+    } else if (/\d{1,2}\s*월|\d{1,2}\s*일/.test(text)) {
+      const dateText = text.match(/(?:(?:20\d{2})\s*년\s*)?(?:(?:1[0-2]|[1-9])\s*월\s*)?(?:3[01]|[12]\d|[1-9])\s*일/);
+      if (dateText) date = getTeamLeaveQueryRange(dateText[0]).start;
+    }
+    return {
+      date,
+      venue: /스키장|스키\s*하우스/.test(text) ? 'ski' : 'golf'
+    };
+  }
+
+  async function runMealPlanShortcut(args) {
+    busy = true;
+    const controller = new AbortController();
+    activeController = controller;
+    let timeoutId;
+    const timeoutPromise = new Promise((_, reject) => {
+      timeoutId = window.setTimeout(() => {
+        controller.abort();
+        reject(new Error('식단표 조회 시간이 초과되었습니다.'));
+      }, 30000);
+    });
+    updateControls();
+    try {
+      await Promise.race([
+        (async () => {
+          const result = await mcpRequest('tools/call', {
+            name: 'get_weekly_meal_plan',
+            arguments: args
+          });
+          const mealPlan = parseToolValue(result);
+          if (mealPlan?.isError) {
+            throw new Error(typeof mealPlan.error === 'string'
+              ? mealPlan.error
+              : JSON.stringify(mealPlan.error));
+          }
+          if (!mealPlan?.found) {
+            appendMessage(`${mealPlan?.venue === 'ski' ? '스키장' : '골프장'} 식단표 이미지가 등록되어 있지 않습니다.`);
+            return;
+          }
+          appendMealPlanImage(mealPlan);
+        })(),
+        timeoutPromise
+      ]);
+    } catch (error) {
+      if (controller.signal.aborted) {
+        appendMessage('식단표를 가져오는 데 시간이 초과되었습니다. 잠시 후 다시 시도해 주세요.', 'assistant', true);
+      } else {
+        console.error('식단표 조회 실패:', error);
+        appendMessage(error.message || '식단표 이미지를 가져오지 못했습니다.', 'assistant', true);
+      }
+    } finally {
+      window.clearTimeout(timeoutId);
+      if (activeController === controller) activeController = null;
+      busy = false;
+      updateControls();
+    }
+  }
+
+  function isEmployeeListQuery(text) {
+    return /(?:회사원|직원|사원).*(?:목록|명단|리스트)|(?:목록|명단|리스트).*(?:회사원|직원|사원)/.test(text);
+  }
+
+  async function runEmployeeListShortcut() {
+    busy = true;
+    const controller = new AbortController();
+    activeController = controller;
+    let timeoutId;
+    const timeoutPromise = new Promise((_, reject) => {
+      timeoutId = window.setTimeout(() => {
+        controller.abort();
+        reject(new Error('직원 목록 조회 시간이 초과되었습니다.'));
+      }, 30000);
+    });
+    updateControls();
+    try {
+      await Promise.race([
+        (async () => {
+          await loadTools();
+          if (!tools.some(tool => tool.name === 'list_employees')) {
+            throw new Error('회사 직원 목록 조회는 관리자 권한이 필요합니다. 관리자 계정으로 로그인했는지 확인해 주세요.');
+          }
+          const result = await mcpRequest('tools/call', {
+            name: 'list_employees',
+            arguments: {}
+          });
+          const employees = parseToolValue(result);
+          if (employees?.isError) {
+            throw new Error(typeof employees.error === 'string'
+              ? employees.error
+              : JSON.stringify(employees.error));
+          }
+          if (!Array.isArray(employees)) throw new Error('직원 목록 응답 형식이 올바르지 않습니다.');
+          if (!employees.length) {
+            appendMessage('조회된 재직 직원이 없습니다.');
+            return;
+          }
+          const lines = employees.map(employee => [
+            employee.name || '이름 미등록',
+            employee.job_title,
+            employee.work_location,
+            employee.phone
+          ].filter(Boolean).join(' · '));
+          appendMessage(`재직 직원 ${employees.length}명:\n${lines.join('\n')}`);
+        })(),
+        timeoutPromise
+      ]);
+    } catch (error) {
+      if (controller.signal.aborted) {
+        appendMessage('직원 목록을 불러오는 데 시간이 초과되었습니다. 잠시 후 다시 시도해 주세요.', 'assistant', true);
+      } else {
+        console.error('직원 목록 조회 실패:', error);
+        appendMessage(error.message || '직원 목록을 가져오지 못했습니다.', 'assistant', true);
+      }
+    } finally {
+      window.clearTimeout(timeoutId);
+      if (activeController === controller) activeController = null;
+      busy = false;
+      updateControls();
+    }
+  }
+
   function getTeamLeaveQueryRange(text) {
     const today = getTodayKst();
     const [year, month, day] = today.split('-').map(Number);
@@ -1061,6 +1220,20 @@
         args: { dates: directRequest.dates },
         id: `direct-${Date.now()}`
       }], true);
+      return;
+    }
+
+    if (isEmployeeListQuery(text)) {
+      await runEmployeeListShortcut();
+      return;
+    }
+
+    if (isMealPlanQuery(text)) {
+      try {
+        await runMealPlanShortcut(getMealPlanArguments(text));
+      } catch (error) {
+        appendMessage(error.message || '식단표 조회 날짜를 해석하지 못했습니다.', 'assistant', true);
+      }
       return;
     }
 

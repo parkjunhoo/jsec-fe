@@ -422,6 +422,7 @@ html[data-theme="light"] .push-settings-card {
   color: #1b2922;
 }
 html[data-theme="light"] .push-settings-card .text-slate-200 { color: #263a2d; }
+html[data-theme="light"] .push-settings-card .text-slate-300 { color: #43594b; }
 html[data-theme="light"] .push-settings-card .text-slate-400,
 html[data-theme="light"] .push-settings-card .text-slate-500 { color: #56695c; }
 html[data-theme="light"] .push-settings-card fieldset { border-color: #b7c5ba; }
@@ -438,12 +439,34 @@ html[data-theme="light"] .push-settings-card #geminiApiKey {
   caret-color: #1b2922;
   color-scheme: light;
 }
+html[data-theme="light"] .push-settings-card #groqApiKey,
+html[data-theme="light"] .push-settings-card #aiProvider {
+  border-color: #a9b8ad;
+  background-color: #fff;
+  color: #1b2922;
+  color-scheme: light;
+}
+html[data-theme="light"] .push-settings-card #aiProvider option {
+  background-color: #fff;
+  color: #1b2922;
+}
 html[data-theme="light"] .push-settings-card #geminiApiKey::placeholder { color: #68776e; opacity: 1; }
+html[data-theme="light"] .push-settings-card #groqApiKey::placeholder { color: #68776e; opacity: 1; }
 html[data-theme="light"] .push-settings-card #geminiApiKey:focus {
   border-color: #197254;
   box-shadow: 0 0 0 3px rgba(25, 114, 84, 0.14);
 }
+html[data-theme="light"] .push-settings-card #groqApiKey:focus,
+html[data-theme="light"] .push-settings-card #aiProvider:focus {
+  border-color: #197254;
+  box-shadow: 0 0 0 3px rgba(25, 114, 84, 0.14);
+}
 html[data-theme="light"] .push-settings-card #geminiApiKey:-webkit-autofill {
+  -webkit-text-fill-color: #1b2922;
+  box-shadow: 0 0 0 1000px #fff inset;
+  caret-color: #1b2922;
+}
+html[data-theme="light"] .push-settings-card #groqApiKey:-webkit-autofill {
   -webkit-text-fill-color: #1b2922;
   box-shadow: 0 0 0 1000px #fff inset;
   caret-color: #1b2922;

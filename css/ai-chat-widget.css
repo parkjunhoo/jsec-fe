@@ -133,6 +133,19 @@
   color: var(--danger, #ef6262);
 }
 
+.jsec-ai-chat-meal-plan {
+  max-width: 100%;
+}
+
+.jsec-ai-chat-meal-plan-image {
+  display: block;
+  max-width: min(100%, 340px);
+  max-height: 420px;
+  margin-top: 8px;
+  border-radius: 8px;
+  object-fit: contain;
+}
+
 .jsec-ai-chat-settings-link {
   display: inline-block;
   margin-top: 8px;
