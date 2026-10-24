@@ -16,9 +16,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   const userFilter = document.getElementById('attendanceUserFilter');
   const recordsBody = document.getElementById('attendanceRecords');
   const historyMessage = document.getElementById('attendanceHistoryMessage');
-  const gpsHeading = document.getElementById('attendanceGpsHeading');
-  const deviceHeading = document.getElementById('attendanceDeviceHeading');
-  const actionHeading = document.getElementById('attendanceActionHeading');
   const siteSettings = document.getElementById('attendanceSiteSettings');
   const siteFields = document.getElementById('attendanceSiteFields');
   const siteForm = document.getElementById('attendanceSiteForm');
@@ -296,9 +293,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   function renderRecords() {
-    actionHeading.hidden = !isAdmin;
-    gpsHeading.hidden = !isAdmin;
-    deviceHeading.hidden = !isAdmin;
     personalHistory.hidden = isAdmin;
     adminRecordsTable.hidden = !isAdmin;
     addRecordButton.hidden = !isAdmin;
@@ -307,7 +301,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const inProgressCount = records.length - completedCount;
     personalSummary.textContent = `${monthInput.value.replace('-', '.')} · ${records.length}건 · 퇴근 완료 ${completedCount} · 근무 중 ${inProgressCount} · 휴게시간 미차감`;
     if (!records.length) {
-      recordsBody.innerHTML = `<tr><td class="attendance-empty" colspan="${isAdmin ? 8 : 5}">해당 기간의 출퇴근 기록이 없습니다.</td></tr>`;
+      recordsBody.innerHTML = '<div class="attendance-empty">해당 기간의 출퇴근 기록이 없습니다.</div>';
       personalRecords.innerHTML = '<div class="attendance-history-empty">해당 월의 출퇴근 기록이 없습니다.</div>';
       return;
     }
@@ -333,24 +327,60 @@ document.addEventListener('DOMContentLoaded', async () => {
           </div>
         </article>`;
     }).join('');
-    recordsBody.innerHTML = records.map(record => `
-      <tr>
-        <td>${escapeHtml(record.work_date)}${isAdmin ? `<span class="attendance-secondary">${escapeHtml(record.username)}</span>` : ''}</td>
-        <td>${escapeHtml(record.location_name)}</td>
-        <td>${escapeHtml(formatDateTime(record.check_in_at))}<span class="attendance-secondary">${record.check_in_latitude == null ? 'GPS 미수집 · 관리자 추가' : `정확도 ${Math.round(record.check_in_accuracy_m)}m · 거리 ${Math.round(record.check_in_distance_m)}m`}</span></td>
-        <td>${escapeHtml(formatDateTime(record.check_out_at))}${record.check_out_at ? `<span class="attendance-secondary">${record.check_out_latitude == null ? 'GPS 미수집 · 관리자 추가' : `정확도 ${Math.round(record.check_out_accuracy_m)}m · 거리 ${Math.round(record.check_out_distance_m)}m`}</span>` : ''}</td>
-        <td>${record.check_out_at ? '퇴근 완료' : '근무 중'}${record.note ? `<span class="attendance-secondary">${escapeHtml(record.note)}</span>` : ''}</td>
-        ${isAdmin ? `<td><div class="attendance-record-gps">
-          ${record.check_in_latitude != null ? `<button class="attendance-button" type="button" data-attendance-gps="${escapeHtml(record.id)}" data-gps-action="check-in">출근 위치</button>` : '<span class="attendance-secondary">좌표 없음</span>'}
-          ${record.check_out_latitude != null ? `<button class="attendance-button" type="button" data-attendance-gps="${escapeHtml(record.id)}" data-gps-action="check-out">퇴근 위치</button>` : ''}
-        </div></td>` : ''}
-        ${isAdmin ? `<td>${record.check_in_device ? `<span class="attendance-secondary">출근 · ${escapeHtml(formatDeviceInfo(record.check_in_device))}</span>` : '<span class="attendance-secondary">출근 기기 정보 없음</span>'}${record.check_out_at ? `<span class="attendance-secondary">퇴근 · ${escapeHtml(formatDeviceInfo(record.check_out_device))}</span>` : ''}</td>` : ''}
-        ${isAdmin ? `<td><div class="attendance-table-actions">
-          <button class="attendance-button" type="button" data-edit-attendance="${escapeHtml(record.id)}">수정</button>
-          <button class="attendance-button danger" type="button" data-delete-attendance="${escapeHtml(record.id)}">삭제</button>
-        </div></td>` : ''}
-      </tr>
-    `).join('');
+    recordsBody.innerHTML = records.map(record => {
+      const status = record.check_out_at ? '퇴근 완료' : '근무 중';
+      const duration = formatWorkDuration(record.check_in_at, record.check_out_at || currentTime);
+      const checkInLocation = record.check_in_latitude == null
+        ? 'GPS 미수집 · 관리자 추가 기록'
+        : `정확도 ${Math.round(record.check_in_accuracy_m)}m · 거리 ${Math.round(record.check_in_distance_m)}m`;
+      const checkOutLocation = !record.check_out_at
+        ? '퇴근 전'
+        : record.check_out_latitude == null
+          ? 'GPS 미수집 · 관리자 추가 기록'
+          : `정확도 ${Math.round(record.check_out_accuracy_m)}m · 거리 ${Math.round(record.check_out_distance_m)}m`;
+      return `
+        <article class="attendance-admin-record">
+          <header class="attendance-admin-record-header">
+            <div class="attendance-admin-record-identity">
+              <strong class="attendance-admin-record-date">${escapeHtml(formatWorkDate(record.work_date))}</strong>
+              <span class="attendance-admin-record-user">${escapeHtml(record.username || '직원')}</span>
+              <div class="attendance-admin-record-site">${escapeHtml(record.location_name)}</div>
+            </div>
+            <span class="attendance-admin-record-status ${record.check_out_at ? '' : 'open'}">${status}</span>
+          </header>
+          <div class="attendance-admin-record-times">
+            <div class="attendance-admin-record-time">
+              <span>출근</span><strong>${escapeHtml(formatPunchTime(record.check_in_at, record.work_date))}</strong>
+              <small>${escapeHtml(checkInLocation)}</small>
+            </div>
+            <div class="attendance-admin-record-time">
+              <span>퇴근</span><strong>${escapeHtml(formatPunchTime(record.check_out_at, record.work_date))}</strong>
+              <small>${escapeHtml(checkOutLocation)}</small>
+            </div>
+          </div>
+          <div class="attendance-admin-record-footer">
+            <div class="attendance-admin-record-meta">
+              <strong>근무 ${escapeHtml(duration)}</strong>
+              ${record.note ? `<span class="attendance-admin-record-note">${escapeHtml(record.note)}</span>` : ''}
+            </div>
+            <div class="attendance-admin-record-tools">
+              ${record.check_in_latitude != null ? `<button class="attendance-button" type="button" data-attendance-gps="${escapeHtml(record.id)}" data-gps-action="check-in">출근 위치</button>` : ''}
+              ${record.check_out_latitude != null ? `<button class="attendance-button" type="button" data-attendance-gps="${escapeHtml(record.id)}" data-gps-action="check-out">퇴근 위치</button>` : ''}
+            </div>
+          </div>
+          <details class="attendance-admin-record-details">
+            <summary>기기 정보</summary>
+            <div class="attendance-admin-record-details-body">
+              <span>출근 · ${escapeHtml(formatDeviceInfo(record.check_in_device))}</span>
+              ${record.check_out_at ? `<span>퇴근 · ${escapeHtml(formatDeviceInfo(record.check_out_device))}</span>` : ''}
+            </div>
+          </details>
+          <footer class="attendance-admin-record-actions">
+            <button class="attendance-button" type="button" data-edit-attendance="${escapeHtml(record.id)}">기록 수정</button>
+            <button class="attendance-button danger" type="button" data-delete-attendance="${escapeHtml(record.id)}">기록 삭제</button>
+          </footer>
+        </article>`;
+    }).join('');
   }
 
   function renderSiteSettings() {
@@ -545,7 +575,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const { start, end } = getMonthRange(monthInput.value);
     const params = new URLSearchParams({ start, end });
     if (isAdmin && userFilter.value) params.set('user_id', userFilter.value);
-    recordsBody.innerHTML = `<tr><td class="attendance-empty" colspan="${isAdmin ? 7 : 5}">기록을 불러오는 중입니다.</td></tr>`;
+    recordsBody.innerHTML = '<div class="attendance-empty">기록을 불러오는 중입니다.</div>';
     try {
       const result = await request(`/records?${params}`);
       records = result.records || [];
@@ -554,7 +584,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     } catch (error) {
       console.error('근태 기록 조회 오류:', error);
       historyMessage.textContent = error.message || '근태 기록을 불러오지 못했습니다.';
-      recordsBody.innerHTML = `<tr><td class="attendance-empty" colspan="${isAdmin ? 7 : 5}">기록을 불러오지 못했습니다.</td></tr>`;
+      recordsBody.innerHTML = '<div class="attendance-empty">기록을 불러오지 못했습니다.</div>';
     }
   }
 
@@ -741,7 +771,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     isAdmin = profile.role === 'admin';
     siteSettings.hidden = !isAdmin;
     userFilterField.hidden = !isAdmin;
-    actionHeading.hidden = !isAdmin;
     await loadSites();
     if (isAdmin) {
       const { data: { session } } = await supabaseClient.auth.getSession();
