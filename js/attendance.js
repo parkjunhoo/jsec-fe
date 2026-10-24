@@ -342,8 +342,30 @@ document.addEventListener('DOMContentLoaded', async () => {
     const completedCount = displayRecords.filter(record => record.check_out_at).length;
     const inProgressCount = displayRecords.length - completedCount;
     personalSummary.textContent = `${monthInput.value.replace('-', '.')} · ${displayRecords.length}건 · 퇴근 완료 ${completedCount} · 근무 중 ${inProgressCount} · 휴게시간 미차감`;
+    const [selectedYear, selectedMonth] = monthInput.value.split('-').map(Number);
+    const daysInMonth = new Date(Date.UTC(selectedYear, selectedMonth, 0)).getUTCDate();
+    const recordsByDate = new Map(displayRecords.map(record => [record.work_date, record]));
     const currentTime = Date.now();
-    personalRecords.innerHTML = displayRecords.length ? displayRecords.map(record => {
+    personalRecords.innerHTML = Array.from({ length: daysInMonth }, (_, index) => {
+      const workDate = `${monthInput.value}-${String(index + 1).padStart(2, '0')}`;
+      const record = recordsByDate.get(workDate);
+      if (!record) {
+        return `
+          <article class="attendance-personal-record empty">
+            <div>
+              <div class="attendance-personal-record-heading">
+                <span>${escapeHtml(formatWorkDate(workDate))}</span>
+                <span class="attendance-record-status empty">기록 없음</span>
+              </div>
+              <div class="attendance-personal-record-site">등록된 근무기록이 없습니다.</div>
+            </div>
+            <div class="attendance-personal-record-duration">-</div>
+            <div class="attendance-personal-record-times">
+              <div>출근<strong>--:--</strong></div>
+              <div>퇴근<strong>--:--</strong></div>
+            </div>
+          </article>`;
+      }
       const status = record.check_out_at ? '퇴근 완료' : '근무 중';
       const duration = record.check_out_at
         ? formatWorkDuration(record.check_in_at, record.check_out_at)
@@ -363,7 +385,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             <div>퇴근<strong>${escapeHtml(formatPunchTime(record.check_out_at, record.work_date))}</strong></div>
           </div>
         </article>`;
-    }).join('') : '<div class="attendance-history-empty">해당 월의 출퇴근 기록이 없습니다.</div>';
+    }).join('');
     const adminDisplayRecords = isAdmin && !userFilter.value
       ? records.filter(record => record.user_id !== currentUserId)
       : records;
