@@ -404,7 +404,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         fillOpacity: 0.12
       });
     } else {
-      mapRadius.setCenter(point);
+      mapRadius.setPosition(point);
       mapRadius.setRadius(radius);
       mapRadius.setMap(mapPicker);
     }
@@ -706,7 +706,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       recordMap.setCenter(point);
       recordMap.setLevel(3);
       recordMapMarker.setPosition(point);
-      recordMapAccuracyCircle.setCenter(point);
+      recordMapAccuracyCircle.setPosition(point);
       recordMapAccuracyCircle.setRadius(accuracy);
     }
     window.setTimeout(() => {
