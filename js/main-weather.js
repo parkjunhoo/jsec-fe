@@ -44,9 +44,13 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   function formatPrecipitation(value) {
     if (value === null || value === undefined || value === '') return '--';
-    if (['강수 없음', '강수없음', '적설 없음', '적설없음', '-'].includes(String(value))) return '없음';
-    const amount = Number.parseFloat(value);
-    return Number.isFinite(amount) ? `${amount} mm` : String(value);
+    const text = String(value).trim();
+    if (['강수 없음', '강수없음', '적설 없음', '적설없음', '-'].includes(text)) return '없음';
+    if (/^\d+(?:\.\d+)?$/.test(text)) {
+      const amount = Number(text);
+      return amount === 0 ? '없음' : `${amount} mm`;
+    }
+    return text.replace(/\s*mm\b/i, ' mm').replace(/\s+/g, ' ').trim();
   }
 
   function setDetail(label, value) {
@@ -63,6 +67,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     setDetail('습도', formatValue(weather.current.humidity, '%'));
     setDetail('바람', `${formatValue(weather.current.wind)} m/s`);
     setDetail('강수', formatPrecipitation(weather.current.precipitation));
+    setDetail('강수확률', formatValue(weather.current.precipitationProbability, '%'));
 
     const observedAt = weather.observedAt || '';
     updated.textContent = observedAt.length >= 13
@@ -89,7 +94,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         temperature.textContent = `${formatValue(item.temperature)}°`;
         const condition = document.createElement('span');
         condition.textContent = item.condition || '';
-        hour.append(time, icon, temperature, condition);
+        const precipitation = document.createElement('span');
+        precipitation.className = 'home-weather-hour-precipitation';
+        precipitation.textContent = `강수량 ${formatPrecipitation(item.precipitation)}`;
+        const probability = document.createElement('span');
+        probability.className = 'home-weather-hour-probability';
+        probability.textContent = `확률 ${formatValue(item.precipitationProbability, '%')}`;
+        hour.append(time, icon, temperature, condition, precipitation, probability);
         forecast.append(hour);
       });
     }

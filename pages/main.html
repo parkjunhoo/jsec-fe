@@ -226,7 +226,7 @@
     .home-weather-temperature { font-size: clamp(34px, 8vw, 46px); font-weight: 750; letter-spacing: -.06em; line-height: 1; }
     .home-weather-condition { margin-top: 5px; color: #c7d6e5; font-size: 13px; }
     .home-weather-updated { margin-left: auto; color: var(--muted); font-size: 10px; text-align: right; }
-    .home-weather-details { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: 13px; }
+    .home-weather-details { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin-top: 13px; }
     .home-weather-detail { min-width: 0; padding: 9px 10px; border: 1px solid rgba(190, 211, 239, .08); border-radius: 9px; background: rgba(255, 255, 255, .035); }
     .home-weather-detail span { display: block; color: var(--muted); font-size: 9px; }
     .home-weather-detail strong { display: block; margin-top: 4px; font-size: 12px; }
@@ -235,10 +235,11 @@
     .home-weather-forecast-controls { display: flex; gap: 5px; }
     .home-weather-forecast-controls button { width: 30px; height: 30px; border: 1px solid var(--line); border-radius: 8px; background: rgba(255, 255, 255, .05); color: inherit; font-size: 18px; cursor: pointer; }
     .home-weather-forecast { display: flex; gap: 7px; margin-top: 8px; padding: 0 1px 6px; overflow-x: auto; scroll-snap-type: x mandatory; scroll-behavior: smooth; scrollbar-width: thin; -webkit-overflow-scrolling: touch; }
-    .home-weather-hour { display: grid; flex: 0 0 72px; justify-items: center; gap: 5px; padding: 9px 5px; border: 1px solid transparent; border-radius: 9px; background: rgba(255, 255, 255, .045); text-align: center; scroll-snap-align: start; }
+    .home-weather-hour { display: grid; flex: 0 0 92px; justify-items: center; gap: 5px; padding: 9px 5px; border: 1px solid transparent; border-radius: 9px; background: rgba(255, 255, 255, .045); text-align: center; scroll-snap-align: start; }
     .home-weather-hour time { color: var(--muted); font-size: 10px; }
     .home-weather-hour-icon { font-size: 19px; }
     .home-weather-hour strong { font-size: 12px; }
+    .home-weather-hour-precipitation, .home-weather-hour-probability { color: var(--muted); font-size: 9px; line-height: 1.35; }
     .home-weather-error { margin: 12px 0 0; color: #fca5a5; font-size: 11px; line-height: 1.5; }
     .home-weather-location-message { color: var(--muted); }
     .home-weather-error:empty { display: none; }
@@ -253,6 +254,8 @@
     html[data-theme="light"] .home-weather-updated,
     html[data-theme="light"] .home-weather-detail span,
     html[data-theme="light"] .home-weather-hour time,
+    html[data-theme="light"] .home-weather-hour-precipitation,
+    html[data-theme="light"] .home-weather-hour-probability,
     html[data-theme="light"] .home-weather-source { color: #65756b; }
     html[data-theme="light"] .home-weather-condition { color: #44584b; }
     html[data-theme="light"] .home-weather-refresh,
@@ -663,6 +666,7 @@
       .menu-card { min-height: 126px; }
     }
     @media (max-width: 392px) {
+      .home-weather-details { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .personal-tabs {
         overflow-x: auto;
         overscroll-behavior-inline: contain;
@@ -751,7 +755,8 @@
       <div class="home-weather-details" id="homeWeatherDetails">
         <div class="home-weather-detail"><span>습도</span><strong>--</strong></div>
         <div class="home-weather-detail"><span>바람</span><strong>--</strong></div>
-        <div class="home-weather-detail"><span>강수</span><strong>--</strong></div>
+        <div class="home-weather-detail"><span>현재 강수량</span><strong>--</strong></div>
+        <div class="home-weather-detail"><span>강수확률</span><strong>--</strong></div>
       </div>
       <div class="home-weather-forecast-heading">
         <strong>시간별 날씨</strong>
