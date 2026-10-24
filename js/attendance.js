@@ -3,8 +3,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const noteInput = document.getElementById('attendanceNote');
   const todayStatus = document.getElementById('attendanceTodayStatus');
   const punchMessage = document.getElementById('attendancePunchMessage');
-  const checkInButton = document.getElementById('attendanceCheckIn');
-  const checkOutButton = document.getElementById('attendanceCheckOut');
+  const punchButton = document.getElementById('attendancePunchToggle');
   const appPunchControls = document.getElementById('attendanceAppPunchControls');
   const webPunchNotice = document.getElementById('attendanceWebPunchNotice');
   const todayDateLabel = document.getElementById('attendanceTodayDate');
@@ -26,6 +25,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   const siteMessage = document.getElementById('attendanceSiteMessage');
   const saveSitesButton = document.getElementById('attendanceSaveSites');
   const addSiteButton = document.getElementById('attendanceAddSite');
+  const addRecordButton = document.getElementById('attendanceAddRecord');
+  const createDialog = document.getElementById('attendanceCreateDialog');
+  const createForm = document.getElementById('attendanceCreateForm');
+  const createMessage = document.getElementById('attendanceCreateMessage');
+  const createSaveButton = document.getElementById('attendanceCreateSave');
+  const createUser = document.getElementById('attendanceCreateUser');
+  const createSite = document.getElementById('attendanceCreateSite');
   const mapDialog = document.getElementById('attendanceMapDialog');
   const mapMessage = document.getElementById('attendanceMapMessage');
   const mapConfirmButton = document.getElementById('attendanceMapConfirm');
@@ -38,11 +44,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   const recordMapDetails = document.getElementById('attendanceRecordMapDetails');
   let recordMap = null;
   let recordMapMarker = null;
+  let recordMapAccuracyCircle = null;
   const editDialog = document.getElementById('attendanceEditDialog');
   const editForm = document.getElementById('attendanceEditForm');
   const editMessage = document.getElementById('attendanceEditMessage');
   const editSaveButton = document.getElementById('attendanceEditSave');
   let isAdmin = false;
+  let adminUsers = [];
   let sites = [];
   let records = [];
   let todayRecord = null;
@@ -54,12 +62,37 @@ document.addEventListener('DOMContentLoaded', async () => {
   let mapRadius = null;
   let mapTargetCard = null;
   let mapSelection = null;
-  let recordMapAccuracyCircle = null;
 
   function escapeHtml(value) {
     return String(value ?? '').replace(/[&<>"']/g, character => ({
       '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
     })[character]);
+  }
+
+  async function deleteAttendanceRecord(record) {
+    const reason = window.prompt(`${record.username} · ${record.work_date} 근태 기록 삭제 사유를 입력해 주세요.`);
+    if (reason === null) return;
+    if (!reason.trim()) {
+      historyMessage.textContent = '삭제 사유를 입력해야 합니다.';
+      return;
+    }
+    if (!window.confirm('선택한 근태 기록을 삭제할까요? 기록은 목록에서 숨겨지고 감사 기록은 보존됩니다.')) return;
+
+    historyMessage.textContent = '';
+    try {
+      await request(`/records/${encodeURIComponent(record.id)}`, {
+        method: 'DELETE',
+        body: JSON.stringify({ reason: reason.trim() })
+      });
+      historyMessage.textContent = '근태 기록을 삭제했습니다. 감사 기록은 보존되었습니다.';
+      historyMessage.style.color = 'var(--primary)';
+      await loadRecords();
+      if (record.user_id === currentUserId) await loadTodayRecord();
+    } catch (error) {
+      console.error('근태 기록 삭제 오류:', error);
+      historyMessage.textContent = error.message || '근태 기록을 삭제하지 못했습니다.';
+      historyMessage.style.color = 'var(--danger)';
+    }
   }
 
   function getAttendanceDevice() {
@@ -107,6 +140,19 @@ document.addEventListener('DOMContentLoaded', async () => {
   function getCurrentMonth() {
     const { year, month } = getKstParts();
     return `${year}-${month}`;
+  }
+
+  function getKoreaDateTimeInput() {
+    const parts = Object.fromEntries(new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'Asia/Seoul',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      hourCycle: 'h23'
+    }).formatToParts(new Date()).map(part => [part.type, part.value]));
+    return `${parts.year}-${parts.month}-${parts.day}T${parts.hour}:${parts.minute}`;
   }
 
   function getMonthRange(value) {
@@ -202,8 +248,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   function setBusy(nextBusy) {
     busy = nextBusy;
-    checkInButton.disabled = busy;
-    checkOutButton.disabled = busy;
+    punchButton.disabled = busy;
     noteInput.disabled = busy;
   }
 
@@ -213,31 +258,41 @@ document.addEventListener('DOMContentLoaded', async () => {
         .map(site => `<option value="${escapeHtml(site.id)}">${escapeHtml(site.name)}${site.enabled ? '' : ' (보관됨)'}</option>`)
         .join('');
     }
-    checkInButton.disabled = busy;
-    checkOutButton.disabled = busy;
+    punchButton.disabled = busy;
   }
 
   function renderTodayStatus() {
     const record = todayRecord;
     const title = todayStatus.querySelector('strong');
     const detail = todayStatus.querySelector('span');
+    const now = new Date();
     todayDateLabel.textContent = new Intl.DateTimeFormat('ko-KR', {
       timeZone: 'Asia/Seoul', year: 'numeric', month: 'long', day: 'numeric', weekday: 'short'
-    }).format(new Date());
+    }).format(now);
+    document.getElementById('attendanceCurrentTime').textContent = new Intl.DateTimeFormat('ko-KR', {
+      timeZone: 'Asia/Seoul', hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23'
+    }).format(now);
     if (!record) {
       title.textContent = '출근 전';
-      detail.textContent = '현재 위치를 확인한 뒤 출근을 등록해 주세요.';
+      detail.textContent = '현재 위치를 확인해 출근을 등록해 주세요.';
     } else if (!record.check_out_at) {
       title.textContent = '근무 중';
-      detail.textContent = `${record.location_name} · 출근 ${formatDateTime(record.check_in_at)}${record.work_date !== getKstDate() ? ' (전날 출근)' : ''}`;
+      const elapsed = formatWorkDuration(record.check_in_at, now);
+      detail.textContent = `${record.location_name} · 출근 ${formatDateTime(record.check_in_at)}${record.work_date !== getKstDate() ? ' (전날 출근)' : ''} · 퇴근 시 예상 ${elapsed}`;
     } else {
-      title.textContent = '퇴근 완료';
-      detail.textContent = `${record.location_name} · ${formatDateTime(record.check_in_at)} ~ ${formatDateTime(record.check_out_at)}`;
+      const duration = formatWorkDuration(record.check_in_at, record.check_out_at);
+      title.textContent = '근무 완료 · 다음 출근 가능';
+      detail.textContent = `${record.location_name} · ${formatDateTime(record.check_in_at)} ~ ${formatDateTime(record.check_out_at)} · 근무 ${duration}`;
     }
-    const hasCheckIn = Boolean(record);
-    const hasCheckOut = Boolean(record?.check_out_at);
-    checkInButton.hidden = hasCheckIn;
-    checkOutButton.hidden = !hasCheckIn || hasCheckOut;
+    const isCheckingOut = Boolean(record && !record.check_out_at);
+    punchButton.dataset.action = isCheckingOut ? 'check-out' : 'check-in';
+    punchButton.textContent = isCheckingOut
+      ? `퇴근하기 · 예상 ${formatWorkDuration(record.check_in_at, now)}`
+      : '현재 위치로 출근하기';
+    punchButton.setAttribute('aria-label', isCheckingOut
+      ? `현재 위치로 퇴근하기. 퇴근 시 근무시간 ${formatWorkDuration(record.check_in_at, now)}`
+      : '현재 위치로 출근하기');
+    punchButton.disabled = busy;
   }
 
   function renderRecords() {
@@ -246,6 +301,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     deviceHeading.hidden = !isAdmin;
     personalHistory.hidden = isAdmin;
     adminRecordsTable.hidden = !isAdmin;
+    addRecordButton.hidden = !isAdmin;
     renderPersonalMetrics();
     const completedCount = records.filter(record => record.check_out_at).length;
     const inProgressCount = records.length - completedCount;
@@ -281,15 +337,18 @@ document.addEventListener('DOMContentLoaded', async () => {
       <tr>
         <td>${escapeHtml(record.work_date)}${isAdmin ? `<span class="attendance-secondary">${escapeHtml(record.username)}</span>` : ''}</td>
         <td>${escapeHtml(record.location_name)}</td>
-        <td>${escapeHtml(formatDateTime(record.check_in_at))}<span class="attendance-secondary">정확도 ${Math.round(record.check_in_accuracy_m)}m · 거리 ${Math.round(record.check_in_distance_m)}m</span></td>
-        <td>${escapeHtml(formatDateTime(record.check_out_at))}${record.check_out_at ? `<span class="attendance-secondary">정확도 ${Math.round(record.check_out_accuracy_m)}m · 거리 ${Math.round(record.check_out_distance_m)}m</span>` : ''}</td>
+        <td>${escapeHtml(formatDateTime(record.check_in_at))}<span class="attendance-secondary">${record.check_in_latitude == null ? 'GPS 미수집 · 관리자 추가' : `정확도 ${Math.round(record.check_in_accuracy_m)}m · 거리 ${Math.round(record.check_in_distance_m)}m`}</span></td>
+        <td>${escapeHtml(formatDateTime(record.check_out_at))}${record.check_out_at ? `<span class="attendance-secondary">${record.check_out_latitude == null ? 'GPS 미수집 · 관리자 추가' : `정확도 ${Math.round(record.check_out_accuracy_m)}m · 거리 ${Math.round(record.check_out_distance_m)}m`}</span>` : ''}</td>
         <td>${record.check_out_at ? '퇴근 완료' : '근무 중'}${record.note ? `<span class="attendance-secondary">${escapeHtml(record.note)}</span>` : ''}</td>
         ${isAdmin ? `<td><div class="attendance-record-gps">
           ${record.check_in_latitude != null ? `<button class="attendance-button" type="button" data-attendance-gps="${escapeHtml(record.id)}" data-gps-action="check-in">출근 위치</button>` : '<span class="attendance-secondary">좌표 없음</span>'}
           ${record.check_out_latitude != null ? `<button class="attendance-button" type="button" data-attendance-gps="${escapeHtml(record.id)}" data-gps-action="check-out">퇴근 위치</button>` : ''}
         </div></td>` : ''}
         ${isAdmin ? `<td>${record.check_in_device ? `<span class="attendance-secondary">출근 · ${escapeHtml(formatDeviceInfo(record.check_in_device))}</span>` : '<span class="attendance-secondary">출근 기기 정보 없음</span>'}${record.check_out_at ? `<span class="attendance-secondary">퇴근 · ${escapeHtml(formatDeviceInfo(record.check_out_device))}</span>` : ''}</td>` : ''}
-        ${isAdmin ? `<td><button class="attendance-button" type="button" data-edit-attendance="${escapeHtml(record.id)}">수정</button></td>` : ''}
+        ${isAdmin ? `<td><div class="attendance-table-actions">
+          <button class="attendance-button" type="button" data-edit-attendance="${escapeHtml(record.id)}">수정</button>
+          <button class="attendance-button danger" type="button" data-delete-attendance="${escapeHtml(record.id)}">삭제</button>
+        </div></td>` : ''}
       </tr>
     `).join('');
   }
@@ -326,19 +385,32 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   function updateMapPreview(latitude, longitude, radius) {
-    if (!window.L || !mapPicker) return;
-    const point = [latitude, longitude];
-    if (!mapMarker) mapMarker = window.L.marker(point).addTo(mapPicker);
-    else mapMarker.setLatLng(point);
+    if (!window.kakao?.maps || !mapPicker) return;
+    const point = new window.kakao.maps.LatLng(latitude, longitude);
+    if (!mapMarker) mapMarker = new window.kakao.maps.Marker({ position: point, map: mapPicker });
+    else {
+      mapMarker.setPosition(point);
+      mapMarker.setMap(mapPicker);
+    }
     if (!mapRadius) {
-      mapRadius = window.L.circle(point, { radius, color: '#197a52', fillOpacity: 0.12 }).addTo(mapPicker);
+      mapRadius = new window.kakao.maps.Circle({
+        map: mapPicker,
+        center: point,
+        radius,
+        strokeWeight: 2,
+        strokeColor: '#197a52',
+        strokeOpacity: 0.8,
+        fillColor: '#197a52',
+        fillOpacity: 0.12
+      });
     } else {
-      mapRadius.setLatLng(point);
+      mapRadius.setCenter(point);
       mapRadius.setRadius(radius);
+      mapRadius.setMap(mapPicker);
     }
   }
 
-  function openSiteMap(card) {
+  async function openSiteMap(card) {
     mapTargetCard = card;
     mapMessage.textContent = '';
     mapSearchInput.value = '';
@@ -346,49 +418,53 @@ document.addEventListener('DOMContentLoaded', async () => {
     mapSelection = null;
     mapConfirmButton.disabled = true;
     mapDialog.showModal();
-    if (!window.L) {
-      mapMessage.textContent = '지도를 불러오지 못했습니다. 위도와 경도를 직접 입력해 주세요.';
-      return;
-    }
-
-    const latitudeValue = card.querySelector('[data-site-latitude]').value;
-    const longitudeValue = card.querySelector('[data-site-longitude]').value;
-    const latitude = Number(latitudeValue);
-    const longitude = Number(longitudeValue);
-    const hasCoordinates = latitudeValue !== '' && longitudeValue !== ''
-      && Number.isFinite(latitude) && Number.isFinite(longitude);
-    if (!mapPicker) {
-      mapPicker = window.L.map('attendanceMap').setView(
-        hasCoordinates ? [latitude, longitude] : [36.5, 127.5],
-        hasCoordinates ? 16 : 7
+    try {
+      await window.jsecKakaoMaps.load();
+      const latitudeValue = card.querySelector('[data-site-latitude]').value;
+      const longitudeValue = card.querySelector('[data-site-longitude]').value;
+      const latitude = Number(latitudeValue);
+      const longitude = Number(longitudeValue);
+      const hasCoordinates = latitudeValue !== '' && longitudeValue !== ''
+        && Number.isFinite(latitude) && Number.isFinite(longitude);
+      const center = new window.kakao.maps.LatLng(
+        hasCoordinates ? latitude : 36.5,
+        hasCoordinates ? longitude : 127.5
       );
-      window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        maxZoom: 19,
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-      }).addTo(mapPicker);
-      mapPicker.on('click', event => {
-        mapSelection = event.latlng;
-        updateMapPreview(event.latlng.lat, event.latlng.lng, Number(mapTargetCard?.querySelector('[data-site-radius]').value) || 100);
-        mapMessage.textContent = `선택한 좌표: ${event.latlng.lat.toFixed(6)}, ${event.latlng.lng.toFixed(6)}`;
+      if (!mapPicker) {
+        mapPicker = new window.kakao.maps.Map(document.getElementById('attendanceMap'), {
+          center,
+          level: hasCoordinates ? 3 : 13
+        });
+        window.kakao.maps.event.addListener(mapPicker, 'click', event => {
+          const point = event.latLng;
+          mapSelection = { lat: point.getLat(), lng: point.getLng() };
+          updateMapPreview(mapSelection.lat, mapSelection.lng, Number(mapTargetCard?.querySelector('[data-site-radius]').value) || 100);
+          mapMessage.textContent = `선택한 좌표: ${mapSelection.lat.toFixed(6)}, ${mapSelection.lng.toFixed(6)}`;
+          mapConfirmButton.disabled = false;
+        });
+      } else {
+        mapPicker.setCenter(center);
+        mapPicker.setLevel(hasCoordinates ? 3 : 13);
+      }
+      if (hasCoordinates) {
+        mapSelection = { lat: latitude, lng: longitude };
+        updateMapPreview(latitude, longitude, Number(card.querySelector('[data-site-radius]').value) || 100);
+        mapMessage.textContent = `현재 좌표: ${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
         mapConfirmButton.disabled = false;
-      });
-    }
-    mapPicker.setView(hasCoordinates ? [latitude, longitude] : [36.5, 127.5], hasCoordinates ? 16 : 7);
-    if (hasCoordinates) {
-      mapSelection = { lat: latitude, lng: longitude };
-      updateMapPreview(latitude, longitude, Number(card.querySelector('[data-site-radius]').value) || 100);
-      mapMessage.textContent = `현재 좌표: ${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
-      mapConfirmButton.disabled = false;
-    } else if (mapMarker) {
-      mapPicker.removeLayer(mapMarker);
-      mapMarker = null;
-      if (mapRadius) {
-        mapPicker.removeLayer(mapRadius);
+      } else {
+        mapMarker?.setMap(null);
+        mapRadius?.setMap(null);
+        mapMarker = null;
         mapRadius = null;
       }
+      window.setTimeout(() => {
+        mapPicker.relayout();
+        mapPicker.setCenter(center);
+      }, 0);
+    } catch (error) {
+      console.error('카카오 지도 초기화 오류:', error);
+      mapMessage.textContent = `${error.message} 지도 키와 등록 도메인을 설정하거나 위도·경도를 직접 입력해 주세요.`;
     }
-
-    window.setTimeout(() => mapPicker.invalidateSize(), 0);
   }
 
   async function searchMapLocation(event) {
@@ -399,32 +475,22 @@ document.addEventListener('DOMContentLoaded', async () => {
     mapMessage.textContent = '장소를 검색하고 있습니다...';
     mapSearchResults.replaceChildren();
     try {
-      const url = new URL('https://nominatim.openstreetmap.org/search');
-      url.search = new URLSearchParams({
-        q: query,
-        format: 'jsonv2',
-        limit: '5',
-        countrycodes: 'kr',
-        'accept-language': 'ko'
-      });
-      const response = await fetch(url, { headers: { Accept: 'application/json' } });
-      if (!response.ok) throw new Error(`장소 검색에 실패했습니다. (HTTP ${response.status})`);
-      const results = await response.json();
-      if (!Array.isArray(results)) throw new Error('장소 검색 응답을 확인할 수 없습니다.');
+      const results = await window.jsecKakaoMaps.search(query);
       if (!results.length) {
         mapMessage.textContent = '검색 결과가 없습니다. 다른 주소나 장소명을 입력해 주세요.';
         return;
       }
       for (const result of results) {
-        const latitude = Number(result.lat);
-        const longitude = Number(result.lon);
+        const latitude = result.latitude;
+        const longitude = result.longitude;
         if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) continue;
         const item = document.createElement('li');
         const button = document.createElement('button');
         button.type = 'button';
         button.dataset.latitude = String(latitude);
         button.dataset.longitude = String(longitude);
-        button.textContent = result.display_name || `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
+        button.dataset.name = result.name;
+        button.textContent = [result.name, result.address].filter(Boolean).join(' · ');
         item.append(button);
         mapSearchResults.append(item);
       }
@@ -549,8 +615,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       });
       punchMessage.textContent = action === 'check-in' ? '출근이 기록되었습니다.' : '퇴근이 기록되었습니다.';
       punchMessage.style.color = 'var(--primary)';
-        await Promise.all([loadRecords(), loadTodayRecord(), loadAnnualLeaveBalance()]);
-        if (!isAdmin) window.setInterval(renderPersonalMetrics, 60 * 1000);
+      await Promise.all([loadRecords(), loadTodayRecord()]);
     } catch (error) {
       console.error('출퇴근 등록 오류:', error);
       punchMessage.textContent = error.message || '출퇴근을 기록하지 못했습니다.';
@@ -562,10 +627,27 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   function populateAdminUserFilter(users) {
+    adminUsers = users.filter(user =>
+      !['guest', 'monitor'].includes(user.role) && user.status !== '퇴직'
+    );
     userFilter.innerHTML = '<option value="">전체 직원</option>' + users
       .filter(user => !['guest', 'monitor'].includes(user.role))
       .map(user => `<option value="${escapeHtml(user.id)}">${escapeHtml(user.name || user.username || '이름 없음')}</option>`)
       .join('');
+    createUser.innerHTML = '<option value="">직원 선택</option>' + adminUsers
+      .map(user => `<option value="${escapeHtml(user.id)}">${escapeHtml(user.name || user.username || '이름 없음')}</option>`)
+      .join('');
+    createSite.innerHTML = '<option value="">출근지 선택</option>' + sites
+      .map(site => `<option value="${escapeHtml(site.id)}">${escapeHtml(site.name)}${site.enabled ? '' : ' (보관됨)'}</option>`)
+      .join('');
+  }
+
+  function openCreateDialog() {
+    createForm.reset();
+    createMessage.textContent = '';
+    document.getElementById('attendanceCreateCheckIn').value = getKoreaDateTimeInput();
+    document.getElementById('attendanceCreateCheckOut').value = '';
+    createDialog.showModal();
   }
 
   function openEditDialog(record) {
@@ -579,7 +661,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     editDialog.showModal();
   }
 
-  function openRecordMap(record, action) {
+  async function openRecordMap(record, action) {
     const isCheckIn = action === 'check-in';
     const prefix = isCheckIn ? 'check_in' : 'check_out';
     const latitude = record[`${prefix}_latitude`];
@@ -595,31 +677,42 @@ document.addEventListener('DOMContentLoaded', async () => {
       + `위도 ${Number(latitude).toFixed(6)}, 경도 ${Number(longitude).toFixed(6)} · `
       + `GPS 정확도 약 ${Math.round(accuracy)}m · 출근지까지 ${Math.round(distance)}m`;
     recordMapDialog.showModal();
-    if (!window.L) {
-      recordMapDetails.textContent += '\n지도를 불러오지 못했습니다. 좌표는 위 표시와 같습니다.';
+    try {
+      await window.jsecKakaoMaps.load();
+    } catch (error) {
+      console.error('카카오 근태 지도 초기화 오류:', error);
+      recordMapDetails.textContent += `\n${error.message} 좌표를 참고해 주세요.`;
       return;
     }
 
-    const point = [latitude, longitude];
+    const point = new window.kakao.maps.LatLng(latitude, longitude);
     if (!recordMap) {
-      recordMap = window.L.map('attendanceRecordMap').setView(point, 17);
-      window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        maxZoom: 19,
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-      }).addTo(recordMap);
-      recordMapMarker = window.L.marker(point).addTo(recordMap);
-      recordMapAccuracyCircle = window.L.circle(point, {
+      recordMap = new window.kakao.maps.Map(document.getElementById('attendanceRecordMap'), {
+        center: point,
+        level: 3
+      });
+      recordMapMarker = new window.kakao.maps.Marker({ position: point, map: recordMap });
+      recordMapAccuracyCircle = new window.kakao.maps.Circle({
+        map: recordMap,
+        center: point,
         radius: accuracy,
-        color: '#d24d57',
+        strokeWeight: 2,
+        strokeColor: '#d24d57',
+        strokeOpacity: 0.8,
+        fillColor: '#d24d57',
         fillOpacity: 0.12
-      }).addTo(recordMap);
+      });
     } else {
-      recordMap.setView(point, 17);
-      recordMapMarker.setLatLng(point);
-      recordMapAccuracyCircle.setLatLng(point);
+      recordMap.setCenter(point);
+      recordMap.setLevel(3);
+      recordMapMarker.setPosition(point);
+      recordMapAccuracyCircle.setCenter(point);
       recordMapAccuracyCircle.setRadius(accuracy);
     }
-    window.setTimeout(() => recordMap.invalidateSize(), 0);
+    window.setTimeout(() => {
+      recordMap.relayout();
+      recordMap.setCenter(point);
+    }, 0);
   }
 
   attendanceDevice = getAttendanceDevice();
@@ -659,15 +752,52 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (!response.ok) throw new Error(users.error || '직원 목록을 불러오지 못했습니다.');
       populateAdminUserFilter(users);
     }
-    await Promise.all([loadRecords(), loadTodayRecord()]);
+    await Promise.all([loadRecords(), loadTodayRecord(), loadAnnualLeaveBalance()]);
+    window.setInterval(renderTodayStatus, 1000);
+    if (!isAdmin) window.setInterval(renderPersonalMetrics, 60 * 1000);
   } catch (error) {
     console.error('근태 관리 화면 초기화 오류:', error);
     historyMessage.textContent = error.message || '근태 관리 화면을 불러오지 못했습니다.';
     punchMessage.textContent = error.message || '출근지 설정을 불러오지 못했습니다.';
   }
 
-  checkInButton.addEventListener('click', () => punch('check-in'));
-  checkOutButton.addEventListener('click', () => punch('check-out'));
+  punchButton.addEventListener('click', () => punch(punchButton.dataset.action));
+  addRecordButton.addEventListener('click', openCreateDialog);
+  document.getElementById('attendanceCreateCancel').addEventListener('click', () => createDialog.close());
+  createDialog.addEventListener('click', event => {
+    if (event.target === createDialog) createDialog.close();
+  });
+  createForm.addEventListener('submit', async event => {
+    event.preventDefault();
+    createMessage.textContent = '';
+    createSaveButton.disabled = true;
+    try {
+      const userId = createUser.value;
+      await request('/records', {
+        method: 'POST',
+        body: JSON.stringify({
+          user_id: userId,
+          location_id: createSite.value,
+          check_in_at: document.getElementById('attendanceCreateCheckIn').value,
+          check_out_at: document.getElementById('attendanceCreateCheckOut').value || null,
+          note: document.getElementById('attendanceCreateNote').value,
+          reason: document.getElementById('attendanceCreateReason').value
+        })
+      });
+      createDialog.close();
+      userFilter.value = userId;
+      monthInput.value = document.getElementById('attendanceCreateCheckIn').value.slice(0, 7);
+      await loadRecords();
+      historyMessage.textContent = '관리자 근태 기록을 추가했습니다. 추가 사유와 변경 내용은 감사 기록에 보관되었습니다.';
+      historyMessage.style.color = 'var(--primary)';
+      if (userId === currentUserId) await loadTodayRecord();
+    } catch (error) {
+      console.error('관리자 근태 기록 추가 오류:', error);
+      createMessage.textContent = error.message || '근태 기록을 추가하지 못했습니다.';
+    } finally {
+      createSaveButton.disabled = false;
+    }
+  });
   document.getElementById('attendanceReload').addEventListener('click', loadRecords);
   const changeMonth = offset => {
     const [year, month] = monthInput.value.split('-').map(Number);
@@ -705,7 +835,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const mapButton = event.target.closest('[data-open-site-map]');
     if (mapButton) {
-      openSiteMap(card);
+      await openSiteMap(card);
       return;
     }
     const deleteButton = event.target.closest('[data-delete-site]');
@@ -757,13 +887,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     const latitude = Number(resultButton.dataset.latitude);
     const longitude = Number(resultButton.dataset.longitude);
     if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return;
-    mapSelection = { lat: latitude, lng: longitude };
+    mapSelection = { lat: latitude, lng: longitude, name: resultButton.dataset.name || '' };
     const radius = Number(mapTargetCard.querySelector('[data-site-radius]').value) || 100;
-    mapPicker.setView([latitude, longitude], 17);
+    const point = new window.kakao.maps.LatLng(latitude, longitude);
+    mapPicker.setCenter(point);
+    mapPicker.setLevel(3);
     updateMapPreview(latitude, longitude, radius);
     mapMessage.textContent = `검색 위치 선택 · 위도 ${latitude.toFixed(6)}, 경도 ${longitude.toFixed(6)}. 지도를 클릭해 위치를 미세 조정할 수 있습니다.`;
     mapConfirmButton.disabled = false;
-    window.setTimeout(() => mapPicker.invalidateSize(), 0);
+    window.setTimeout(() => mapPicker.relayout(), 0);
   });
   document.getElementById('attendanceMapCancel').addEventListener('click', () => mapDialog.close());
   mapDialog.addEventListener('click', event => {
@@ -808,9 +940,15 @@ document.addEventListener('DOMContentLoaded', async () => {
       return;
     }
     const button = event.target.closest('[data-edit-attendance]');
-    if (!button || !isAdmin) return;
-    const record = records.find(item => item.id === button.dataset.editAttendance);
-    if (record) openEditDialog(record);
+    if (button && isAdmin) {
+      const record = records.find(item => item.id === button.dataset.editAttendance);
+      if (record) openEditDialog(record);
+      return;
+    }
+    const deleteButton = event.target.closest('[data-delete-attendance]');
+    if (!deleteButton || !isAdmin) return;
+    const record = records.find(item => item.id === deleteButton.dataset.deleteAttendance);
+    if (record) deleteAttendanceRecord(record);
   });
   document.getElementById('attendanceEditCancel').addEventListener('click', () => editDialog.close());
   editDialog.addEventListener('click', event => {

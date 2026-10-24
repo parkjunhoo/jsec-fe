@@ -192,21 +192,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     locationMessage.textContent = '장소를 검색하고 있습니다...';
     locationResults.replaceChildren();
     try {
-      const url = new URL('https://nominatim.openstreetmap.org/search');
-      url.search = new URLSearchParams({
-        q: query,
-        format: 'jsonv2',
-        limit: '5',
-        countrycodes: 'kr',
-        'accept-language': 'ko'
-      });
-      const response = await fetch(url, { headers: { Accept: 'application/json' } });
-      if (!response.ok) throw new Error(`장소 검색에 실패했습니다. (HTTP ${response.status})`);
-      const results = await response.json();
-      if (!Array.isArray(results)) throw new Error('장소 검색 응답 형식이 올바르지 않습니다.');
+      const results = await window.jsecKakaoMaps.search(query);
       for (const result of results) {
-        const latitude = Number(result.lat);
-        const longitude = Number(result.lon);
+        const latitude = result.latitude;
+        const longitude = result.longitude;
         if (!Number.isFinite(latitude) || latitude < 32 || latitude > 40
           || !Number.isFinite(longitude) || longitude < 123 || longitude > 133) continue;
         const item = document.createElement('li');
@@ -214,7 +203,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         button.type = 'button';
         button.dataset.latitude = String(latitude);
         button.dataset.longitude = String(longitude);
-        button.textContent = result.display_name || `${latitude.toFixed(5)}, ${longitude.toFixed(5)}`;
+        button.dataset.name = result.name;
+        button.textContent = [result.name, result.address].filter(Boolean).join(' · ');
         item.append(button);
         locationResults.append(item);
       }
@@ -263,7 +253,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const longitude = Number(button.dataset.longitude);
     if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return;
     applySelectedLocation({
-      name: button.textContent.trim().split(',').slice(0, 3).join(',').slice(0, 100),
+      name: (button.dataset.name || button.textContent).slice(0, 100),
       latitude,
       longitude
     });
