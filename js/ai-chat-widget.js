@@ -65,6 +65,8 @@
   let pointerDrag = null;
   let ignoreNextToggleClick = false;
   let hasCustomPosition = false;
+  let savedTogglePosition = null;
+  let viewportHeightBeforeKeyboard = null;
 
   function storageKeys() {
     return {
@@ -90,6 +92,7 @@
     root.style.bottom = 'auto';
     hasCustomPosition = true;
     if (persist && userId) {
+      savedTogglePosition = position;
       try {
         localStorage.setItem(storageKeys().position, JSON.stringify(position));
       } catch (error) {
@@ -102,6 +105,7 @@
     try {
       const saved = JSON.parse(localStorage.getItem(storageKeys().position) || 'null');
       if (Number.isFinite(saved?.left) && Number.isFinite(saved?.top)) {
+        savedTogglePosition = { left: saved.left, top: saved.top };
         placeToggle(saved.left, saved.top);
       }
     } catch (error) {
@@ -123,6 +127,35 @@
     panel.style.top = `${top}px`;
     panel.style.right = 'auto';
     panel.style.bottom = 'auto';
+  }
+
+  function getVisibleViewportHeight() {
+    return Math.min(window.innerHeight, window.visualViewport?.height ?? window.innerHeight);
+  }
+
+  function handleViewportChange() {
+    const viewportHeight = getVisibleViewportHeight();
+    const keyboardIsOpen = viewportHeightBeforeKeyboard !== null
+      && viewportHeight < viewportHeightBeforeKeyboard - 100;
+
+    if (keyboardIsOpen) {
+      if (hasCustomPosition && savedTogglePosition) {
+        const keyboardHeight = viewportHeightBeforeKeyboard - viewportHeight;
+        placeToggle(savedTogglePosition.left, savedTogglePosition.top - keyboardHeight);
+      }
+      if (!panel.hidden) positionPanel();
+      return;
+    }
+
+    if (viewportHeightBeforeKeyboard !== null) {
+      viewportHeightBeforeKeyboard = null;
+      if (hasCustomPosition && savedTogglePosition) {
+        placeToggle(savedTogglePosition.left, savedTogglePosition.top);
+      }
+    } else if (hasCustomPosition && savedTogglePosition) {
+      placeToggle(savedTogglePosition.left, savedTogglePosition.top);
+    }
+    if (!panel.hidden) positionPanel();
   }
 
   function appendMessage(text, role = 'assistant', isError = false) {
@@ -285,6 +318,7 @@
 
   function setOpen(isOpen) {
     if (isOpen && !enabled) return;
+    if (!isOpen && activeController) activeController.abort();
     panel.hidden = !isOpen;
     toggle.setAttribute('aria-expanded', String(isOpen));
     toggle.setAttribute('aria-label', isOpen ? 'AI 챗봇 닫기' : 'AI 챗봇 열기');
@@ -979,8 +1013,8 @@
       if (controller.signal.aborted) {
         if (timedOut) {
           console.error('AI 챗봇 요청 시간 초과:', error);
-          appendMessage('1분 안에 답변을 받지 못했습니다. AI 서비스가 혼잡할 수 있으니 잠시 후 다시 시도해 주세요.', 'assistant', true);
-        } else {
+          if (!panel.hidden) appendMessage('1분 안에 답변을 받지 못했습니다. AI 서비스가 혼잡할 수 있으니 잠시 후 다시 시도해 주세요.', 'assistant', true);
+        } else if (!panel.hidden) {
           appendMessage('답변 생성을 중지했습니다.');
         }
       } else {
@@ -1454,10 +1488,15 @@
   document.addEventListener('keydown', event => {
     if (event.key === 'Escape' && !panel.hidden) setOpen(false);
   });
-  window.addEventListener('resize', () => {
-    if (hasCustomPosition) placeToggle(toggle.getBoundingClientRect().left, toggle.getBoundingClientRect().top);
-    if (!panel.hidden) positionPanel();
+  input.addEventListener('focus', () => {
+    viewportHeightBeforeKeyboard = Math.max(
+      window.innerHeight,
+      window.visualViewport?.height || 0
+    );
   });
+  input.addEventListener('blur', handleViewportChange);
+  window.addEventListener('resize', handleViewportChange);
+  window.visualViewport?.addEventListener('resize', handleViewportChange);
 
   window.addEventListener('jsec-ai-settings-changed', refreshSettings);
   window.addEventListener('storage', event => {
