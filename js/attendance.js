@@ -141,6 +141,38 @@ document.addEventListener('DOMContentLoaded', async () => {
     }).format(date);
   }
 
+  function formatPunchTime(value, workDate) {
+    if (!value) return '미기록';
+    const parts = Object.fromEntries(new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'Asia/Seoul',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      hourCycle: 'h23'
+    }).formatToParts(new Date(value)).map(part => [part.type, part.value]));
+    const time = `${parts.hour}:${parts.minute}`;
+    const punchDate = `${parts.year}-${parts.month}-${parts.day}`;
+    return punchDate === workDate ? time : `${parts.month}.${parts.day} ${time}`;
+  }
+
+  function getTotalWorkMinutes() {
+    return records.reduce((total, record) => {
+      const end = record.check_out_at ? new Date(record.check_out_at).getTime() : Date.now();
+      const start = new Date(record.check_in_at).getTime();
+      return total + (Number.isFinite(start) && Number.isFinite(end)
+        ? Math.max(0, Math.floor((end - start) / 60000))
+        : 0);
+    }, 0);
+  }
+
+  function renderPersonalMetrics() {
+    const totalMinutes = getTotalWorkMinutes();
+    document.getElementById('attendanceMonthlyWorkTime').textContent =
+      `${Math.floor(totalMinutes / 60)}시간 ${totalMinutes % 60}분`;
+  }
+
   function formatDateForInput(value) {
     if (!value) return '';
     const parts = new Intl.DateTimeFormat('en-CA', {
@@ -214,24 +246,21 @@ document.addEventListener('DOMContentLoaded', async () => {
     deviceHeading.hidden = !isAdmin;
     personalHistory.hidden = isAdmin;
     adminRecordsTable.hidden = !isAdmin;
+    renderPersonalMetrics();
+    const completedCount = records.filter(record => record.check_out_at).length;
+    const inProgressCount = records.length - completedCount;
+    personalSummary.textContent = `${monthInput.value.replace('-', '.')} · ${records.length}건 · 퇴근 완료 ${completedCount} · 근무 중 ${inProgressCount} · 휴게시간 미차감`;
     if (!records.length) {
       recordsBody.innerHTML = `<tr><td class="attendance-empty" colspan="${isAdmin ? 8 : 5}">해당 기간의 출퇴근 기록이 없습니다.</td></tr>`;
-      personalSummary.textContent = `${monthInput.value.replace('-', '.')} 근태 기록이 없습니다.`;
-      personalRecords.innerHTML = '<div class="attendance-history-empty">해당 월의 근태 기록이 없습니다.</div>';
+      personalRecords.innerHTML = '<div class="attendance-history-empty">해당 월의 출퇴근 기록이 없습니다.</div>';
       return;
     }
-    const completed = records.filter(record => record.check_out_at);
-    const completedMinutes = completed.reduce((total, record) => total + Math.floor(
-      (new Date(record.check_out_at).getTime() - new Date(record.check_in_at).getTime()) / 60000
-    ), 0);
-    personalSummary.textContent = isAdmin
-      ? ''
-      : `${monthInput.value.replace('-', '.')} · ${records.length}건${completed.length ? ` · 퇴근 완료 ${completed.length}건 · 출퇴근 간격 ${formatWorkDuration(0, completedMinutes * 60000)} (휴게시간 미차감)` : ''}`;
+    const currentTime = Date.now();
     personalRecords.innerHTML = records.map(record => {
       const status = record.check_out_at ? '퇴근 완료' : '근무 중';
       const duration = record.check_out_at
         ? formatWorkDuration(record.check_in_at, record.check_out_at)
-        : '퇴근 전';
+        : `${formatWorkDuration(record.check_in_at, currentTime)} · 진행 중`;
       return `
         <article class="attendance-personal-record">
           <div>
@@ -243,8 +272,8 @@ document.addEventListener('DOMContentLoaded', async () => {
           </div>
           <div class="attendance-personal-record-duration">${duration}</div>
           <div class="attendance-personal-record-times">
-            <div>출근<strong>${escapeHtml(formatDateTime(record.check_in_at))}</strong></div>
-            <div>퇴근<strong>${record.check_out_at ? escapeHtml(formatDateTime(record.check_out_at)) : '아직 퇴근 전'}</strong></div>
+            <div>출근<strong>${escapeHtml(formatPunchTime(record.check_in_at, record.work_date))}</strong></div>
+            <div>퇴근<strong>${escapeHtml(formatPunchTime(record.check_out_at, record.work_date))}</strong></div>
           </div>
         </article>`;
     }).join('');
@@ -475,6 +504,31 @@ document.addEventListener('DOMContentLoaded', async () => {
     renderTodayStatus();
   }
 
+  async function loadAnnualLeaveBalance() {
+    try {
+      const { data, error } = await supabaseClient.auth.getSession();
+      if (error) throw error;
+      if (!data.session?.access_token) throw new Error('로그인이 필요합니다.');
+      const response = await fetch('https://jsec-serverless.adobephotoshop.workers.dev/api/annual-leave', {
+        headers: { Authorization: `Bearer ${data.session.access_token}` }
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(result.error || `연차 조회에 실패했습니다. (HTTP ${response.status})`);
+      const balance = (result.balances || []).find(item => item.user_id === currentUserId);
+      if (!balance) throw new Error('내 연차 현황을 찾을 수 없습니다.');
+      document.getElementById('attendanceAnnualLeaveBalance').textContent =
+        balance.remaining_days == null ? '산정 불가' : `${balance.remaining_days}일`;
+      document.getElementById('attendanceAnnualLeaveDetail').textContent = balance.annual_base_date
+        ? `총 ${balance.entitled_days ?? '--'}일 · 사용 ${balance.used_days}일 · 입사 ${balance.annual_base_date}`
+        : '연차 기준일이 등록되지 않았습니다.';
+    } catch (error) {
+      console.error('근태 화면 연차 현황 조회 오류:', error);
+      document.getElementById('attendanceAnnualLeaveBalance').textContent = '조회 실패';
+      document.getElementById('attendanceAnnualLeaveDetail').textContent =
+        error.message || '연차 관리 페이지에서 다시 확인해 주세요.';
+    }
+  }
+
   async function punch(action) {
     if (busy) return;
     if (!attendanceDevice) {
@@ -495,7 +549,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       });
       punchMessage.textContent = action === 'check-in' ? '출근이 기록되었습니다.' : '퇴근이 기록되었습니다.';
       punchMessage.style.color = 'var(--primary)';
-      await Promise.all([loadRecords(), loadTodayRecord()]);
+        await Promise.all([loadRecords(), loadTodayRecord(), loadAnnualLeaveBalance()]);
+        if (!isAdmin) window.setInterval(renderPersonalMetrics, 60 * 1000);
     } catch (error) {
       console.error('출퇴근 등록 오류:', error);
       punchMessage.textContent = error.message || '출퇴근을 기록하지 못했습니다.';
