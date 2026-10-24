@@ -28,11 +28,17 @@ document.addEventListener('DOMContentLoaded', async () => {
   const currentUserId = session.user.id;
   const UPDATE_PROFILE_API = `https://jsec-serverless.adobephotoshop.workers.dev/api/users/${encodeURIComponent(currentUserId)}`;
   const aiChatEnabled = document.getElementById('aiChatEnabled');
+  const aiProvider = document.getElementById('aiProvider');
   const geminiApiKeyInput = document.getElementById('geminiApiKey');
   const saveGeminiApiKey = document.getElementById('saveGeminiApiKey');
   const removeGeminiApiKey = document.getElementById('removeGeminiApiKey');
+  const groqApiKeyInput = document.getElementById('groqApiKey');
+  const saveGroqApiKey = document.getElementById('saveGroqApiKey');
+  const removeGroqApiKey = document.getElementById('removeGroqApiKey');
   const aiSettingsStatus = document.getElementById('aiSettingsStatus');
   const aiApiKeyStorageKey = `jsecGeminiApiKey:${currentUserId}`;
+  const groqApiKeyStorageKey = `jsecGroqApiKey:${currentUserId}`;
+  const aiProviderStorageKey = `jsecAiProvider:${currentUserId}`;
   const aiEnabledStorageKey = `jsecAiChatEnabled:${currentUserId}`;
   let pushToken = '';
 
@@ -42,17 +48,41 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   try {
     aiChatEnabled.checked = localStorage.getItem(aiEnabledStorageKey) !== 'false';
-    aiSettingsStatus.textContent = localStorage.getItem(aiApiKeyStorageKey)
-      ? 'API 키가 이 브라우저에 저장되어 있습니다.'
-      : 'API 키를 등록해 주세요.';
+    aiProvider.value = localStorage.getItem(aiProviderStorageKey) || 'gemini';
+    const savedProviderKey = aiProvider.value === 'groq'
+      ? localStorage.getItem(groqApiKeyStorageKey)
+      : localStorage.getItem(aiApiKeyStorageKey);
+    aiSettingsStatus.textContent = savedProviderKey
+      ? `${aiProvider.value === 'groq' ? 'Groq' : 'Gemini'} API 키가 이 브라우저에 저장되어 있습니다.`
+      : `${aiProvider.value === 'groq' ? 'Groq' : 'Gemini'} API 키를 등록해 주세요.`;
   } catch (error) {
     aiChatEnabled.disabled = true;
+    aiProvider.disabled = true;
     geminiApiKeyInput.disabled = true;
     saveGeminiApiKey.disabled = true;
     removeGeminiApiKey.disabled = true;
+    groqApiKeyInput.disabled = true;
+    saveGroqApiKey.disabled = true;
+    removeGroqApiKey.disabled = true;
     aiSettingsStatus.textContent = '브라우저 저장소에 접근할 수 없어 AI 설정을 사용할 수 없습니다.';
     console.error('AI 설정 저장소 확인 실패:', error);
   }
+
+  aiProvider.addEventListener('change', () => {
+    try {
+      localStorage.setItem(aiProviderStorageKey, aiProvider.value);
+      const hasKey = Boolean(localStorage.getItem(aiProvider.value === 'groq'
+        ? groqApiKeyStorageKey
+        : aiApiKeyStorageKey));
+      aiSettingsStatus.textContent = hasKey
+        ? `${aiProvider.value === 'groq' ? 'Groq' : 'Gemini'}로 전환했습니다. 저장된 키를 사용합니다.`
+        : `${aiProvider.value === 'groq' ? 'Groq' : 'Gemini'}를 선택했습니다. 해당 API 키를 등록해 주세요.`;
+      notifyAiSettingsChanged();
+    } catch (error) {
+      aiSettingsStatus.textContent = 'AI 제공자 설정을 저장하지 못했습니다.';
+      console.error('AI 제공자 설정 저장 실패:', error);
+    }
+  });
 
   aiChatEnabled.addEventListener('change', () => {
     try {
@@ -93,6 +123,36 @@ document.addEventListener('DOMContentLoaded', async () => {
     } catch (error) {
       aiSettingsStatus.textContent = '저장된 API 키를 삭제하지 못했습니다.';
       console.error('Gemini API 키 삭제 실패:', error);
+    }
+  });
+
+  saveGroqApiKey.addEventListener('click', () => {
+    const apiKey = groqApiKeyInput.value.trim();
+    if (!apiKey) {
+      aiSettingsStatus.textContent = '저장할 Groq API 키를 입력해 주세요.';
+      groqApiKeyInput.focus();
+      return;
+    }
+    try {
+      localStorage.setItem(groqApiKeyStorageKey, apiKey);
+      groqApiKeyInput.value = '';
+      aiSettingsStatus.textContent = 'Groq API 키를 이 브라우저에 저장했습니다.';
+      notifyAiSettingsChanged();
+    } catch (error) {
+      aiSettingsStatus.textContent = 'Groq API 키를 브라우저에 저장하지 못했습니다.';
+      console.error('Groq API 키 저장 실패:', error);
+    }
+  });
+
+  removeGroqApiKey.addEventListener('click', () => {
+    try {
+      localStorage.removeItem(groqApiKeyStorageKey);
+      groqApiKeyInput.value = '';
+      aiSettingsStatus.textContent = '저장된 Groq API 키를 삭제했습니다.';
+      notifyAiSettingsChanged();
+    } catch (error) {
+      aiSettingsStatus.textContent = '저장된 Groq API 키를 삭제하지 못했습니다.';
+      console.error('Groq API 키 삭제 실패:', error);
     }
   });
 

@@ -1,6 +1,7 @@
 (() => {
   const MCP_URL = 'https://jsec-serverless.adobephotoshop.workers.dev/api/mcp';
   const MCP_VERSION = '2025-03-26';
+  const GROQ_MODEL = 'qwen/qwen3.8-27b';
   const PREFERRED_GEMINI_MODELS = [
     'gemini-3.5-flash-lite',
     'gemini-3.1-flash-lite'
@@ -48,6 +49,7 @@
   const stopButton = root.querySelector('#jsecAiChatStop');
   let userId = '';
   let apiKey = '';
+  let provider = 'gemini';
   let geminiModel = '';
   let geminiModels = [];
   let geminiModelsPromise = null;
@@ -67,6 +69,8 @@
   function storageKeys() {
     return {
       apiKey: `jsecGeminiApiKey:${userId}`,
+      groqApiKey: `jsecGroqApiKey:${userId}`,
+      provider: `jsecAiProvider:${userId}`,
       enabled: `jsecAiChatEnabled:${userId}`,
       position: `jsecAiChatPosition:${userId}`
     };
@@ -160,11 +164,12 @@
 
   function renderNoKeyMessage() {
     messages.replaceChildren();
-    const message = appendMessage('Gemini API 키가 등록되어 있지 않습니다. 설정에서 API 키를 등록해 주세요.');
+    const providerLabel = provider === 'groq' ? 'Groq' : 'Gemini';
+    const message = appendMessage(`${providerLabel} API 키가 등록되어 있지 않습니다. 설정에서 선택한 AI의 API 키를 등록해 주세요.`);
     const settingsLink = document.createElement('a');
     settingsLink.className = 'jsec-ai-chat-settings-link';
-    settingsLink.href = '/pages/settings.html#geminiApiKey';
-    settingsLink.textContent = '설정에서 API 키 등록하기';
+    settingsLink.href = '/pages/settings.html#aiProvider';
+    settingsLink.textContent = '설정에서 AI 선택 및 API 키 등록하기';
     message.append(document.createElement('br'), settingsLink);
     form.hidden = true;
   }
@@ -182,8 +187,10 @@
   function refreshSettings() {
     try {
       const keys = storageKeys();
-      const savedApiKey = localStorage.getItem(keys.apiKey) || '';
-      if (savedApiKey !== apiKey) {
+      const savedProvider = localStorage.getItem(keys.provider) === 'groq' ? 'groq' : 'gemini';
+      const savedApiKey = localStorage.getItem(savedProvider === 'groq' ? keys.groqApiKey : keys.apiKey) || '';
+      if (savedProvider !== provider || savedApiKey !== apiKey) {
+        provider = savedProvider;
         apiKey = savedApiKey;
         geminiModel = '';
         geminiModels = [];
@@ -351,6 +358,130 @@
     });
     if (userTurnStarts.length <= maxUserTurns) return history;
     return history.slice(userTurnStarts[userTurnStarts.length - maxUserTurns]);
+  }
+
+  function toGroqMessages(history) {
+    const messages = [{ role: 'system', content: getSystemPrompt() }];
+    const pendingToolIds = new Map();
+    let generatedToolId = 0;
+    for (const item of getRecentConversation(history)) {
+      if (item.role === 'model') {
+        const calls = item.parts.filter(part => part.functionCall?.name).map(part => {
+          const call = part.functionCall;
+          const id = call.id || `jsec-tool-${++generatedToolId}`;
+          const ids = pendingToolIds.get(call.name) || [];
+          ids.push(id);
+          pendingToolIds.set(call.name, ids);
+          return {
+            id,
+            type: 'function',
+            function: {
+              name: call.name,
+              arguments: JSON.stringify(call.args || {})
+            }
+          };
+        });
+        const text = item.parts.map(part => part.text || '').filter(Boolean).join('\n');
+        if (text || calls.length) {
+          messages.push({
+            role: 'assistant',
+            ...(text ? { content: text } : { content: null }),
+            ...(calls.length ? { tool_calls: calls } : {})
+          });
+        }
+        continue;
+      }
+      if (item.role !== 'user') continue;
+      const textParts = item.parts.filter(part => typeof part.text === 'string').map(part => part.text);
+      const toolResponses = item.parts.filter(part => part.functionResponse);
+      for (const part of toolResponses) {
+        const response = part.functionResponse;
+        const ids = pendingToolIds.get(response.name) || [];
+        const id = response.id || ids.shift();
+        if (ids.length) pendingToolIds.set(response.name, ids);
+        else pendingToolIds.delete(response.name);
+        if (!id) throw new Error(`Groq 도구 응답 ID를 찾을 수 없습니다: ${response.name}`);
+        messages.push({
+          role: 'tool',
+          tool_call_id: id,
+          content: JSON.stringify(response.response?.result ?? {})
+        });
+      }
+      const images = item.parts.filter(part => part.inlineData).map(part => ({
+        type: 'image_url',
+        image_url: {
+          url: `data:${part.inlineData.mimeType || 'image/jpeg'};base64,${part.inlineData.data}`
+        }
+      }));
+      if (textParts.length || images.length) {
+        const content = [...textParts.map(text => ({ type: 'text', text })), ...images];
+        messages.push({
+          role: 'user',
+          content: images.length ? content : textParts.join('\n')
+        });
+      }
+    }
+    return messages;
+  }
+
+  async function callGroq() {
+    statusText.textContent = 'Groq에서 답변을 생성하고 있습니다.';
+    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${apiKey}`
+      },
+      ...(activeController ? { signal: activeController.signal } : {}),
+      body: JSON.stringify({
+        model: GROQ_MODEL,
+        messages: toGroqMessages(conversation),
+        tools: tools.map(tool => ({
+          type: 'function',
+          function: {
+            name: tool.name,
+            description: tool.description,
+            parameters: tool.inputSchema
+          }
+        })),
+        tool_choice: 'auto',
+        temperature: 0.2,
+        max_completion_tokens: 1000
+      })
+    });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new Error(result.error?.message || `Groq 요청 실패 (HTTP ${response.status})`);
+    }
+    const message = result.choices?.[0]?.message;
+    if (!message) throw new Error('Groq가 답변을 반환하지 않았습니다.');
+    const parts = [];
+    if (typeof message.content === 'string' && message.content.trim()) {
+      parts.push({ text: message.content });
+    }
+    for (const toolCall of message.tool_calls || []) {
+      let args;
+      if (typeof toolCall.function.arguments === 'string') {
+        try {
+          args = JSON.parse(toolCall.function.arguments || '{}');
+        } catch {
+          throw new Error(`Groq가 ${toolCall.function.name} 도구 인수를 올바른 JSON으로 반환하지 않았습니다.`);
+        }
+      } else if (toolCall.function.arguments && typeof toolCall.function.arguments === 'object') {
+        args = toolCall.function.arguments;
+      } else {
+        args = {};
+      }
+      parts.push({
+        functionCall: {
+          name: toolCall.function.name,
+          args,
+          ...(toolCall.id ? { id: toolCall.id } : {})
+        }
+      });
+    }
+    if (!parts.length) throw new Error('Groq가 빈 답변을 반환했습니다.');
+    return { role: 'model', parts };
   }
 
   async function callGemini() {
@@ -607,20 +738,24 @@
         timedOut = true;
         controller.abort();
         reject(new Error('답변 대기 시간이 초과되었습니다.'));
-      }, 15000);
+      }, 60000);
     });
     updateControls();
     try {
       await Promise.race([
         (async () => {
-          await Promise.all([loadTools(), loadGeminiModels()]);
+          if (provider === 'groq') {
+            await loadTools();
+          } else {
+            await Promise.all([loadTools(), loadGeminiModels()]);
+          }
           for (let turn = 0; turn < 6; turn += 1) {
-            const content = await callGemini();
+            const content = provider === 'groq' ? await callGroq() : await callGemini();
             conversation.push(content);
             const calls = content.parts.filter(part => part.functionCall?.name).map(part => part.functionCall);
             if (!calls.length) {
               const answer = content.parts.map(part => part.text || '').filter(Boolean).join('\n').trim();
-              if (!answer) throw new Error('Gemini가 답변을 반환하지 않았습니다. 다시 시도해 주세요.');
+              if (!answer) throw new Error('AI가 답변을 반환하지 않았습니다. 다시 시도해 주세요.');
               appendMessage(answer);
               releaseConversationImages();
               return;
@@ -655,7 +790,7 @@
       if (controller.signal.aborted) {
         if (timedOut) {
           console.error('AI 챗봇 요청 시간 초과:', error);
-          appendMessage('20초 안에 답변을 받지 못했습니다. Gemini 사용량이 많을 수 있으니 잠시 후 다시 시도해 주세요.', 'assistant', true);
+          appendMessage('1분 안에 답변을 받지 못했습니다. AI 서비스가 혼잡할 수 있으니 잠시 후 다시 시도해 주세요.', 'assistant', true);
         } else {
           appendMessage('답변 생성을 중지했습니다.');
         }
