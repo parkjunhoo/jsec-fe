@@ -25,6 +25,11 @@
       </header>
       <div class="jsec-ai-chat-messages" id="jsecAiChatMessages" role="log" aria-live="polite"></div>
       <form class="jsec-ai-chat-composer" id="jsecAiChatForm">
+        <div class="jsec-ai-chat-status" id="jsecAiChatStatus" role="status" aria-live="polite" hidden>
+          <span class="jsec-ai-chat-spinner" aria-hidden="true"></span>
+          <span id="jsecAiChatStatusText">AI가 답변을 준비하고 있습니다.</span>
+          <button id="jsecAiChatStop" type="button">답변 중지</button>
+        </div>
         <textarea id="jsecAiChatInput" rows="1" maxlength="2000" placeholder="업무 내용을 입력해 주세요." aria-label="메시지"></textarea>
         <button id="jsecAiChatSend" type="submit">전송</button>
       </form>
@@ -40,6 +45,9 @@
   const form = root.querySelector('#jsecAiChatForm');
   const input = root.querySelector('#jsecAiChatInput');
   const sendButton = root.querySelector('#jsecAiChatSend');
+  const status = root.querySelector('#jsecAiChatStatus');
+  const statusText = root.querySelector('#jsecAiChatStatusText');
+  const stopButton = root.querySelector('#jsecAiChatStop');
   let userId = '';
   let apiKey = '';
   let geminiModel = '';
@@ -51,6 +59,7 @@
   let pendingConfirmation = null;
   let pendingIsDirect = false;
   let requestId = 0;
+  let activeController = null;
   let pointerDrag = null;
   let ignoreNextToggleClick = false;
   let hasCustomPosition = false;
@@ -125,6 +134,12 @@
     const blocked = busy || Boolean(pendingCalls);
     input.disabled = blocked || !apiKey;
     sendButton.disabled = blocked || !apiKey;
+    stopButton.disabled = !activeController;
+    status.hidden = !busy;
+    stopButton.hidden = !activeController;
+    statusText.textContent = activeController
+      ? 'AI가 답변을 준비하고 있습니다.'
+      : '요청을 처리하고 있습니다.';
   }
 
   function releaseConversationImages() {
@@ -280,7 +295,7 @@
     return data.session.access_token;
   }
 
-  async function mcpRequest(method, params = {}) {
+  async function mcpRequest(method, params = {}, signal = activeController?.signal) {
     const body = { jsonrpc: '2.0', id: ++requestId, method, params };
     const response = await fetch(MCP_URL, {
       method: 'POST',
@@ -290,7 +305,8 @@
         Accept: 'application/json, text/event-stream',
         'MCP-Protocol-Version': MCP_VERSION
       },
-      body: JSON.stringify(body)
+      body: JSON.stringify(body),
+      ...(signal ? { signal } : {})
     });
     const result = await response.json().catch(() => null);
     if (!response.ok) throw new Error(result?.error?.message || `업무 도구 요청 실패 (HTTP ${response.status})`);
@@ -330,7 +346,8 @@
   async function callGemini() {
     if (!geminiModel) {
       const modelsResponse = await fetch('https://generativelanguage.googleapis.com/v1beta/models?pageSize=1000', {
-        headers: { 'x-goog-api-key': apiKey }
+        headers: { 'x-goog-api-key': apiKey },
+        ...(activeController ? { signal: activeController.signal } : {})
       });
       const modelsResult = await modelsResponse.json().catch(() => ({}));
       if (!modelsResponse.ok) {
@@ -354,6 +371,7 @@
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
+        ...(activeController ? { signal: activeController.signal } : {}),
         body: JSON.stringify({
           systemInstruction: { parts: [{ text: getSystemPrompt() }] },
           contents: conversation,
@@ -527,6 +545,16 @@
 
   async function continueConversation() {
     busy = true;
+    const controller = new AbortController();
+    activeController = controller;
+    const initialConversationLength = conversation.length;
+    const startedWithPendingUserMessage = conversation.at(-1)?.role === 'user'
+      && conversation.at(-1)?.parts?.some(part => typeof part.text === 'string');
+    let timedOut = false;
+    const timeoutId = window.setTimeout(() => {
+      timedOut = true;
+      controller.abort();
+    }, 90000);
     updateControls();
     try {
       await loadTools();
@@ -563,9 +591,87 @@
       }
       throw new Error('도구 호출이 반복되어 대화를 멈췄습니다. 요청을 나눠서 다시 시도해 주세요.');
     } catch (error) {
-      console.error('AI 챗봇 요청 실패:', error);
-      appendMessage(error.message || '요청을 처리하지 못했습니다.', 'assistant', true);
+      if (controller.signal.aborted) {
+        conversation.length = initialConversationLength;
+        if (startedWithPendingUserMessage) conversation.pop();
+        if (timedOut) {
+          console.error('AI 챗봇 요청 시간 초과:', error);
+          appendMessage('응답 시간이 초과되었습니다. 잠시 후 다시 시도해 주세요.', 'assistant', true);
+        } else {
+          appendMessage('답변 생성을 중지했습니다.');
+        }
+      } else {
+        console.error('AI 챗봇 요청 실패:', error);
+        appendMessage(error.message || '요청을 처리하지 못했습니다.', 'assistant', true);
+      }
     } finally {
+      window.clearTimeout(timeoutId);
+      if (activeController === controller) activeController = null;
+      busy = false;
+      updateControls();
+    }
+  }
+
+  function isWeatherRequest(text) {
+    return /(날씨|기온|강수|비\s*(?:와|오|오나|오나요)|눈\s*(?:와|오|오나|오나요))/.test(text);
+  }
+
+  function formatWeatherAnswer(weather) {
+    const current = weather.current || {};
+    const details = [
+      current.temperature == null ? '' : `${current.temperature}℃`,
+      current.condition || '',
+      current.precipitation ? `강수 ${current.precipitation}` : '',
+      current.humidity == null ? '' : `습도 ${current.humidity}%`,
+      current.wind == null ? '' : `풍속 ${current.wind}m/s`
+    ].filter(Boolean);
+    const today = getTodayKst().replaceAll('-', '');
+    const forecast = (weather.hourly || [])
+      .filter(item => item.date === today)
+      .slice(0, 3)
+      .map(item => `${item.label} ${item.temperature ?? '?'}℃ ${item.condition || ''}`.trim());
+    const lines = [`${weather.location || '지산리조트'} 현재 날씨: ${details.join(' · ') || '현재 날씨 자료가 없습니다.'}`];
+    if (forecast.length) lines.push(`오늘 예보: ${forecast.join(' / ')}`);
+    if (weather.observedAt) lines.push(`관측 기준: ${weather.observedAt.replace('T', ' ')}`);
+    return lines.join('\n');
+  }
+
+  async function runWeatherShortcut() {
+    busy = true;
+    const controller = new AbortController();
+    activeController = controller;
+    let timedOut = false;
+    const timeoutId = window.setTimeout(() => {
+      timedOut = true;
+      controller.abort();
+    }, 45000);
+    updateControls();
+    try {
+      await loadTools();
+      if (!tools.some(tool => tool.name === 'get_resort_weather')) {
+        throw new Error('날씨 조회 도구를 사용할 수 없습니다.');
+      }
+      const result = await mcpRequest('tools/call', {
+        name: 'get_resort_weather',
+        arguments: {}
+      });
+      const weather = parseToolValue(result);
+      if (weather?.isError) {
+        throw new Error(typeof weather.error === 'string' ? weather.error : JSON.stringify(weather.error));
+      }
+      appendMessage(formatWeatherAnswer(weather));
+    } catch (error) {
+      if (controller.signal.aborted) {
+        appendMessage(timedOut
+          ? '날씨 정보를 가져오는 데 시간이 초과되었습니다. 잠시 후 다시 시도해 주세요.'
+          : '날씨 조회를 중지했습니다.', 'assistant', timedOut);
+      } else {
+        console.error('AI 챗봇 날씨 조회 실패:', error);
+        appendMessage(error.message || '날씨 정보를 가져오지 못했습니다.', 'assistant', true);
+      }
+    } finally {
+      window.clearTimeout(timeoutId);
+      if (activeController === controller) activeController = null;
       busy = false;
       updateControls();
     }
@@ -587,6 +693,12 @@
     setOpen(open);
   });
   closeButton.addEventListener('click', () => setOpen(false));
+  stopButton.addEventListener('click', () => {
+    if (!activeController) return;
+    statusText.textContent = '답변을 중지하고 있습니다.';
+    stopButton.disabled = true;
+    activeController.abort();
+  });
   toggle.addEventListener('pointerdown', event => {
     if (event.button !== undefined && event.button !== 0) return;
     pointerDrag = {
@@ -640,6 +752,11 @@
         args: { dates: directRequest.dates },
         id: `direct-${Date.now()}`
       }], true);
+      return;
+    }
+
+    if (isWeatherRequest(text)) {
+      await runWeatherShortcut();
       return;
     }
 

@@ -192,6 +192,51 @@
   border-top: 1px solid var(--ai-widget-border);
 }
 
+.jsec-ai-chat-status {
+  display: flex;
+  grid-column: 1 / -1;
+  align-items: center;
+  gap: 9px;
+  min-height: 34px;
+  color: var(--ai-widget-sub);
+  font-size: 12px;
+}
+
+.jsec-ai-chat-status[hidden] {
+  display: none;
+}
+
+.jsec-ai-chat-spinner {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 auto;
+  border: 2px solid var(--ai-widget-border);
+  border-top-color: var(--ai-widget-primary);
+  border-radius: 50%;
+  animation: jsec-ai-chat-spin .8s linear infinite;
+}
+
+@keyframes jsec-ai-chat-spin {
+  to { transform: rotate(360deg); }
+}
+
+.jsec-ai-chat-status button {
+  min-height: 30px;
+  margin-left: auto;
+  padding: 0 10px;
+  border: 1px solid var(--ai-widget-border);
+  border-radius: 8px;
+  background: var(--ai-widget-raised);
+  color: var(--ai-widget-text);
+  font: inherit;
+  cursor: pointer;
+}
+
+.jsec-ai-chat-status button:disabled {
+  cursor: wait;
+  opacity: .6;
+}
+
 .jsec-ai-chat-composer textarea {
   width: 100%;
   min-height: 42px;
