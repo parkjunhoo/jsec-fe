@@ -11,11 +11,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   const adminPendingItemList = document.getElementById('adminPendingItemList');
   const adminPendingItemCount = document.getElementById('adminPendingItemCount');
   const vacationTab = document.getElementById('personalVacationTab');
+  const attendanceTab = document.getElementById('personalAttendanceTab');
   const annualLeaveTab = document.getElementById('personalAnnualLeaveTab');
   const allowanceTab = document.getElementById('personalAllowanceTab');
   const teamVacationTab = document.getElementById('teamVacationTab');
   const teamAllowanceTab = document.getElementById('teamAllowanceTab');
   const vacationPanel = document.getElementById('personalVacationPanel');
+  const attendancePanel = document.getElementById('personalAttendancePanel');
   const annualLeavePanel = document.getElementById('personalAnnualLeavePanel');
   const allowancePanel = document.getElementById('personalAllowancePanel');
   const vacationSummary = document.getElementById('personalVacationSummary');
@@ -179,6 +181,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const panelByTab = new Map([
       [adminMenuTab, adminMenuPanel],
       [vacationTab, vacationPanel],
+      [attendanceTab, attendancePanel],
       [annualLeaveTab, annualLeavePanel],
       [allowanceTab, allowancePanel],
       [teamVacationTab, teamVacationPanel],
@@ -216,17 +219,18 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   function showTab(selectedTab) {
     activeTab = selectedTab;
-    monthNavigation.hidden = selectedTab === annualLeaveTab || selectedTab === adminMenuTab;
+    monthNavigation.hidden = selectedTab === annualLeaveTab || selectedTab === adminMenuTab || selectedTab === attendanceTab;
     if (isAdmin) teamDashboard.hidden = selectedTab !== teamVacationTab && selectedTab !== teamAllowanceTab;
     const panelByTab = new Map([
       [adminMenuTab, adminMenuPanel],
       [vacationTab, vacationPanel],
+      [attendanceTab, attendancePanel],
       [annualLeaveTab, annualLeavePanel],
       [allowanceTab, allowancePanel],
       [teamVacationTab, teamVacationPanel],
       [teamAllowanceTab, teamAllowancePanel]
     ]);
-    [adminMenuTab, vacationTab, annualLeaveTab, allowanceTab, teamVacationTab, teamAllowanceTab].forEach(tab => {
+    [adminMenuTab, vacationTab, attendanceTab, annualLeaveTab, allowanceTab, teamVacationTab, teamAllowanceTab].forEach(tab => {
       const selected = tab === selectedTab;
       tab.setAttribute('aria-selected', String(selected));
       tab.tabIndex = selected ? 0 : -1;
@@ -238,6 +242,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   adminMenuTab.addEventListener('click', () => showTab(adminMenuTab));
   vacationTab.addEventListener('click', () => showTab(vacationTab));
+  attendanceTab.addEventListener('click', () => showTab(attendanceTab));
   annualLeaveTab.addEventListener('click', () => showTab(annualLeaveTab));
   allowanceTab.addEventListener('click', () => showTab(allowanceTab));
   teamVacationTab.addEventListener('click', () => showTab(teamVacationTab));
@@ -263,11 +268,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     }, { passive: true });
     panel.addEventListener('touchcancel', () => { swipeStart = null; }, { passive: true });
   });
-  [adminMenuTab, vacationTab, annualLeaveTab, allowanceTab, teamVacationTab, teamAllowanceTab].forEach(tab => {
+  [adminMenuTab, vacationTab, attendanceTab, annualLeaveTab, allowanceTab, teamVacationTab, teamAllowanceTab].forEach(tab => {
     tab.addEventListener('keydown', event => {
       if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
       event.preventDefault();
-      const availableTabs = [adminMenuTab, vacationTab, annualLeaveTab, allowanceTab, teamVacationTab, teamAllowanceTab]
+      const availableTabs = [adminMenuTab, vacationTab, attendanceTab, annualLeaveTab, allowanceTab, teamVacationTab, teamAllowanceTab]
         .filter(availableTab => !availableTab.hidden);
       const currentIndex = availableTabs.indexOf(tab);
       const nextIndex = event.key === 'Home'
@@ -304,6 +309,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   } else if (profile) {
     isGuest = profile.role === 'guest' || profile.role === 'monitor';
     isAdmin = profile.role === 'admin';
+    attendanceTab.hidden = isGuest;
     const name = profile.name || profile.username;
     if (name) welcomeMessage.textContent = isGuest
       ? `${name}님, ${getSelectedMonthRange().label} 팀 현황입니다.`
