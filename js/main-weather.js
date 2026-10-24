@@ -5,6 +5,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const current = document.getElementById('homeWeatherCurrent');
   const details = document.getElementById('homeWeatherDetails');
   const forecast = document.getElementById('homeWeatherForecast');
+  const forecastDateLabel = document.getElementById('homeWeatherForecastDate');
   const forecastPrevious = document.getElementById('homeWeatherForecastPrevious');
   const forecastNext = document.getElementById('homeWeatherForecastNext');
   const locationToggle = document.getElementById('homeWeatherLocationToggle');
@@ -45,12 +46,32 @@ document.addEventListener('DOMContentLoaded', async () => {
   function formatPrecipitation(value) {
     if (value === null || value === undefined || value === '') return '--';
     const text = String(value).trim();
-    if (['강수 없음', '강수없음', '적설 없음', '적설없음', '-'].includes(text)) return '없음';
+    if (['강수 없음', '강수없음', '적설 없음', '적설없음', '-'].includes(text)) return '강수 없음';
     if (/^\d+(?:\.\d+)?$/.test(text)) {
       const amount = Number(text);
-      return amount === 0 ? '없음' : `${amount} mm`;
+      return amount === 0 ? '강수 없음' : `${text} mm`;
     }
     return text.replace(/\s*mm\b/i, ' mm').replace(/\s+/g, ' ').trim();
+  }
+
+  function formatForecastDate(value) {
+    if (!/^\d{8}$/.test(String(value || ''))) return '';
+    const date = new Date(`${value.slice(0, 4)}-${value.slice(4, 6)}-${value.slice(6, 8)}T12:00:00+09:00`);
+    return new Intl.DateTimeFormat('ko-KR', {
+      timeZone: 'Asia/Seoul',
+      month: 'long',
+      day: 'numeric',
+      weekday: 'short'
+    }).format(date);
+  }
+
+  function updateForecastDate() {
+    const containerBounds = forecast.getBoundingClientRect();
+    const firstVisibleCard = [...forecast.children].find(card =>
+      card.getBoundingClientRect().right > containerBounds.left + 2
+    );
+    const date = firstVisibleCard?.dataset.forecastDate;
+    forecastDateLabel.textContent = date ? `${formatForecastDate(date)} 예보` : '시간별 예보';
   }
 
   function setDetail(label, value) {
@@ -76,6 +97,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     forecast.replaceChildren();
     if (!weather.hourly?.length) {
+      forecastDateLabel.textContent = '시간별 예보';
       const empty = document.createElement('div');
       empty.className = 'home-weather-hour';
       empty.textContent = '시간별 예보가 없습니다.';
@@ -84,8 +106,11 @@ document.addEventListener('DOMContentLoaded', async () => {
       weather.hourly.forEach(item => {
         const hour = document.createElement('div');
         hour.className = 'home-weather-hour';
+        hour.dataset.forecastDate = item.date;
         const time = document.createElement('time');
         time.textContent = item.label;
+        time.dateTime = `${item.date.slice(0, 4)}-${item.date.slice(4, 6)}-${item.date.slice(6, 8)}T${item.time.slice(0, 2)}:${item.time.slice(2, 4)}:00+09:00`;
+        time.setAttribute('aria-label', `${formatForecastDate(item.date)} ${item.label}`);
         const icon = document.createElement('span');
         icon.className = 'home-weather-hour-icon';
         icon.setAttribute('aria-hidden', 'true');
@@ -103,6 +128,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         hour.append(time, icon, temperature, condition, precipitation, probability);
         forecast.append(hour);
       });
+      updateForecastDate();
     }
     source.textContent = `${weather.provider || '기상청 동네예보'} · 예보 최대 ${weather.hourly?.length || 0}개 시각 · 이후 예보 간격은 기상청 발표 주기에 따릅니다.`;
   }
@@ -148,6 +174,15 @@ document.addEventListener('DOMContentLoaded', async () => {
       behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth'
     });
   }
+
+  let forecastDateUpdateFrame = 0;
+  forecast.addEventListener('scroll', () => {
+    if (forecastDateUpdateFrame) window.cancelAnimationFrame(forecastDateUpdateFrame);
+    forecastDateUpdateFrame = window.requestAnimationFrame(() => {
+      forecastDateUpdateFrame = 0;
+      updateForecastDate();
+    });
+  }, { passive: true });
 
   async function searchLocation(event) {
     event.preventDefault();

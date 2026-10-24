@@ -232,6 +232,8 @@
     .home-weather-detail strong { display: block; margin-top: 4px; font-size: 12px; }
     .home-weather-forecast-heading { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 15px; }
     .home-weather-forecast-heading strong { font-size: 12px; }
+    .home-weather-forecast-meta { display: flex; align-items: center; gap: 8px; }
+    .home-weather-forecast-date { color: var(--muted); font-size: 10px; font-weight: 650; text-align: right; }
     .home-weather-forecast-controls { display: flex; gap: 5px; }
     .home-weather-forecast-controls button { width: 30px; height: 30px; border: 1px solid var(--line); border-radius: 8px; background: rgba(255, 255, 255, .05); color: inherit; font-size: 18px; cursor: pointer; }
     .home-weather-forecast { display: flex; gap: 7px; margin-top: 8px; padding: 0 1px 6px; overflow-x: auto; scroll-snap-type: x mandatory; scroll-behavior: smooth; scrollbar-width: thin; -webkit-overflow-scrolling: touch; }
@@ -256,6 +258,7 @@
     html[data-theme="light"] .home-weather-hour time,
     html[data-theme="light"] .home-weather-hour-precipitation,
     html[data-theme="light"] .home-weather-hour-probability,
+    html[data-theme="light"] .home-weather-forecast-date,
     html[data-theme="light"] .home-weather-source { color: #65756b; }
     html[data-theme="light"] .home-weather-condition { color: #44584b; }
     html[data-theme="light"] .home-weather-refresh,
@@ -760,9 +763,12 @@
       </div>
       <div class="home-weather-forecast-heading">
         <strong>시간별 날씨</strong>
-        <div class="home-weather-forecast-controls" role="group" aria-label="시간별 예보 이동">
-          <button id="homeWeatherForecastPrevious" type="button" aria-label="이전 예보">‹</button>
-          <button id="homeWeatherForecastNext" type="button" aria-label="다음 예보">›</button>
+        <div class="home-weather-forecast-meta">
+          <span class="home-weather-forecast-date" id="homeWeatherForecastDate" aria-live="polite">시간별 예보</span>
+          <div class="home-weather-forecast-controls" role="group" aria-label="시간별 예보 이동">
+            <button id="homeWeatherForecastPrevious" type="button" aria-label="이전 예보">‹</button>
+            <button id="homeWeatherForecastNext" type="button" aria-label="다음 예보">›</button>
+          </div>
         </div>
       </div>
       <div class="home-weather-forecast" id="homeWeatherForecast" aria-label="시간별 날씨 예보"></div>
