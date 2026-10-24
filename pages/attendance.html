@@ -219,6 +219,11 @@
     .attendance-personal-record, .attendance-admin-record { border: 1px solid #e3e6eb; border-radius: 14px; background: #fff; box-shadow: 0 5px 16px rgba(31, 39, 52, .06); }
     .attendance-personal-records, .attendance-admin-record-list { gap: 11px; }
     .attendance-admin-record-status { border-radius: 7px; }
+    .attendance-punch-button { min-height: 116px; }
+    .attendance-punch-button .attendance-toggle-active { font-size: 21px; }
+    .attendance-punch-button .attendance-toggle-time { font-size: 14px; }
+    .attendance-punch-button[data-action="check-in"] .attendance-toggle-inactive { font-size: 21px; }
+    .attendance-punch-button[data-action="check-in"] .attendance-toggle-active { font-size: 14px; }
   </style>
 </head>
 <body class="attendance-home-active">
@@ -226,7 +231,6 @@
   <main class="attendance-shell">
     <header class="attendance-heading">
       <h1>근태 관리</h1>
-      <p id="attendanceHeadingMessage">오늘의 근무 상태를 확인하세요.</p>
       <div class="attendance-profile">
         <div><h2 class="attendance-profile-name" id="attendanceProfileName">사용자</h2><p class="attendance-profile-meta" id="attendanceProfileMeta">근무지 확인 중</p></div>
         <div class="attendance-profile-mark" aria-hidden="true">P</div>

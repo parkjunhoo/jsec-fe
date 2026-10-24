@@ -807,7 +807,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (profileError) throw profileError;
     if (!profile || ['guest', 'monitor'].includes(profile.role)) {
       document.getElementById('attendancePunchCard').hidden = true;
-      document.getElementById('attendanceHeadingMessage').textContent = '이 계정은 근태 기능을 사용할 수 없습니다.';
+      const headingMessage = document.getElementById('attendanceHeadingMessage');
+      if (headingMessage) headingMessage.textContent = '이 계정은 근태 기능을 사용할 수 없습니다.';
       historyMessage.textContent = '근태 기능을 사용할 권한이 없습니다.';
       return;
     }

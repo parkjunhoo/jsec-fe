@@ -116,6 +116,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     .attendance-nav-btn:hover { border-color: rgba(131, 207, 255, .55); background: rgba(131, 207, 255, .12); }
     .attendance-nav-btn svg { width: 21px; height: 21px; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.8; }
+    html[data-theme="light"] .attendance-nav-btn { border-color: rgba(25, 114, 84, .22); background: #ffffff; color: #176346; box-shadow: 0 2px 8px rgba(25, 70, 48, .1); }
+    html[data-theme="light"] .attendance-nav-btn:hover { border-color: #197254; background: rgba(25, 114, 84, .08); color: #125338; }
     .notification-btn {
       position: relative;
       width: 40px;

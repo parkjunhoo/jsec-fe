@@ -1,12 +1,30 @@
 document.addEventListener('DOMContentLoaded', async () => {
   const sessionReason = new URLSearchParams(window.location.search).get('session');
   const showLoginScreen = () => document.body.classList.remove('auth-checking');
+  const progressFill = document.getElementById('authLoadingProgressFill');
+  const progressValue = document.getElementById('authLoadingProgressValue');
+  const progressMessage = document.getElementById('authLoadingMessage');
+  let loadingProgress = 0;
+  let progressTimer = null;
+  const setLoadingProgress = (value, message) => {
+    loadingProgress = Math.max(0, Math.min(100, Math.round(value)));
+    if (progressFill) progressFill.style.width = `${loadingProgress}%`;
+    if (progressValue) progressValue.textContent = `${loadingProgress}%`;
+    if (progressMessage && message) progressMessage.textContent = message;
+  };
+  setLoadingProgress(0);
+  progressTimer = window.setInterval(() => {
+    if (loadingProgress < 88) setLoadingProgress(loadingProgress + Math.max(1, Math.round((88 - loadingProgress) / 10)));
+  }, 120);
   try {
+    setLoadingProgress(18, '로그인 상태를 확인하고 있습니다.');
     const { data: { session }, error } = await supabaseClient.auth.getSession();
     if (error) throw error;
     if (session && sessionReason === 'retired') {
+      setLoadingProgress(72, '로그인 정보를 정리하고 있습니다.');
       await supabaseClient.auth.signOut({ scope: 'local' });
     } else if (session) {
+      setLoadingProgress(92, '서비스로 이동하고 있습니다.');
       const destination = window.consumeNativePushDestination?.();
       window.location.replace(destination || '/pages/main.html');
       return;
@@ -15,6 +33,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     console.error('세션 확인 오류:', err);
   }
 
+  window.clearInterval(progressTimer);
+  setLoadingProgress(100, '로그인 화면을 준비했습니다.');
+  await new Promise(resolve => window.setTimeout(resolve, 180));
   showLoginScreen();
 
   const loginForm = document.getElementById('loginForm');
