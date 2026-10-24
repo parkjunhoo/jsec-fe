@@ -103,6 +103,19 @@ document.addEventListener('DOMContentLoaded', async () => {
       align-items: center;
       gap: 10px;
     }
+    .attendance-nav-btn {
+      display: grid;
+      width: 40px;
+      height: 40px;
+      place-items: center;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.06);
+      color: #f8fafc;
+      cursor: pointer;
+    }
+    .attendance-nav-btn:hover { border-color: rgba(131, 207, 255, .55); background: rgba(131, 207, 255, .12); }
+    .attendance-nav-btn svg { width: 21px; height: 21px; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.8; }
     .notification-btn {
       position: relative;
       width: 40px;
@@ -541,6 +554,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         </a>
       </div>
       <div class="nav-actions">
+        <a class="attendance-nav-btn" href="/pages/attendance.html" aria-label="근태 관리" title="근태 관리">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"></circle><path d="M12 7v5l3 2"></path><path d="M4.5 4.5 6 6"></path></svg>
+        </a>
         <button class="notification-btn" id="openNotifications" type="button" aria-label="알림 열기" aria-haspopup="dialog" aria-expanded="false">
           🔔<span class="notification-badge" id="notificationUnreadBadge" style="display: none;">0</span>
         </button>

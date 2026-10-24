@@ -7,6 +7,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   const appPunchControls = document.getElementById('attendanceAppPunchControls');
   const webPunchNotice = document.getElementById('attendanceWebPunchNotice');
   const todayDateLabel = document.getElementById('attendanceTodayDate');
+  const homeDateLabel = document.getElementById('attendanceHomeDate');
+  const currentTimeLabel = document.getElementById('attendanceCurrentTime');
+  const liveTimeLabel = document.getElementById('attendanceLiveTime');
+  const checkInTimeLabel = document.getElementById('attendanceCheckInTime');
+  const punchLabel = document.getElementById('attendancePunchLabel');
+  const profileName = document.getElementById('attendanceProfileName');
+  const profileMeta = document.getElementById('attendanceProfileMeta');
   const monthInput = document.getElementById('attendanceMonth');
   const personalHistory = document.getElementById('attendancePersonalHistory');
   const personalSummary = document.getElementById('attendancePersonalSummary');
@@ -50,6 +57,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   let adminUsers = [];
   let sites = [];
   let records = [];
+  let weeklyRecords = [];
   let todayRecord = null;
   let currentUserId = '';
   let attendanceDevice = null;
@@ -161,6 +169,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     };
   }
 
+  function getCurrentWeekRange() {
+    const today = getKstDate();
+    const todayDate = new Date(`${today}T12:00:00Z`);
+    const mondayOffset = (todayDate.getUTCDay() + 6) % 7;
+    const weekStart = new Date(todayDate);
+    weekStart.setUTCDate(todayDate.getUTCDate() - mondayOffset);
+    const weekEnd = new Date(weekStart);
+    weekEnd.setUTCDate(weekStart.getUTCDate() + 6);
+    return { start: weekStart.toISOString().slice(0, 10), end: weekEnd.toISOString().slice(0, 10) };
+  }
+
   function formatDateTime(value) {
     if (!value) return '-';
     return new Intl.DateTimeFormat('ko-KR', {
@@ -212,8 +231,20 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   function renderPersonalMetrics() {
     const totalMinutes = getTotalWorkMinutes();
-    document.getElementById('attendanceMonthlyWorkTime').textContent =
-      `${Math.floor(totalMinutes / 60)}시간 ${totalMinutes % 60}분`;
+    const formatMinutes = minutes => `${Math.floor(minutes / 60)}시간 ${minutes % 60}분`;
+    const monthTotal = formatMinutes(totalMinutes);
+    const monthlyLabel = document.getElementById('attendanceMonthlyWorkTime');
+    const homeMonthlyLabel = document.getElementById('attendanceMonthlyWorkTimeHome');
+    if (monthlyLabel) monthlyLabel.textContent = monthTotal;
+    if (homeMonthlyLabel) homeMonthlyLabel.textContent = monthTotal;
+    const { start, end } = getCurrentWeekRange();
+    const weeklyMinutes = weeklyRecords
+      .reduce((total, record) => {
+        const finish = record.check_out_at ? new Date(record.check_out_at).getTime() : Date.now();
+        return total + Math.max(0, Math.floor((finish - new Date(record.check_in_at).getTime()) / 60000));
+      }, 0);
+    const weeklyLabel = document.getElementById('attendanceWeeklyWorkTime');
+    if (weeklyLabel) weeklyLabel.textContent = formatMinutes(weeklyMinutes);
   }
 
   function formatDateForInput(value) {
@@ -266,9 +297,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     todayDateLabel.textContent = new Intl.DateTimeFormat('ko-KR', {
       timeZone: 'Asia/Seoul', year: 'numeric', month: 'long', day: 'numeric', weekday: 'short'
     }).format(now);
-    document.getElementById('attendanceCurrentTime').textContent = new Intl.DateTimeFormat('ko-KR', {
+    const currentTime = new Intl.DateTimeFormat('ko-KR', {
       timeZone: 'Asia/Seoul', hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23'
     }).format(now);
+    currentTimeLabel.textContent = `현재 시각 ${currentTime}`;
+    liveTimeLabel.textContent = currentTime;
+    homeDateLabel.textContent = new Intl.DateTimeFormat('ko-KR', {
+      timeZone: 'Asia/Seoul', year: 'numeric', month: 'numeric', day: 'numeric', weekday: 'short'
+    }).format(now);
+    checkInTimeLabel.textContent = record ? formatPunchTime(record.check_in_at, record.work_date) : '--:--';
     if (!record) {
       title.textContent = '출근 전';
       detail.textContent = '현재 위치를 확인해 출근을 등록해 주세요.';
@@ -283,9 +320,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     const isCheckingOut = Boolean(record && !record.check_out_at);
     punchButton.dataset.action = isCheckingOut ? 'check-out' : 'check-in';
-    punchButton.textContent = isCheckingOut
-      ? `퇴근하기 · 예상 ${formatWorkDuration(record.check_in_at, now)}`
-      : '현재 위치로 출근하기';
+    punchLabel.textContent = isCheckingOut ? '퇴근' : '출근';
     punchButton.setAttribute('aria-label', isCheckingOut
       ? `현재 위치로 퇴근하기. 퇴근 시 근무시간 ${formatWorkDuration(record.check_in_at, now)}`
       : '현재 위치로 출근하기');
@@ -588,6 +623,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
+  async function loadWeeklyRecords() {
+    const { start, end } = getCurrentWeekRange();
+    const params = new URLSearchParams({ start, end });
+    if (isAdmin) params.set('user_id', currentUserId);
+    const result = await request(`/records?${params}`);
+    weeklyRecords = result.records || [];
+    renderPersonalMetrics();
+  }
+
   async function loadTodayRecord() {
     const today = getKstDate();
     const params = new URLSearchParams({ start: getPreviousKstDate(today), end: today });
@@ -645,7 +689,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       });
       punchMessage.textContent = action === 'check-in' ? '출근이 기록되었습니다.' : '퇴근이 기록되었습니다.';
       punchMessage.style.color = 'var(--primary)';
-      await Promise.all([loadRecords(), loadTodayRecord()]);
+      await Promise.all([loadRecords(), loadTodayRecord(), loadWeeklyRecords()]);
     } catch (error) {
       console.error('출퇴근 등록 오류:', error);
       punchMessage.textContent = error.message || '출퇴근을 기록하지 못했습니다.';
@@ -758,16 +802,18 @@ document.addEventListener('DOMContentLoaded', async () => {
   try {
     const { data: profile, error: profileError } = await supabaseClient
       .from('users')
-      .select('role')
+      .select('role, name, username, job_title, work_location')
       .eq('id', currentUserId)
       .maybeSingle();
     if (profileError) throw profileError;
     if (!profile || ['guest', 'monitor'].includes(profile.role)) {
       document.getElementById('attendancePunchCard').hidden = true;
-      document.querySelector('.attendance-heading p').textContent = '이 계정은 근태 기능을 사용할 수 없습니다.';
+      document.getElementById('attendanceHeadingMessage').textContent = '이 계정은 근태 기능을 사용할 수 없습니다.';
       historyMessage.textContent = '근태 기능을 사용할 권한이 없습니다.';
       return;
     }
+    profileName.textContent = profile.name || profile.username || '사용자';
+    profileMeta.textContent = [profile.job_title, profile.work_location].filter(Boolean).join(' · ') || '근무지 미등록';
     isAdmin = profile.role === 'admin';
     siteSettings.hidden = !isAdmin;
     userFilterField.hidden = !isAdmin;
@@ -781,7 +827,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (!response.ok) throw new Error(users.error || '직원 목록을 불러오지 못했습니다.');
       populateAdminUserFilter(users);
     }
-    await Promise.all([loadRecords(), loadTodayRecord(), loadAnnualLeaveBalance()]);
+    await Promise.all([loadRecords(), loadTodayRecord(), loadWeeklyRecords(), loadAnnualLeaveBalance()]);
     window.setInterval(renderTodayStatus, 1000);
     if (!isAdmin) window.setInterval(renderPersonalMetrics, 60 * 1000);
   } catch (error) {
@@ -1009,4 +1055,16 @@ document.addEventListener('DOMContentLoaded', async () => {
       editSaveButton.disabled = false;
     }
   });
+
+  const attendanceHomePanel = document.getElementById('attendanceHomePanel');
+  const attendanceHistoryPanel = document.getElementById('attendanceHistoryPanel');
+  const attendanceViewButtons = [...document.querySelectorAll('[data-attendance-view]')];
+  function showAttendanceView(view) {
+    const isHistory = view === 'history';
+    attendanceHomePanel.hidden = isHistory;
+    attendanceHistoryPanel.hidden = !isHistory;
+    attendanceViewButtons.forEach(button => button.setAttribute('aria-selected', String(button.dataset.attendanceView === view)));
+    if (isHistory) window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+  attendanceViewButtons.forEach(button => button.addEventListener('click', () => showAttendanceView(button.dataset.attendanceView)));
 });
