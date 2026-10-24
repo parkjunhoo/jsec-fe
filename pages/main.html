@@ -815,6 +815,12 @@
     html[data-theme="light"] .today-off-heading .welcome-meta { border-color: rgba(25, 114, 84, .2); background: #f4f8f5; }
     html[data-theme="light"] .today-off-heading .welcome-meta .meta-label { color: #197254; }
     html[data-theme="light"] .today-off-heading .welcome-meta time { color: #1b2922; }
+    @media (max-width: 520px) {
+      .today-off-heading { align-items: flex-start; flex-wrap: wrap; }
+      .today-off-heading-main { flex: 1 1 150px; min-width: 0; }
+      .today-off-heading .welcome-meta { flex: 0 1 auto; min-width: 0; max-width: 100%; margin-left: auto; }
+      .today-off-heading .welcome-meta time { max-width: 100%; overflow-wrap: anywhere; white-space: normal; text-align: right; }
+    }
   </style>
   <link rel="stylesheet" href="/css/app-theme.css">
 </head>
