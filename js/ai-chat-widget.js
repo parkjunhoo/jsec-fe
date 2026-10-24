@@ -330,6 +330,7 @@
   function getSystemPrompt() {
     return [
       '너는 지산리조트 보안팀 업무 챗봇이다. 한국어로 짧고 바로 답한다.',
+      '사용자가 등록된 업무 기능과 무관한 인사, 일상 대화, 일반 지식 질문을 해도 답할 수 있으면 Gemini의 일반 지식으로 자연스럽게 답한다. 지원 기능 목록은 답변 가능한 주제를 제한하는 목록이 아니다. 다만 사내 실시간 정보나 개인 정보는 업무 도구에서 확인되지 않으면 지어내지 말고 확인할 수 없다고 말한다.',
       '제공된 도구 목록에 관리자 도구가 있으면 관리자로 로그인한 것이다. 관리자 도구가 있을 때만 다른 직원 정보·휴무·근태를 조회하거나 직원 휴무를 관리한다. 관리자 도구가 없으면 본인 데이터만 다룬다.',
       '일반 사용자도 list_team_days_off 도구로 팀 휴무자를 조회할 수 있다. "내일 휴무자 누구야?", "오늘 누가 쉬어?"와 같이 물으면 서울 기준 날짜를 계산해 해당 날짜만 조회하고 이름과 휴무 정보를 안내한다. 팀 일정 조회를 개인 정보 제한으로 거절하지 않는다. 연락처, 근태, 연차 잔액 등 다른 직원 개인정보는 관리자 도구가 있을 때만 조회한다.',
       '휴무 등록 요청은 자연스러운 한국어 날짜를 직접 해석한다. "12월 5일", "5일, 6일, 8일" 같은 요청을 YYYY-MM-DD로 변환하고 형식을 되묻지 않는다. 다른 직원 이름이 요청에 포함되면 관리자 도구가 있을 때에만 직원 대상 도구를 쓴다.',
@@ -551,49 +552,58 @@
     const startedWithPendingUserMessage = conversation.at(-1)?.role === 'user'
       && conversation.at(-1)?.parts?.some(part => typeof part.text === 'string');
     let timedOut = false;
-    const timeoutId = window.setTimeout(() => {
-      timedOut = true;
-      controller.abort();
-    }, 90000);
+    let timeoutId;
+    const timeoutPromise = new Promise((resolve, reject) => {
+      timeoutId = window.setTimeout(() => {
+        timedOut = true;
+        controller.abort();
+        reject(new Error('응답 시간이 초과되었습니다.'));
+      }, 45000);
+    });
     updateControls();
     try {
-      await loadTools();
-      for (let turn = 0; turn < 6; turn += 1) {
-        const content = await callGemini();
-        conversation.push(content);
-        const calls = content.parts.filter(part => part.functionCall?.name).map(part => part.functionCall);
-        if (!calls.length) {
-          const answer = content.parts.map(part => part.text || '').filter(Boolean).join('\n').trim();
-          if (!answer) throw new Error('답변 내용이 비어 있습니다.');
-          appendMessage(answer);
-          releaseConversationImages();
-          return;
-        }
-        if (calls.some(call => MUTATION_TOOL_NAMES.has(call.name))) {
-          showConfirmation(calls);
-          return;
-        }
-        const responses = [];
-        for (const call of calls) {
-          try {
-            responses.push(...await runMcpTool(call));
-          } catch (error) {
-            responses.push({
-              functionResponse: {
-                name: call.name,
-                ...(call.id ? { id: call.id } : {}),
-                response: { result: { error: error.message || '업무 도구 실행에 실패했습니다.' } }
+      await Promise.race([
+        (async () => {
+          await loadTools();
+          for (let turn = 0; turn < 6; turn += 1) {
+            const content = await callGemini();
+            conversation.push(content);
+            const calls = content.parts.filter(part => part.functionCall?.name).map(part => part.functionCall);
+            if (!calls.length) {
+              const answer = content.parts.map(part => part.text || '').filter(Boolean).join('\n').trim();
+              if (!answer) throw new Error('Gemini가 답변을 반환하지 않았습니다. 다시 시도해 주세요.');
+              appendMessage(answer);
+              releaseConversationImages();
+              return;
+            }
+            if (calls.some(call => MUTATION_TOOL_NAMES.has(call.name))) {
+              showConfirmation(calls);
+              return;
+            }
+            const responses = [];
+            for (const call of calls) {
+              try {
+                responses.push(...await runMcpTool(call));
+              } catch (error) {
+                responses.push({
+                  functionResponse: {
+                    name: call.name,
+                    ...(call.id ? { id: call.id } : {}),
+                    response: { result: { error: error.message || '업무 도구 실행에 실패했습니다.' } }
+                  }
+                });
               }
-            });
+            }
+            conversation.push({ role: 'user', parts: responses });
           }
-        }
-        conversation.push({ role: 'user', parts: responses });
-      }
-      throw new Error('도구 호출이 반복되어 대화를 멈췄습니다. 요청을 나눠서 다시 시도해 주세요.');
+          throw new Error('도구 호출이 반복되어 대화를 멈췄습니다. 요청을 나눠서 다시 시도해 주세요.');
+        })(),
+        timeoutPromise
+      ]);
     } catch (error) {
+      conversation.length = initialConversationLength;
+      if (startedWithPendingUserMessage) conversation.pop();
       if (controller.signal.aborted) {
-        conversation.length = initialConversationLength;
-        if (startedWithPendingUserMessage) conversation.pop();
         if (timedOut) {
           console.error('AI 챗봇 요청 시간 초과:', error);
           appendMessage('응답 시간이 초과되었습니다. 잠시 후 다시 시도해 주세요.', 'assistant', true);
@@ -602,7 +612,7 @@
         }
       } else {
         console.error('AI 챗봇 요청 실패:', error);
-        appendMessage(error.message || '요청을 처리하지 못했습니다.', 'assistant', true);
+        appendMessage(error.message || '요청을 처리하지 못했습니다. 다시 시도해 주세요.', 'assistant', true);
       }
     } finally {
       window.clearTimeout(timeoutId);
@@ -614,6 +624,13 @@
 
   function isWeatherRequest(text) {
     return /(날씨|기온|강수|비\s*(?:와|오|오나|오나요)|눈\s*(?:와|오|오나|오나요))/.test(text);
+  }
+
+  function getQuickReply(text) {
+    if (/^(?:안녕(?:하세요)?|(?:ㅎㅇ)+|하이|헬로|hello|hi)[!！?？~.\s]*$/iu.test(text.trim())) {
+      return '안녕하세요! 무엇을 도와드릴까요? 휴무, 날씨, 차량, 연락망 등을 물어보세요.';
+    }
+    return '';
   }
 
   function formatWeatherAnswer(weather) {
@@ -641,25 +658,34 @@
     const controller = new AbortController();
     activeController = controller;
     let timedOut = false;
-    const timeoutId = window.setTimeout(() => {
-      timedOut = true;
-      controller.abort();
-    }, 45000);
+    let timeoutId;
+    const timeoutPromise = new Promise((resolve, reject) => {
+      timeoutId = window.setTimeout(() => {
+        timedOut = true;
+        controller.abort();
+        reject(new Error('날씨 조회 시간이 초과되었습니다.'));
+      }, 45000);
+    });
     updateControls();
     try {
-      await loadTools();
-      if (!tools.some(tool => tool.name === 'get_resort_weather')) {
-        throw new Error('날씨 조회 도구를 사용할 수 없습니다.');
-      }
-      const result = await mcpRequest('tools/call', {
-        name: 'get_resort_weather',
-        arguments: {}
-      });
-      const weather = parseToolValue(result);
-      if (weather?.isError) {
-        throw new Error(typeof weather.error === 'string' ? weather.error : JSON.stringify(weather.error));
-      }
-      appendMessage(formatWeatherAnswer(weather));
+      await Promise.race([
+        (async () => {
+          await loadTools();
+          if (!tools.some(tool => tool.name === 'get_resort_weather')) {
+            throw new Error('날씨 조회 도구를 사용할 수 없습니다.');
+          }
+          const result = await mcpRequest('tools/call', {
+            name: 'get_resort_weather',
+            arguments: {}
+          });
+          const weather = parseToolValue(result);
+          if (weather?.isError) {
+            throw new Error(typeof weather.error === 'string' ? weather.error : JSON.stringify(weather.error));
+          }
+          appendMessage(formatWeatherAnswer(weather));
+        })(),
+        timeoutPromise
+      ]);
     } catch (error) {
       if (controller.signal.aborted) {
         appendMessage(timedOut
@@ -740,6 +766,12 @@
     if (!text || !apiKey || busy || pendingCalls) return;
     input.value = '';
     appendMessage(text, 'user');
+
+    const quickReply = getQuickReply(text);
+    if (quickReply) {
+      appendMessage(quickReply);
+      return;
+    }
 
     const directRequest = parseDirectLeaveRequest(text);
     if (directRequest?.error) {
