@@ -346,46 +346,32 @@ document.addEventListener('DOMContentLoaded', async () => {
     const daysInMonth = new Date(Date.UTC(selectedYear, selectedMonth, 0)).getUTCDate();
     const recordsByDate = new Map(displayRecords.map(record => [record.work_date, record]));
     const currentTime = Date.now();
-    personalRecords.innerHTML = Array.from({ length: daysInMonth }, (_, index) => {
+    const rows = Array.from({ length: daysInMonth }, (_, index) => {
       const workDate = `${monthInput.value}-${String(index + 1).padStart(2, '0')}`;
       const record = recordsByDate.get(workDate);
       if (!record) {
         return `
-          <article class="attendance-personal-record empty">
-            <div>
-              <div class="attendance-personal-record-heading">
-                <span>${escapeHtml(formatWorkDate(workDate))}</span>
-                <span class="attendance-record-status empty">기록 없음</span>
-              </div>
-              <div class="attendance-personal-record-site">등록된 근무기록이 없습니다.</div>
-            </div>
-            <div class="attendance-personal-record-duration">-</div>
-            <div class="attendance-personal-record-times">
-              <div>출근<strong>--:--</strong></div>
-              <div>퇴근<strong>--:--</strong></div>
-            </div>
-          </article>`;
+          <tr class="empty">
+            <td class="table-date">${escapeHtml(formatWorkDate(workDate))}</td>
+            <td><span class="attendance-record-status empty">기록 없음</span></td>
+            <td>--:--</td><td>--:--</td><td class="table-duration">-</td><td class="table-site">-</td>
+          </tr>`;
       }
       const status = record.check_out_at ? '퇴근 완료' : '근무 중';
       const duration = record.check_out_at
         ? formatWorkDuration(record.check_in_at, record.check_out_at)
         : `${formatWorkDuration(record.check_in_at, currentTime)} · 진행 중`;
       return `
-        <article class="attendance-personal-record">
-          <div>
-            <div class="attendance-personal-record-heading">
-              <span>${escapeHtml(formatWorkDate(record.work_date))}</span>
-              <span class="attendance-record-status ${record.check_out_at ? '' : 'open'}">${status}</span>
-            </div>
-            <div class="attendance-personal-record-site">${escapeHtml(record.location_name)}</div>
-          </div>
-          <div class="attendance-personal-record-duration">${duration}</div>
-          <div class="attendance-personal-record-times">
-            <div>출근<strong>${escapeHtml(formatPunchTime(record.check_in_at, record.work_date))}</strong></div>
-            <div>퇴근<strong>${escapeHtml(formatPunchTime(record.check_out_at, record.work_date))}</strong></div>
-          </div>
-        </article>`;
+        <tr>
+          <td class="table-date">${escapeHtml(formatWorkDate(record.work_date))}</td>
+          <td><span class="attendance-record-status ${record.check_out_at ? '' : 'open'}">${status}</span></td>
+          <td>${escapeHtml(formatPunchTime(record.check_in_at, record.work_date))}</td>
+          <td>${escapeHtml(formatPunchTime(record.check_out_at, record.work_date))}</td>
+          <td class="table-duration">${escapeHtml(duration)}</td>
+          <td class="table-site">${escapeHtml(record.location_name)}</td>
+        </tr>`;
     }).join('');
+    personalRecords.innerHTML = `<table class="attendance-personal-table"><thead><tr><th>날짜</th><th>상태</th><th>출근</th><th>퇴근</th><th>근무시간</th><th>근무지</th></tr></thead><tbody>${rows}</tbody></table>`;
     const adminDisplayRecords = isAdmin && !userFilter.value
       ? records.filter(record => record.user_id !== currentUserId)
       : records;
