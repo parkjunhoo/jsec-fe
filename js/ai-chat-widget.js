@@ -237,12 +237,21 @@
   }
 
   function getTodayKst() {
-    return new Intl.DateTimeFormat('sv-SE', {
+    return getKoreaDateTime().slice(0, 10);
+  }
+
+  function getKoreaDateTime() {
+    const parts = Object.fromEntries(new Intl.DateTimeFormat('en-GB', {
       timeZone: 'Asia/Seoul',
       year: 'numeric',
       month: '2-digit',
-      day: '2-digit'
-    }).format(new Date());
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hourCycle: 'h23'
+    }).formatToParts(new Date()).map(part => [part.type, part.value]));
+    return `${parts.year}-${parts.month}-${parts.day} ${parts.hour}:${parts.minute}:${parts.second} KST`;
   }
 
   function parseDirectLeaveRequest(text) {
@@ -393,9 +402,9 @@
       '요청을 해석하고 사용할 API 도구를 직접 선택한다. 도구가 필요한 요청은 반드시 도구를 호출하며, 프론트엔드의 단어 추측에 의존하지 않는다. 날씨·차량·연락망·식단 이미지 등 요청에 맞는 도구를 사용하고 도구 오류는 숨기지 않는다.',
       '휴무 날짜는 자연어를 해석한다. 월이 없으면 아래 오늘 기준 가장 가까운 미래 날짜를 사용하고, 불명확한 경우에만 한 번 묻는다.',
       '조건에 맞는 무작위 휴무 추천 및 등록 요청은 suggest_my_days_off로 근무자와 기존 일정을 확인한 뒤, 사용자가 등록을 요청했으면 반환 날짜로 create_my_days_off를 호출한다.',
-      '등록·수정·삭제는 도구를 호출해 화면의 확인 버튼으로 한 번 승인받는다. 휴무 삭제는 항상 delete_my_days_off 도구를 사용한다. 단일 날짜 삭제는 start=end로, 월 전체 삭제는 그 달의 첫날과 마지막 날을 start/end로 지정한다. 휴무 ID나 단건 삭제 도구를 사용하지 않는다. 채팅으로 추가 확인을 요구하지 않는다.',
+      '등록·수정·삭제는 도구를 호출해 화면의 확인 버튼으로 한 번 승인받는다. 휴무 삭제는 항상 delete_my_days_off 도구를 한 번 호출한다. 이 도구에는 year와 month를 전달한다. "12월 휴무 다 삭제"는 현재 한국시간 기준 연도와 12월을 지정해 월 단위로 처리하며, 날짜별 단건 호출이나 vacation_id는 사용하지 않는다. 채팅으로 추가 확인을 요구하지 않는다.',
       '식단 이미지는 이미지에서 확인되는 메뉴만 답한다.',
-      `오늘(대한민국 서울 기준)은 ${getTodayKst()}이다.`
+      `현재 시각은 ${getKoreaDateTime()}이다. 날짜와 시간의 기준 시간대는 대한민국 표준시(Asia/Seoul, UTC+09:00)다. 오늘·어제·내일 등 상대 날짜와 답변에 표시하는 모든 시각은 반드시 한국시간 기준으로 해석하고 표현한다. UTC 시각으로 변환하거나 UTC 날짜를 사용하지 않는다.`
     ].join('\n');
   }
 
@@ -680,14 +689,16 @@
   function describeMutation(call) {
     const args = call.args || {};
     const target = args.employee_name || '본인';
-    const dates = args.dates || [args.start && args.end
-      ? `${args.start} ~ ${args.end}`
-      : args.date || args.old_date].filter(Boolean);
+    const dates = args.dates || [args.year && args.month
+      ? `${args.year}년 ${Number(args.month)}월 전체`
+      : args.start && args.end
+        ? `${args.start} ~ ${args.end}`
+        : args.date || args.old_date].filter(Boolean);
     const dateLabel = dates.map(displayDate).join(', ');
     const labels = {
       create_my_days_off: '휴무 등록',
       update_my_day_off: '휴무 수정',
-      delete_my_days_off: '기간 내 휴무 일괄 삭제',
+      delete_my_days_off: '월간 휴무 일괄 삭제',
       create_employee_days_off: '직원 휴무 등록',
       update_employee_day_off: '직원 휴무 수정',
       delete_employee_day_off: '직원 휴무 삭제'
@@ -1189,7 +1200,13 @@
       .map(item => `${item.label} ${item.temperature ?? '?'}℃ ${item.condition || ''}`.trim());
     const lines = [`${weather.location || '지산리조트'} 현재 날씨: ${details.join(' · ') || '현재 날씨 자료가 없습니다.'}`];
     if (forecast.length) lines.push(`오늘 예보: ${forecast.join(' / ')}`);
-    if (weather.observedAt) lines.push(`관측 기준: ${weather.observedAt.replace('T', ' ')}`);
+    if (weather.observedAt) {
+      const observation = /^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})$/.exec(weather.observedAt);
+      const observedAt = observation
+        ? `${observation[1]}-${observation[2]}-${observation[3]} ${observation[4]}:${observation[5]} KST`
+        : `${weather.observedAt} KST`;
+      lines.push(`관측 기준(한국시간): ${observedAt}`);
+    }
     return lines.join('\n');
   }
 
