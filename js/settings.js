@@ -27,7 +27,74 @@ document.addEventListener('DOMContentLoaded', async () => {
   const pushSettingsStatus = document.getElementById('pushSettingsStatus');
   const currentUserId = session.user.id;
   const UPDATE_PROFILE_API = `https://jsec-serverless.adobephotoshop.workers.dev/api/users/${encodeURIComponent(currentUserId)}`;
+  const aiChatEnabled = document.getElementById('aiChatEnabled');
+  const geminiApiKeyInput = document.getElementById('geminiApiKey');
+  const saveGeminiApiKey = document.getElementById('saveGeminiApiKey');
+  const removeGeminiApiKey = document.getElementById('removeGeminiApiKey');
+  const aiSettingsStatus = document.getElementById('aiSettingsStatus');
+  const aiApiKeyStorageKey = `jsecGeminiApiKey:${currentUserId}`;
+  const aiEnabledStorageKey = `jsecAiChatEnabled:${currentUserId}`;
   let pushToken = '';
+
+  function notifyAiSettingsChanged() {
+    window.dispatchEvent(new Event('jsec-ai-settings-changed'));
+  }
+
+  try {
+    aiChatEnabled.checked = localStorage.getItem(aiEnabledStorageKey) !== 'false';
+    aiSettingsStatus.textContent = localStorage.getItem(aiApiKeyStorageKey)
+      ? 'API 키가 이 브라우저에 저장되어 있습니다.'
+      : 'API 키를 등록해 주세요.';
+  } catch (error) {
+    aiChatEnabled.disabled = true;
+    geminiApiKeyInput.disabled = true;
+    saveGeminiApiKey.disabled = true;
+    removeGeminiApiKey.disabled = true;
+    aiSettingsStatus.textContent = '브라우저 저장소에 접근할 수 없어 AI 설정을 사용할 수 없습니다.';
+    console.error('AI 설정 저장소 확인 실패:', error);
+  }
+
+  aiChatEnabled.addEventListener('change', () => {
+    try {
+      localStorage.setItem(aiEnabledStorageKey, String(aiChatEnabled.checked));
+      aiSettingsStatus.textContent = aiChatEnabled.checked ? 'AI 챗봇을 켰습니다.' : 'AI 챗봇을 껐습니다.';
+      notifyAiSettingsChanged();
+    } catch (error) {
+      aiChatEnabled.checked = !aiChatEnabled.checked;
+      aiSettingsStatus.textContent = 'AI 챗봇 설정을 저장하지 못했습니다.';
+      console.error('AI 챗봇 사용 설정 저장 실패:', error);
+    }
+  });
+
+  saveGeminiApiKey.addEventListener('click', () => {
+    const apiKey = geminiApiKeyInput.value.trim();
+    if (!apiKey) {
+      aiSettingsStatus.textContent = '저장할 Gemini API 키를 입력해 주세요.';
+      geminiApiKeyInput.focus();
+      return;
+    }
+    try {
+      localStorage.setItem(aiApiKeyStorageKey, apiKey);
+      geminiApiKeyInput.value = '';
+      aiSettingsStatus.textContent = 'Gemini API 키를 이 브라우저에 저장했습니다.';
+      notifyAiSettingsChanged();
+    } catch (error) {
+      aiSettingsStatus.textContent = 'API 키를 브라우저에 저장하지 못했습니다.';
+      console.error('Gemini API 키 저장 실패:', error);
+    }
+  });
+
+  removeGeminiApiKey.addEventListener('click', () => {
+    try {
+      localStorage.removeItem(aiApiKeyStorageKey);
+      geminiApiKeyInput.value = '';
+      aiSettingsStatus.textContent = '저장된 Gemini API 키를 삭제했습니다.';
+      notifyAiSettingsChanged();
+    } catch (error) {
+      aiSettingsStatus.textContent = '저장된 API 키를 삭제하지 못했습니다.';
+      console.error('Gemini API 키 삭제 실패:', error);
+    }
+  });
 
   function setPushSettingsStatus(message) {
     if (pushSettingsStatus) pushSettingsStatus.textContent = message;
