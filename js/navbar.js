@@ -639,6 +639,9 @@ document.addEventListener('DOMContentLoaded', async () => {
               <a href="/pages/annual-leave.html" class="drawer-item ${currentPath.includes('annual-leave.html') ? 'active' : ''}" ${currentPath.includes('annual-leave.html') ? 'aria-current="page"' : ''}>
                 <span class="drawer-item-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 19V5m0 14h16"/><path d="m7 15 4-4 3 2 5-6"/></svg></span><span class="drawer-item-label">연차 관리</span>
               </a>
+              <a href="/pages/assistant.html" class="drawer-item ${currentPath.includes('assistant.html') ? 'active' : ''}" ${currentPath.includes('assistant.html') ? 'aria-current="page"' : ''}>
+                <span class="drawer-item-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3a7 7 0 0 0-4 12.75V19h8v-3.25A7 7 0 0 0 12 3Z"/><path d="M9 22h6m-3-19v2m7.95 1.05-1.42 1.42M21 12h-2m-14 0H3"/></svg></span><span class="drawer-item-label">AI 업무 도우미</span>
+              </a>
               <a href="https://www.ibro.co.kr/PayRoll/JOBWITH/index.asp" class="drawer-item" target="_blank" rel="noopener noreferrer">
                 <span class="drawer-item-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18M7 15h4m4 0h2M8 2v3m8-3v3"/></svg></span><span class="drawer-item-label">급여 조회</span>
               </a>
@@ -812,6 +815,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       '/pages/main.html': '홈 메인 시작 대시보드',
       '/pages/calendar.html': '휴무 일정 캘린더 달력 근무표 스케줄 휴가 공가 시간차 연차 신청',
       '/pages/attendance.html': '근태 관리 출퇴근 출근 퇴근 위치 반경 GPS',
+      '/pages/assistant.html': 'AI 인공지능 챗봇 Gemini MCP 휴무 등록 근태 조회 연차 조회 업무 도우미',
       '/pages/annual-leave.html': '연차 휴가 잔여 소진 근속 가산 차감 기준일 직원',
       '/pages/users.html': '회원 명부 직원 사원 사용자 계정 권한 인사 재직자',
       '/pages/item-requests.html': '물품 신청 비품 구매 소모품 장비 물건 요청 승인',
