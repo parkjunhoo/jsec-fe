@@ -5,9 +5,36 @@ document.addEventListener('DOMContentLoaded', async () => {
   const current = document.getElementById('homeWeatherCurrent');
   const details = document.getElementById('homeWeatherDetails');
   const forecast = document.getElementById('homeWeatherForecast');
+  const forecastPrevious = document.getElementById('homeWeatherForecastPrevious');
+  const forecastNext = document.getElementById('homeWeatherForecastNext');
+  const locationToggle = document.getElementById('homeWeatherLocationToggle');
+  const locationForm = document.getElementById('homeWeatherLocationForm');
+  const locationInput = document.getElementById('homeWeatherLocationInput');
+  const locationSearch = document.getElementById('homeWeatherLocationSearch');
+  const locationReset = document.getElementById('homeWeatherLocationReset');
+  const locationResults = document.getElementById('homeWeatherLocationResults');
+  const locationMessage = document.getElementById('homeWeatherLocationMessage');
   const errorMessage = document.getElementById('homeWeatherError');
   const source = document.getElementById('homeWeatherSource');
   const updated = document.getElementById('homeWeatherUpdated');
+  const locationStorageKey = 'jsec-weather-location';
+  const defaultLocation = { name: '지산컨트리클럽', latitude: 37.2137, longitude: 127.34099 };
+  let selectedLocation = defaultLocation;
+
+  try {
+    const savedLocation = JSON.parse(localStorage.getItem(locationStorageKey) || 'null');
+    if (savedLocation && typeof savedLocation.name === 'string'
+      && Number.isFinite(savedLocation.latitude) && savedLocation.latitude >= 32 && savedLocation.latitude <= 40
+      && Number.isFinite(savedLocation.longitude) && savedLocation.longitude >= 123 && savedLocation.longitude <= 133) {
+      selectedLocation = {
+        name: savedLocation.name.slice(0, 100),
+        latitude: savedLocation.latitude,
+        longitude: savedLocation.longitude
+      };
+    }
+  } catch (error) {
+    console.warn('저장된 날씨 위치를 불러오지 못했습니다.', error);
+  }
 
   function formatValue(value, suffix = '') {
     if (value === null || value === undefined || value === '') return '--';
@@ -28,7 +55,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   function renderWeather(weather) {
-    document.getElementById('homeWeatherTitle').textContent = `${weather.location} 날씨`;
+    document.getElementById('homeWeatherTitle').textContent = `${selectedLocation.name} 날씨`;
     current.querySelector('.home-weather-icon').textContent = weather.current.icon || '🌥️';
     current.querySelector('.home-weather-temperature').textContent =
       `${formatValue(weather.current.temperature)}°`;
@@ -66,7 +93,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         forecast.append(hour);
       });
     }
-    source.textContent = `${weather.provider || '기상청 동네예보'} · 시간별 예보는 발표 주기에 따라 달라질 수 있습니다.`;
+    source.textContent = `${weather.provider || '기상청 동네예보'} · 예보 최대 ${weather.hourly?.length || 0}개 시각 · 이후 예보 간격은 기상청 발표 주기에 따릅니다.`;
   }
 
   async function loadWeather() {
@@ -78,11 +105,20 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (error) throw error;
       if (!data.session?.access_token) throw new Error('로그인이 필요합니다.');
       const fetcher = window.appLoading?.fetchWithoutLoading || window.fetch;
-      const response = await fetcher(API_URL, {
+      const url = new URL(API_URL);
+      url.search = new URLSearchParams({
+        lat: String(selectedLocation.latitude),
+        lon: String(selectedLocation.longitude),
+        name: selectedLocation.name
+      });
+      const response = await fetcher(url, {
         headers: { Authorization: `Bearer ${data.session.access_token}` },
         cache: 'no-store'
       });
       const weather = await response.json().catch(() => ({}));
+      if (response.status === 404) {
+        throw new Error('날씨 API 경로가 Worker에 배포되지 않았습니다. Worker를 최신 버전으로 다시 배포해 주세요.');
+      }
       if (!response.ok) throw new Error(weather.error || `날씨 조회에 실패했습니다. (HTTP ${response.status})`);
       renderWeather(weather);
     } catch (error) {
@@ -94,7 +130,99 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
+  function slideForecast(direction) {
+    const card = forecast.querySelector('.home-weather-hour');
+    forecast.scrollBy({
+      left: direction * (card ? (card.getBoundingClientRect().width + 7) * 4 : forecast.clientWidth * 0.8),
+      behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth'
+    });
+  }
+
+  async function searchLocation(event) {
+    event.preventDefault();
+    const query = locationInput.value.trim();
+    if (!query) return;
+    locationSearch.disabled = true;
+    locationMessage.textContent = '장소를 검색하고 있습니다...';
+    locationResults.replaceChildren();
+    try {
+      const url = new URL('https://nominatim.openstreetmap.org/search');
+      url.search = new URLSearchParams({
+        q: query,
+        format: 'jsonv2',
+        limit: '5',
+        countrycodes: 'kr',
+        'accept-language': 'ko'
+      });
+      const response = await fetch(url, { headers: { Accept: 'application/json' } });
+      if (!response.ok) throw new Error(`장소 검색에 실패했습니다. (HTTP ${response.status})`);
+      const results = await response.json();
+      if (!Array.isArray(results)) throw new Error('장소 검색 응답 형식이 올바르지 않습니다.');
+      for (const result of results) {
+        const latitude = Number(result.lat);
+        const longitude = Number(result.lon);
+        if (!Number.isFinite(latitude) || latitude < 32 || latitude > 40
+          || !Number.isFinite(longitude) || longitude < 123 || longitude > 133) continue;
+        const item = document.createElement('li');
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.dataset.latitude = String(latitude);
+        button.dataset.longitude = String(longitude);
+        button.textContent = result.display_name || `${latitude.toFixed(5)}, ${longitude.toFixed(5)}`;
+        item.append(button);
+        locationResults.append(item);
+      }
+      locationMessage.textContent = locationResults.childElementCount
+        ? '검색 결과를 선택하면 해당 지역의 날씨를 확인합니다.'
+        : '대한민국 내 검색 결과가 없습니다. 다른 주소나 장소명을 입력해 주세요.';
+    } catch (error) {
+      console.error('날씨 위치 검색 오류:', error);
+      locationMessage.textContent = error.message || '위치를 검색하지 못했습니다. 잠시 후 다시 시도해 주세요.';
+    } finally {
+      locationSearch.disabled = false;
+    }
+  }
+
+  function applySelectedLocation(location) {
+    selectedLocation = location;
+    let storageNotice = '';
+    try {
+      if (location === defaultLocation) localStorage.removeItem(locationStorageKey);
+      else localStorage.setItem(locationStorageKey, JSON.stringify(location));
+    } catch (error) {
+      console.error('날씨 위치 저장 오류:', error);
+      storageNotice = '위치는 변경했지만 이 기기에 저장하지 못했습니다. 다음 방문 시 기본 위치로 표시됩니다.';
+    }
+    locationResults.replaceChildren();
+    locationMessage.textContent = storageNotice;
+    locationForm.hidden = true;
+    locationToggle.setAttribute('aria-expanded', 'false');
+    loadWeather();
+  }
+
   refreshButton.addEventListener('click', loadWeather);
+  forecastPrevious.addEventListener('click', () => slideForecast(-1));
+  forecastNext.addEventListener('click', () => slideForecast(1));
+  locationToggle.addEventListener('click', () => {
+    const isOpening = locationForm.hidden;
+    locationForm.hidden = !isOpening;
+    locationToggle.setAttribute('aria-expanded', String(isOpening));
+    if (isOpening) locationInput.focus();
+  });
+  locationForm.addEventListener('submit', searchLocation);
+  locationResults.addEventListener('click', event => {
+    const button = event.target.closest('button[data-latitude][data-longitude]');
+    if (!button) return;
+    const latitude = Number(button.dataset.latitude);
+    const longitude = Number(button.dataset.longitude);
+    if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return;
+    applySelectedLocation({
+      name: button.textContent.trim().split(',').slice(0, 3).join(',').slice(0, 100),
+      latitude,
+      longitude
+    });
+  });
+  locationReset.addEventListener('click', () => applySelectedLocation(defaultLocation));
   await loadWeather();
   window.setInterval(loadWeather, 10 * 60 * 1000);
 });

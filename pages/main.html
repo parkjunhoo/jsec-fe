@@ -204,13 +204,23 @@
     .service-group-heading { margin: 0 2px 11px; }
     .service-group-heading h3 { margin: 0; font-size: 14px; font-weight: 750; letter-spacing: -0.02em; }
     .service-group-heading p { margin: 4px 0 0; color: var(--muted); font-size: 11px; line-height: 1.5; }
-    .home-weather { margin: 16px 0 24px; padding: 16px; border: 1px solid var(--line); border-radius: 15px; background: linear-gradient(145deg, rgba(20, 36, 54, .96), rgba(15, 25, 39, .96)); box-shadow: var(--shadow); }
+    .home-weather { margin: 16px 0 24px; padding: 16px; border: 1px solid var(--line); border-radius: 15px; background: linear-gradient(145deg, #142436, #0f1927); box-shadow: var(--shadow); color: #edf3fa; }
     .home-weather-header { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
     .home-weather-title { min-width: 0; }
     .home-weather-title h2 { margin: 0; font-size: 15px; }
     .home-weather-title p { margin: 4px 0 0; color: var(--muted); font-size: 10px; }
-    .home-weather-refresh { flex: 0 0 auto; width: 34px; height: 34px; border: 1px solid var(--line); border-radius: 9px; background: rgba(255, 255, 255, .04); color: var(--ink); font-size: 16px; cursor: pointer; }
+    .home-weather-actions { display: flex; flex: 0 0 auto; gap: 6px; }
+    .home-weather-action { min-height: 34px; padding: 0 10px; border: 1px solid var(--line); border-radius: 9px; background: rgba(255, 255, 255, .04); color: inherit; font-size: 11px; font-weight: 700; cursor: pointer; }
+    .home-weather-refresh { width: 34px; padding: 0; font-size: 16px; }
     .home-weather-refresh:disabled { opacity: .55; cursor: wait; }
+    .home-weather-location-form { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 7px; margin-top: 12px; }
+    .home-weather-location-form[hidden] { display: none; }
+    .home-weather-location-form input { width: 100%; min-width: 0; min-height: 38px; padding: 0 10px; border: 1px solid var(--line); border-radius: 8px; background: rgba(0, 0, 0, .18); color: inherit; font: inherit; font-size: 12px; }
+    .home-weather-location-results { display: grid; gap: 5px; max-height: 180px; overflow: auto; margin: 7px 0 0; padding: 0; list-style: none; }
+    .home-weather-location-results:empty { display: none; }
+    .home-weather-location-results button { width: 100%; padding: 9px 10px; border: 1px solid var(--line); border-radius: 8px; background: rgba(255, 255, 255, .045); color: inherit; font: inherit; font-size: 11px; line-height: 1.45; text-align: left; cursor: pointer; }
+    .home-weather-location-attribution { margin: 5px 0 0; color: var(--muted); font-size: 9px; }
+    .home-weather-location-attribution a { color: inherit; }
     .home-weather-current { display: flex; align-items: center; gap: 15px; margin-top: 12px; }
     .home-weather-icon { font-size: 44px; line-height: 1; }
     .home-weather-temperature { font-size: clamp(34px, 8vw, 46px); font-weight: 750; letter-spacing: -.06em; line-height: 1; }
@@ -220,14 +230,48 @@
     .home-weather-detail { min-width: 0; padding: 9px 10px; border: 1px solid rgba(190, 211, 239, .08); border-radius: 9px; background: rgba(255, 255, 255, .035); }
     .home-weather-detail span { display: block; color: var(--muted); font-size: 9px; }
     .home-weather-detail strong { display: block; margin-top: 4px; font-size: 12px; }
-    .home-weather-forecast { display: flex; gap: 7px; margin-top: 12px; padding-bottom: 3px; overflow-x: auto; scrollbar-width: thin; }
-    .home-weather-hour { display: grid; flex: 1 0 62px; justify-items: center; gap: 5px; padding: 9px 5px; border-radius: 9px; background: rgba(255, 255, 255, .035); text-align: center; }
+    .home-weather-forecast-heading { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 15px; }
+    .home-weather-forecast-heading strong { font-size: 12px; }
+    .home-weather-forecast-controls { display: flex; gap: 5px; }
+    .home-weather-forecast-controls button { width: 30px; height: 30px; border: 1px solid var(--line); border-radius: 8px; background: rgba(255, 255, 255, .05); color: inherit; font-size: 18px; cursor: pointer; }
+    .home-weather-forecast { display: flex; gap: 7px; margin-top: 8px; padding: 0 1px 6px; overflow-x: auto; scroll-snap-type: x mandatory; scroll-behavior: smooth; scrollbar-width: thin; -webkit-overflow-scrolling: touch; }
+    .home-weather-hour { display: grid; flex: 0 0 72px; justify-items: center; gap: 5px; padding: 9px 5px; border: 1px solid transparent; border-radius: 9px; background: rgba(255, 255, 255, .045); text-align: center; scroll-snap-align: start; }
     .home-weather-hour time { color: var(--muted); font-size: 10px; }
     .home-weather-hour-icon { font-size: 19px; }
     .home-weather-hour strong { font-size: 12px; }
     .home-weather-error { margin: 12px 0 0; color: #fca5a5; font-size: 11px; line-height: 1.5; }
+    .home-weather-location-message { color: var(--muted); }
     .home-weather-error:empty { display: none; }
     .home-weather-source { margin: 9px 0 0; color: var(--muted); font-size: 9px; }
+    html[data-theme="light"] .home-weather {
+      border-color: #dce6df;
+      background: linear-gradient(145deg, #ffffff, #f1f7f3);
+      color: #17251d;
+      box-shadow: 0 10px 28px rgba(28, 63, 44, .1);
+    }
+    html[data-theme="light"] .home-weather-title p,
+    html[data-theme="light"] .home-weather-updated,
+    html[data-theme="light"] .home-weather-detail span,
+    html[data-theme="light"] .home-weather-hour time,
+    html[data-theme="light"] .home-weather-source { color: #65756b; }
+    html[data-theme="light"] .home-weather-condition { color: #44584b; }
+    html[data-theme="light"] .home-weather-refresh,
+    html[data-theme="light"] .home-weather-action,
+    html[data-theme="light"] .home-weather-forecast-controls button {
+      border-color: #d8e3db;
+      background: #f7faf8;
+      color: #244d37;
+    }
+    html[data-theme="light"] .home-weather-location-form input { border-color: #d8e3db; background: #fff; color: #17251d; }
+    html[data-theme="light"] .home-weather-location-results button { border-color: #d8e3db; background: #fff; color: #17251d; }
+    html[data-theme="light"] .home-weather-detail,
+    html[data-theme="light"] .home-weather-hour {
+      border-color: #e0e9e3;
+      background: rgba(255, 255, 255, .78);
+    }
+    html[data-theme="light"] .home-weather-error { color: #a33139; }
+    html[data-theme="light"] .home-weather-location-message { color: #65756b; }
+    @media (prefers-reduced-motion: reduce) { .home-weather-forecast { scroll-behavior: auto; } }
     .service-count {
       display: inline-flex;
       align-items: center;
@@ -686,8 +730,19 @@
           <h2 id="homeWeatherTitle">지산 리조트 날씨</h2>
           <p>기상청 실시간 관측 및 시간별 예보</p>
         </div>
-        <button class="home-weather-refresh" id="homeWeatherRefresh" type="button" aria-label="날씨 새로고침" title="새로고침">↻</button>
+        <div class="home-weather-actions">
+          <button class="home-weather-action" id="homeWeatherLocationToggle" type="button" aria-expanded="false" aria-controls="homeWeatherLocationForm">위치 변경</button>
+          <button class="home-weather-action home-weather-refresh" id="homeWeatherRefresh" type="button" aria-label="날씨 새로고침" title="새로고침">↻</button>
+        </div>
       </header>
+      <form class="home-weather-location-form" id="homeWeatherLocationForm" role="search" hidden>
+        <input id="homeWeatherLocationInput" type="search" maxlength="120" placeholder="시·군·구 또는 주소 검색" aria-label="날씨 위치 검색" required>
+        <button class="home-weather-action" id="homeWeatherLocationSearch" type="submit">검색</button>
+        <button class="home-weather-action" id="homeWeatherLocationReset" type="button">지산CC</button>
+      </form>
+      <ul class="home-weather-location-results" id="homeWeatherLocationResults" aria-label="날씨 위치 검색 결과"></ul>
+      <p class="home-weather-error home-weather-location-message" id="homeWeatherLocationMessage" role="status"></p>
+      <p class="home-weather-location-attribution">위치 검색: <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a></p>
       <div class="home-weather-current" id="homeWeatherCurrent" aria-live="polite">
         <span class="home-weather-icon" aria-hidden="true">⛅</span>
         <div><div class="home-weather-temperature">--°</div><div class="home-weather-condition">날씨를 불러오는 중입니다.</div></div>
@@ -697,6 +752,13 @@
         <div class="home-weather-detail"><span>습도</span><strong>--</strong></div>
         <div class="home-weather-detail"><span>바람</span><strong>--</strong></div>
         <div class="home-weather-detail"><span>강수</span><strong>--</strong></div>
+      </div>
+      <div class="home-weather-forecast-heading">
+        <strong>시간별 날씨</strong>
+        <div class="home-weather-forecast-controls" role="group" aria-label="시간별 예보 이동">
+          <button id="homeWeatherForecastPrevious" type="button" aria-label="이전 예보">‹</button>
+          <button id="homeWeatherForecastNext" type="button" aria-label="다음 예보">›</button>
+        </div>
       </div>
       <div class="home-weather-forecast" id="homeWeatherForecast" aria-label="시간별 날씨 예보"></div>
       <p class="home-weather-error" id="homeWeatherError" role="alert"></p>
@@ -726,7 +788,7 @@
       <section class="personal-content" id="adminMenuPanel" role="tabpanel" aria-labelledby="adminMenuTab" hidden>
         <header class="admin-menu-toolbar">
           <div><h3>처리 및 확인이 필요한 항목</h3><p id="adminMenuUpdatedAt">관리자 확인 항목을 불러오는 중입니다.</p></div>
-          <button class="admin-menu-refresh" id="adminMenuRefresh" type="button" aria-label="새로고침" title="새로고침">🔄</button>
+          <button class="admin-menu-refresh" id="adminMenuRefresh" type="button" aria-label="새로고침" title="새로고침">↻</button>
         </header>
         <div class="admin-menu-grid">
           <section class="admin-menu-section" aria-labelledby="adminAnnualDueTitle">
