@@ -431,6 +431,23 @@ html[data-theme="light"] .push-settings-card input[type="time"] {
   color: #1b2922;
   color-scheme: light;
 }
+html[data-theme="light"] .push-settings-card #geminiApiKey {
+  border-color: #a9b8ad;
+  background-color: #fff;
+  color: #1b2922;
+  caret-color: #1b2922;
+  color-scheme: light;
+}
+html[data-theme="light"] .push-settings-card #geminiApiKey::placeholder { color: #68776e; opacity: 1; }
+html[data-theme="light"] .push-settings-card #geminiApiKey:focus {
+  border-color: #197254;
+  box-shadow: 0 0 0 3px rgba(25, 114, 84, 0.14);
+}
+html[data-theme="light"] .push-settings-card #geminiApiKey:-webkit-autofill {
+  -webkit-text-fill-color: #1b2922;
+  box-shadow: 0 0 0 1000px #fff inset;
+  caret-color: #1b2922;
+}
 .push-settings-card .push-save-button {
   border: 1px solid #145c40;
   background-color: var(--push-save-bg);
