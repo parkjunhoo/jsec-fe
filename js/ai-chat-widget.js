@@ -7,12 +7,20 @@
     'gemini-3.5-flash-lite',
     'gemini-3.1-flash-lite'
   ];
+  const MUTATION_TOOL_NAMES = new Set([
+    'create_my_days_off',
+    'update_my_day_off',
+    'delete_my_day_off',
+    'create_employee_days_off',
+    'update_employee_day_off',
+    'delete_employee_day_off'
+  ]);
   const root = document.createElement('div');
   root.id = 'jsec-ai-chat-widget';
   root.innerHTML = `
     <section class="jsec-ai-chat-panel" id="jsecAiChatPanel" aria-label="AI 챗봇" hidden>
       <header class="jsec-ai-chat-header">
-        <div><h2 class="jsec-ai-chat-title">AI 업무 챗봇</h2><p class="jsec-ai-chat-subtitle">내 업무 정보를 질문하고 휴무를 등록할 수 있습니다.</p></div>
+        <div><h2 class="jsec-ai-chat-title">AI 업무 챗봇</h2><p class="jsec-ai-chat-subtitle">날씨·차량·연락망·식단을 조회하고 휴무를 관리합니다.</p></div>
         <button class="jsec-ai-chat-close" id="jsecAiChatClose" type="button" aria-label="채팅 닫기">×</button>
       </header>
       <div class="jsec-ai-chat-messages" id="jsecAiChatMessages" role="log" aria-live="polite"></div>
@@ -43,12 +51,65 @@
   let pendingConfirmation = null;
   let pendingIsDirect = false;
   let requestId = 0;
+  let pointerDrag = null;
+  let ignoreNextToggleClick = false;
+  let hasCustomPosition = false;
 
   function storageKeys() {
     return {
       apiKey: `jsecGeminiApiKey:${userId}`,
-      enabled: `jsecAiChatEnabled:${userId}`
+      enabled: `jsecAiChatEnabled:${userId}`,
+      position: `jsecAiChatPosition:${userId}`
     };
+  }
+
+  function placeToggle(left, top, persist = false) {
+    const margin = 8;
+    const maxLeft = Math.max(margin, window.innerWidth - toggle.offsetWidth - margin);
+    const maxTop = Math.max(margin, window.innerHeight - toggle.offsetHeight - margin);
+    const position = {
+      left: Math.min(maxLeft, Math.max(margin, left)),
+      top: Math.min(maxTop, Math.max(margin, top))
+    };
+    root.style.left = `${position.left}px`;
+    root.style.top = `${position.top}px`;
+    root.style.right = 'auto';
+    root.style.bottom = 'auto';
+    hasCustomPosition = true;
+    if (persist && userId) {
+      try {
+        localStorage.setItem(storageKeys().position, JSON.stringify(position));
+      } catch (error) {
+        console.error('AI 챗봇 버튼 위치 저장 실패:', error);
+      }
+    }
+  }
+
+  function restoreTogglePosition() {
+    try {
+      const saved = JSON.parse(localStorage.getItem(storageKeys().position) || 'null');
+      if (Number.isFinite(saved?.left) && Number.isFinite(saved?.top)) {
+        placeToggle(saved.left, saved.top);
+      }
+    } catch (error) {
+      console.error('AI 챗봇 버튼 위치를 불러오지 못했습니다:', error);
+    }
+  }
+
+  function positionPanel() {
+    const rect = toggle.getBoundingClientRect();
+    const panelWidth = Math.min(390, window.innerWidth - 24);
+    const panelHeight = Math.min(590, window.innerHeight - 112);
+    const left = rect.left + rect.width / 2 < window.innerWidth / 2
+      ? Math.max(12, Math.min(window.innerWidth - panelWidth - 12, rect.left))
+      : Math.max(12, Math.min(window.innerWidth - panelWidth - 12, rect.right - panelWidth));
+    const top = rect.top + rect.height / 2 > window.innerHeight / 2
+      ? Math.max(12, rect.top - panelHeight - 14)
+      : Math.min(window.innerHeight - panelHeight - 12, rect.bottom + 14);
+    panel.style.left = `${left}px`;
+    panel.style.top = `${top}px`;
+    panel.style.right = 'auto';
+    panel.style.bottom = 'auto';
   }
 
   function appendMessage(text, role = 'assistant', isError = false) {
@@ -66,11 +127,19 @@
     sendButton.disabled = blocked || !apiKey;
   }
 
+  function releaseConversationImages() {
+    conversation = conversation.map(content => ({
+      ...content,
+      parts: content.parts.filter(part => !part.inlineData)
+    }));
+  }
+
   function setOpen(isOpen) {
     if (isOpen && !enabled) return;
     panel.hidden = !isOpen;
     toggle.setAttribute('aria-expanded', String(isOpen));
     toggle.setAttribute('aria-label', isOpen ? 'AI 챗봇 닫기' : 'AI 챗봇 열기');
+    if (isOpen) positionPanel();
     if (isOpen && apiKey) input.focus();
   }
 
@@ -116,7 +185,7 @@
     if (!apiKey && !panel.hidden) renderNoKeyMessage();
     else if (apiKey && !panel.hidden && !messages.childElementCount) {
       form.hidden = false;
-      appendMessage('안녕하세요. “12월 5일 휴무 등록해줘”처럼 말씀하시면 날짜를 해석해 한 번의 확인으로 처리합니다.');
+      appendMessage('안녕하세요. “12월 5일 휴무 등록해줘”처럼 요청하거나 날씨, 차량, 직원 연락망, 오늘 식단을 물어보세요.');
     }
     updateControls();
   }
@@ -132,7 +201,10 @@
 
   function parseDirectLeaveRequest(text) {
     if (!/(휴무|휴가|쉬는\s*날)/.test(text) || !/(등록|추가|잡아|신청|넣어|올려)/.test(text)
-      || /(매달|매월|정기적으로)/.test(text)) return null;
+      || /(매달|매월|정기적으로|직원|씨|님|에게|대신|대리)/.test(text)) return null;
+    if (!/^\s*(?:(?:이번|다음)\s*달\s*)?(?:(20\d{2})\s*년\s*)?(?:(?:1[0-2]|[1-9])\s*월\s*)?(?:3[01]|[12]\d|[1-9])\s*일/.test(text)) {
+      return null;
+    }
 
     const datePattern = /(?:(20\d{2})\s*년\s*)?(?:(1[0-2]|[1-9])\s*월\s*)?(3[01]|[12]\d|[1-9])\s*일/g;
     const matches = [...text.matchAll(datePattern)];
@@ -155,6 +227,8 @@
 
     const today = getTodayKst();
     const [currentYear, currentMonth, currentDay] = today.split('-').map(Number);
+    const useNextMonth = /^\s*다음\s*달/.test(text);
+    const useCurrentMonth = /^\s*이번\s*달/.test(text);
     if (dayTokens.some(item => item.month && item.month !== explicitMonth)) return null;
     if (dayTokens.some(item => item.year && item.year !== explicitYear)) return null;
 
@@ -162,7 +236,9 @@
     let year = explicitYear;
     if (!month) {
       if (year) return null;
-      month = dayTokens.every(item => item.day >= currentDay) ? currentMonth : currentMonth + 1;
+      month = useNextMonth || (!useCurrentMonth && !dayTokens.every(item => item.day >= currentDay))
+        ? currentMonth + 1
+        : currentMonth;
       year = currentYear;
       if (month > 12) {
         month = 1;
@@ -238,12 +314,15 @@
   function getSystemPrompt() {
     return [
       '너는 지산리조트 보안팀 업무 챗봇이다. 한국어로 짧고 바로 답한다.',
-      '로그인한 사용자 본인의 데이터만 다루고, 타인의 정보는 조회하거나 수정하지 않는다.',
-      '휴무 등록 요청은 자연스러운 한국어 날짜를 직접 해석한다. "12월 5일", "5일, 6일, 8일" 같은 요청을 YYYY-MM-DD로 변환해 create_my_days_off를 바로 호출하고, 날짜 형식을 되묻지 않는다.',
+      '제공된 도구 목록에 관리자 도구가 있으면 관리자로 로그인한 것이다. 관리자 도구가 있을 때만 다른 직원 정보·휴무·근태를 조회하거나 직원 휴무를 관리한다. 관리자 도구가 없으면 본인 데이터만 다룬다.',
+      '일반 사용자도 list_team_days_off 도구로 팀 휴무자를 조회할 수 있다. "내일 휴무자 누구야?", "오늘 누가 쉬어?"와 같이 물으면 서울 기준 날짜를 계산해 해당 날짜만 조회하고 이름과 휴무 정보를 안내한다. 팀 일정 조회를 개인 정보 제한으로 거절하지 않는다. 연락처, 근태, 연차 잔액 등 다른 직원 개인정보는 관리자 도구가 있을 때만 조회한다.',
+      '휴무 등록 요청은 자연스러운 한국어 날짜를 직접 해석한다. "12월 5일", "5일, 6일, 8일" 같은 요청을 YYYY-MM-DD로 변환하고 형식을 되묻지 않는다. 다른 직원 이름이 요청에 포함되면 관리자 도구가 있을 때에만 직원 대상 도구를 쓴다.',
       '월이 없으면 아래 오늘 날짜 기준으로 가장 가까운 미래 날짜를 쓴다. 여러 날짜 중 하나라도 이미 지났으면 다음 달로 넘긴다. 월/연도를 합리적으로 해석할 수 없을 때만 빠진 정보를 한 번 질문한다.',
-      '휴무 등록은 화면에 날짜를 보여주는 확인 버튼으로만 승인받는다. 사용자에게 대화로 다시 등록 여부를 묻지 않는다. 날짜가 확실하면 도구 호출을 미루지 않는다.',
+      '모든 등록·수정·삭제는 화면에 대상과 날짜를 보여주는 확인 버튼으로 한 번만 승인받는다. 사용자에게 대화로 재확인을 하지 않는다. 도구 호출을 바로 해 확인창을 표시한다.',
       '도구 실행 성공 후 완료라고 답하고, 도구 오류가 난 경우에만 오류를 설명한다.',
-      '내 휴무, 내 근태, 내 연차 잔여 일수 조회를 제공한다. 근태 조회는 조회만 가능하다.',
+      '지원 업무: 팀 휴무자 조회, 본인 휴무 조회·등록·수정·삭제, 본인 근태·연차 조회, 기상청 지산리조트 날씨, 차량 검색, 지산 연락망 검색, 골프장/스키장 주간 식단표 이미지 읽기. 관리자에게는 도구 목록에 표시된 직원 정보·근태·휴무 관리 도구도 제공된다.',
+      '주간 식단표 도구가 이미지를 반환하면 이미지의 해당 날짜 메뉴를 읽어 답하고, 사진에서 확인할 수 없는 내용은 추측하지 않는다.',
+      '근태는 조회만 가능하다. GPS 좌표·기기 정보 및 로그인 비밀 정보는 조회하지 않는다.',
       `오늘(대한민국 서울 기준)은 ${getTodayKst()}이다.`
     ].join('\n');
   }
@@ -313,13 +392,21 @@
       const errorMessage = typeof value.error === 'string' ? value.error : JSON.stringify(value.error);
       throw new Error(errorMessage);
     }
-    return {
+    const imageBase64 = typeof value?.imageBase64 === 'string' ? value.imageBase64 : '';
+    const resultValue = imageBase64
+      ? Object.fromEntries(Object.entries(value).filter(([key]) => key !== 'imageBase64'))
+      : value;
+    const parts = [{
       functionResponse: {
         name: functionCall.name,
         ...(functionCall.id ? { id: functionCall.id } : {}),
-        response: { result: value }
+        response: { result: resultValue }
       }
-    };
+    }];
+    if (imageBase64) {
+      parts.push({ inlineData: { mimeType: value.mimeType || 'image/jpeg', data: imageBase64 } });
+    }
+    return parts;
   }
 
   function displayDate(date) {
@@ -327,28 +414,43 @@
     return match ? `${match[1]}년 ${Number(match[2])}월 ${Number(match[3])}일` : date;
   }
 
+  function describeMutation(call) {
+    const args = call.args || {};
+    const target = args.employee_name || '본인';
+    const dates = args.dates || [args.date || args.old_date].filter(Boolean);
+    const dateLabel = dates.map(displayDate).join(', ');
+    const labels = {
+      create_my_days_off: '휴무 등록',
+      update_my_day_off: '휴무 수정',
+      delete_my_day_off: '휴무 삭제',
+      create_employee_days_off: '직원 휴무 등록',
+      update_employee_day_off: '직원 휴무 수정',
+      delete_employee_day_off: '직원 휴무 삭제'
+    };
+    const oldDate = args.old_date ? `${displayDate(args.old_date)} 일정 → ` : '';
+    return `${labels[call.name] || '일정 변경'} · ${target}${dateLabel ? ` · ${oldDate}${dateLabel}` : ''}`;
+  }
+
   function showConfirmation(calls, isDirect = false) {
     pendingCalls = calls;
     pendingIsDirect = isDirect;
     const confirmation = document.createElement('section');
     confirmation.className = 'jsec-ai-chat-pending';
-    confirmation.setAttribute('aria-label', '휴무 등록 확인');
+    confirmation.setAttribute('aria-label', '업무 변경 확인');
     const title = document.createElement('strong');
-    title.textContent = '다음 날짜에 휴무를 등록합니다.';
+    title.textContent = '다음 업무를 실행합니다.';
     const list = document.createElement('ul');
     calls.forEach(call => {
-      (call.args?.dates || []).forEach(date => {
-        const item = document.createElement('li');
-        item.textContent = displayDate(date);
-        list.append(item);
-      });
+      const item = document.createElement('li');
+      item.textContent = describeMutation(call);
+      list.append(item);
     });
     const actions = document.createElement('div');
     actions.className = 'jsec-ai-chat-pending-actions';
     const confirm = document.createElement('button');
     confirm.type = 'button';
     confirm.className = 'confirm';
-    confirm.textContent = '휴무 등록';
+    confirm.textContent = '확인하고 실행';
     const cancel = document.createElement('button');
     cancel.type = 'button';
     cancel.textContent = '취소';
@@ -375,7 +477,7 @@
     try {
       if (!confirmed) {
         if (isDirect) {
-          appendMessage('휴무 등록을 취소했습니다.');
+          appendMessage('요청을 취소했습니다.');
           return;
         }
         conversation.push({
@@ -393,7 +495,7 @@
       const responses = [];
       for (const call of calls) {
         try {
-          responses.push(await runMcpTool(call));
+          responses.push(...await runMcpTool(call));
         } catch (error) {
           if (isDirect) throw error;
           appendMessage(`업무 실행 실패: ${error.message || '업무 도구 오류'}`, 'assistant', true);
@@ -407,8 +509,10 @@
         }
       }
       if (isDirect) {
-        const total = calls.reduce((sum, call) => sum + (call.args?.dates?.length || 0), 0);
-        appendMessage(`${total}일 휴무 등록을 완료했습니다.`);
+        const total = calls.reduce((sum, call) =>
+          sum + (call.name.includes('days_off') ? (call.args?.dates?.length || 0) : 0), 0);
+        if (total) appendMessage(`${total}일 휴무 등록을 완료했습니다.`);
+        else appendMessage('요청한 변경을 완료했습니다.');
       } else {
         conversation.push({ role: 'user', parts: responses });
       }
@@ -434,16 +538,17 @@
           const answer = content.parts.map(part => part.text || '').filter(Boolean).join('\n').trim();
           if (!answer) throw new Error('답변 내용이 비어 있습니다.');
           appendMessage(answer);
+          releaseConversationImages();
           return;
         }
-        if (calls.some(call => call.name === 'create_my_days_off')) {
+        if (calls.some(call => MUTATION_TOOL_NAMES.has(call.name))) {
           showConfirmation(calls);
           return;
         }
         const responses = [];
         for (const call of calls) {
           try {
-            responses.push(await runMcpTool(call));
+            responses.push(...await runMcpTool(call));
           } catch (error) {
             responses.push({
               functionResponse: {
@@ -467,17 +572,56 @@
   }
 
   toggle.addEventListener('click', () => {
+    if (ignoreNextToggleClick) {
+      ignoreNextToggleClick = false;
+      return;
+    }
     const open = panel.hidden;
     if (open) {
       if (!apiKey) renderNoKeyMessage();
       else if (!messages.childElementCount) {
         form.hidden = false;
-        appendMessage('안녕하세요. “12월 5일 휴무 등록해줘”처럼 말씀하시면 날짜를 해석해 한 번의 확인으로 처리합니다.');
+        appendMessage('안녕하세요. “12월 5일 휴무 등록해줘”처럼 요청하거나 날씨, 차량, 직원 연락망, 오늘 식단을 물어보세요.');
       }
     }
     setOpen(open);
   });
   closeButton.addEventListener('click', () => setOpen(false));
+  toggle.addEventListener('pointerdown', event => {
+    if (event.button !== undefined && event.button !== 0) return;
+    pointerDrag = {
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startY: event.clientY,
+      moved: false
+    };
+    toggle.setPointerCapture(event.pointerId);
+  });
+  toggle.addEventListener('pointermove', event => {
+    if (!pointerDrag || pointerDrag.pointerId !== event.pointerId) return;
+    const deltaX = event.clientX - pointerDrag.startX;
+    const deltaY = event.clientY - pointerDrag.startY;
+    if (!pointerDrag.moved && Math.hypot(deltaX, deltaY) < 6) return;
+    if (!pointerDrag.moved) {
+      const rect = toggle.getBoundingClientRect();
+      pointerDrag.originLeft = rect.left;
+      pointerDrag.originTop = rect.top;
+      pointerDrag.moved = true;
+    }
+    placeToggle(pointerDrag.originLeft + deltaX, pointerDrag.originTop + deltaY, false);
+    if (!panel.hidden) positionPanel();
+    event.preventDefault();
+  });
+  const finishPointerDrag = event => {
+    if (!pointerDrag || pointerDrag.pointerId !== event.pointerId) return;
+    if (pointerDrag.moved) {
+      placeToggle(toggle.getBoundingClientRect().left, toggle.getBoundingClientRect().top, true);
+      ignoreNextToggleClick = true;
+    }
+    pointerDrag = null;
+  };
+  toggle.addEventListener('pointerup', finishPointerDrag);
+  toggle.addEventListener('pointercancel', finishPointerDrag);
   form.addEventListener('submit', async event => {
     event.preventDefault();
     const text = input.value.trim();
@@ -511,6 +655,10 @@
   document.addEventListener('keydown', event => {
     if (event.key === 'Escape' && !panel.hidden) setOpen(false);
   });
+  window.addEventListener('resize', () => {
+    if (hasCustomPosition) placeToggle(toggle.getBoundingClientRect().left, toggle.getBoundingClientRect().top);
+    if (!panel.hidden) positionPanel();
+  });
 
   window.addEventListener('jsec-ai-settings-changed', refreshSettings);
   window.addEventListener('storage', event => {
@@ -524,6 +672,7 @@
       if (!data.session?.user?.id) return;
       userId = data.session.user.id;
       document.body.append(root);
+      restoreTogglePosition();
       refreshSettings();
     } catch (error) {
       console.error('AI 챗봇 로그인 상태 확인 실패:', error);

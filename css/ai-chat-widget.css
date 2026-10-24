@@ -30,6 +30,8 @@
   box-shadow: 0 8px 28px rgba(0, 0, 0, .32);
   color: #fff;
   cursor: pointer;
+  touch-action: none;
+  user-select: none;
 }
 
 .jsec-ai-chat-toggle svg {
@@ -43,9 +45,7 @@
 }
 
 .jsec-ai-chat-panel {
-  position: absolute;
-  right: 0;
-  bottom: 72px;
+  position: fixed;
   display: flex;
   width: min(390px, calc(100vw - 24px));
   height: min(590px, calc(100dvh - 112px));
