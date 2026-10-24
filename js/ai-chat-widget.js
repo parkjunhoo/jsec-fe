@@ -51,6 +51,7 @@
   let userId = '';
   let apiKey = '';
   let geminiModel = '';
+  let geminiModels = [];
   let enabled = true;
   let tools = [];
   let conversation = [];
@@ -186,6 +187,7 @@
       if (savedApiKey !== apiKey) {
         apiKey = savedApiKey;
         geminiModel = '';
+        geminiModels = [];
         resetConversation();
       }
       enabled = localStorage.getItem(keys.enabled) !== 'false';
@@ -345,7 +347,7 @@
   }
 
   async function callGemini() {
-    if (!geminiModel) {
+    if (!geminiModels.length) {
       const modelsResponse = await fetch('https://generativelanguage.googleapis.com/v1beta/models?pageSize=1000', {
         headers: { 'x-goog-api-key': apiKey },
         ...(activeController ? { signal: activeController.signal } : {})
@@ -355,38 +357,61 @@
         throw new Error(modelsResult.error?.message || `Gemini API 키 확인 실패 (HTTP ${modelsResponse.status})`);
       }
       const availableModels = (modelsResult.models || []).filter(model =>
-        (model.supportedGenerationMethods || []).includes('generateContent'));
-      const selectedModel = PREFERRED_GEMINI_MODELS
-        .map(name => availableModels.find(model => model.name === `models/${name}`))
-        .find(Boolean) || availableModels.find(model => /flash/i.test(model.name));
-      if (!selectedModel) throw new Error('이 API 키에서 사용할 수 있는 Gemini Flash 모델을 찾지 못했습니다.');
-      geminiModel = selectedModel.name.replace(/^models\//, '');
+        (model.supportedGenerationMethods || []).includes('generateContent')
+        && /flash/i.test(model.name));
+      const preferredModels = PREFERRED_GEMINI_MODELS
+        .map(name => availableModels.find(model => model.name === `models/${name}`)?.name.replace(/^models\//, ''))
+        .filter(Boolean);
+      const fallbackModels = availableModels
+        .map(model => model.name.replace(/^models\//, ''))
+        .filter(name => !preferredModels.includes(name));
+      geminiModels = [...new Set([...preferredModels, ...fallbackModels])];
+      if (!geminiModels.length) throw new Error('이 API 키에서 사용할 수 있는 Gemini Flash 모델을 찾지 못했습니다.');
+      geminiModel = geminiModels[0];
     }
     const declarations = tools.map(tool => ({
       name: tool.name,
       description: tool.description,
       parameters: toGeminiSchema(tool.inputSchema)
     }));
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(geminiModel)}:generateContent`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
-        ...(activeController ? { signal: activeController.signal } : {}),
-        body: JSON.stringify({
-          systemInstruction: { parts: [{ text: getSystemPrompt() }] },
-          contents: conversation,
-          tools: [{ functionDeclarations: declarations }],
-          toolConfig: { functionCallingConfig: { mode: 'AUTO' } },
-          generationConfig: { temperature: 0.2, maxOutputTokens: 1000 }
-        })
+    const modelOrder = [geminiModel, ...geminiModels.filter(model => model !== geminiModel)];
+    let lastOverloadMessage = '';
+    for (const model of modelOrder) {
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
+          ...(activeController ? { signal: activeController.signal } : {}),
+          body: JSON.stringify({
+            systemInstruction: { parts: [{ text: getSystemPrompt() }] },
+            contents: conversation,
+            tools: [{ functionDeclarations: declarations }],
+            toolConfig: { functionCallingConfig: { mode: 'AUTO' } },
+            generationConfig: { temperature: 0.2, maxOutputTokens: 1000 }
+          })
+        }
+      );
+      const result = await response.json().catch(() => ({}));
+      if (response.status === 503 && model !== modelOrder[modelOrder.length - 1]) {
+        lastOverloadMessage = result.error?.message || '모델에 요청이 집중되고 있습니다.';
+        console.warn(`Gemini 모델 ${model}에서 503 응답을 받아 다른 Flash 모델로 재시도합니다.`);
+        statusText.textContent = '사용량이 적은 Gemini 모델로 다시 시도하고 있습니다.';
+        continue;
       }
-    );
-    const result = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(result.error?.message || `Gemini 요청 실패 (HTTP ${response.status})`);
-    const content = result.candidates?.[0]?.content;
-    if (!content?.parts) throw new Error('Gemini가 답변을 반환하지 않았습니다.');
-    return content;
+      if (!response.ok) {
+        const message = result.error?.message || `Gemini 요청 실패 (HTTP ${response.status})`;
+        if (response.status === 503) {
+          throw new Error(`Gemini Flash 모델들이 현재 혼잡합니다. 잠시 후 다시 시도해 주세요. (${message || lastOverloadMessage})`);
+        }
+        throw new Error(message);
+      }
+      const content = result.candidates?.[0]?.content;
+      if (!content?.parts) throw new Error('Gemini가 답변을 반환하지 않았습니다.');
+      geminiModel = model;
+      return content;
+    }
+    throw new Error(`Gemini Flash 모델들이 현재 혼잡합니다. 잠시 후 다시 시도해 주세요. (${lastOverloadMessage})`);
   }
 
   function parseToolValue(toolResponse) {
@@ -633,6 +658,99 @@
     return '';
   }
 
+  function isTeamLeaveQuery(text) {
+    return /(휴무자|휴무.*누구|누구.*휴무|쉬는\s*사람|누가\s*쉬)/.test(text);
+  }
+
+  function getTeamLeaveQueryRange(text) {
+    const today = getTodayKst();
+    const [year, month, day] = today.split('-').map(Number);
+    const addDays = count => {
+      const date = new Date(Date.UTC(year, month - 1, day + count));
+      return date.toISOString().slice(0, 10);
+    };
+    if (/내일/.test(text)) {
+      const date = addDays(1);
+      return { start: date, end: date };
+    }
+    if (/모레/.test(text)) {
+      const date = addDays(2);
+      return { start: date, end: date };
+    }
+    const explicitDate = text.match(/(?:(20\d{2})\s*년\s*)?(?:(1[0-2]|[1-9])\s*월\s*)?(3[01]|[12]\d|[1-9])\s*일/);
+    if (explicitDate) {
+      const explicitYear = explicitDate[1] ? Number(explicitDate[1]) : year;
+      const explicitMonth = explicitDate[2] ? Number(explicitDate[2]) : month;
+      const explicitDay = Number(explicitDate[3]);
+      const date = new Date(Date.UTC(explicitYear, explicitMonth - 1, explicitDay));
+      if (date.getUTCFullYear() !== explicitYear
+        || date.getUTCMonth() !== explicitMonth - 1
+        || date.getUTCDate() !== explicitDay) {
+        throw new Error('날짜가 올바르지 않습니다. 날짜를 확인해 주세요.');
+      }
+      const formatted = date.toISOString().slice(0, 10);
+      return { start: formatted, end: formatted };
+    }
+    return { start: today, end: today };
+  }
+
+  function formatTeamDaysOffAnswer(rows, range) {
+    const dateLabel = displayDate(range.start);
+    if (!rows.length) return `${dateLabel} 휴무자는 없습니다.`;
+    const names = rows.map(item => {
+      const details = [item.leave_type, item.time_detail].filter(Boolean).join(' · ');
+      return details ? `${item.name} (${details})` : item.name;
+    });
+    return `${dateLabel} 휴무자: ${names.join(', ')}`;
+  }
+
+  async function runTeamDaysOffShortcut(range) {
+    busy = true;
+    const controller = new AbortController();
+    activeController = controller;
+    let timedOut = false;
+    let timeoutId;
+    const timeoutPromise = new Promise((_, reject) => {
+      timeoutId = window.setTimeout(() => {
+        timedOut = true;
+        controller.abort();
+        reject(new Error('휴무자 조회 시간이 초과되었습니다.'));
+      }, 30000);
+    });
+    updateControls();
+    try {
+      await Promise.race([
+        (async () => {
+          const result = await mcpRequest('tools/call', {
+            name: 'list_team_days_off',
+            arguments: range
+          });
+          const rows = parseToolValue(result);
+          if (rows?.isError) {
+            throw new Error(typeof rows.error === 'string' ? rows.error : JSON.stringify(rows.error));
+          }
+          if (!Array.isArray(rows)) throw new Error('휴무자 조회 결과를 읽지 못했습니다.');
+          appendMessage(formatTeamDaysOffAnswer(rows, range));
+        })(),
+        timeoutPromise
+      ]);
+    } catch (error) {
+      if (controller.signal.aborted) {
+        appendMessage(timedOut
+          ? '휴무자 정보를 불러오는 데 시간이 초과되었습니다. 잠시 후 다시 시도해 주세요.'
+          : '휴무자 조회를 중지했습니다.', 'assistant', timedOut);
+      } else {
+        console.error('팀 휴무자 조회 실패:', error);
+        appendMessage(error.message || '휴무자 정보를 가져오지 못했습니다.', 'assistant', true);
+      }
+    } finally {
+      window.clearTimeout(timeoutId);
+      if (activeController === controller) activeController = null;
+      busy = false;
+      updateControls();
+    }
+  }
+
   function formatWeatherAnswer(weather) {
     const current = weather.current || {};
     const details = [
@@ -784,6 +902,15 @@
         args: { dates: directRequest.dates },
         id: `direct-${Date.now()}`
       }], true);
+      return;
+    }
+
+    if (isTeamLeaveQuery(text)) {
+      try {
+        await runTeamDaysOffShortcut(getTeamLeaveQueryRange(text));
+      } catch (error) {
+        appendMessage(error.message || '조회 날짜를 해석하지 못했습니다.', 'assistant', true);
+      }
       return;
     }
 
