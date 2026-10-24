@@ -205,11 +205,15 @@
     .service-group-heading h3 { margin: 0; font-size: 14px; font-weight: 750; letter-spacing: -0.02em; }
     .service-group-heading p { margin: 4px 0 0; color: var(--muted); font-size: 11px; line-height: 1.5; }
     .home-weather { margin: 16px 0 24px; padding: 16px; border: 1px solid var(--line); border-radius: 15px; background: linear-gradient(145deg, #142436, #0f1927); box-shadow: var(--shadow); color: #edf3fa; }
-    .home-weather-header { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+    .home-weather-header { display: flex; align-items: center; gap: 10px; }
+    .home-weather-toggle { display: flex; width: 100%; min-height: 42px; align-items: center; justify-content: space-between; gap: 10px; padding: 0; border: 0; background: transparent; color: inherit; text-align: left; cursor: pointer; }
+    .home-weather-toggle:focus-visible { outline: 3px solid rgba(114, 199, 255, .65); outline-offset: 4px; border-radius: 7px; }
     .home-weather-title { min-width: 0; }
-    .home-weather-title h2 { margin: 0; font-size: 15px; }
-    .home-weather-title p { margin: 4px 0 0; color: var(--muted); font-size: 10px; }
-    .home-weather-actions { display: flex; flex: 0 0 auto; gap: 6px; }
+    .home-weather-title-heading { display: block; font-size: 15px; font-weight: 750; }
+    .home-weather-title-description { display: block; margin-top: 4px; color: var(--muted); font-size: 10px; }
+    .home-weather-toggle-icon { flex: 0 0 auto; color: #b6ddf2; font-size: 22px; line-height: 1; transition: transform 160ms ease; }
+    .home-weather-toggle[aria-expanded="true"] .home-weather-toggle-icon { transform: rotate(180deg); }
+    .home-weather-actions { display: flex; justify-content: flex-end; gap: 6px; margin-top: 10px; }
     .home-weather-action { min-height: 34px; padding: 0 10px; border: 1px solid var(--line); border-radius: 9px; background: rgba(255, 255, 255, .04); color: inherit; font-size: 11px; font-weight: 700; cursor: pointer; }
     .home-weather-refresh { width: 34px; padding: 0; font-size: 16px; }
     .home-weather-refresh:disabled { opacity: .55; cursor: wait; }
@@ -261,6 +265,7 @@
     html[data-theme="light"] .home-weather-forecast-date,
     html[data-theme="light"] .home-weather-source { color: #65756b; }
     html[data-theme="light"] .home-weather-condition { color: #44584b; }
+    html[data-theme="light"] .home-weather-toggle-icon { color: #176346; }
     html[data-theme="light"] .home-weather-refresh,
     html[data-theme="light"] .home-weather-action,
     html[data-theme="light"] .home-weather-forecast-controls button {
@@ -778,51 +783,6 @@
       </div>
     </section>
 
-    <section class="home-weather" id="homeWeather" aria-labelledby="homeWeatherTitle" aria-busy="true">
-      <header class="home-weather-header">
-        <div class="home-weather-title">
-          <h2 id="homeWeatherTitle">지산 리조트 날씨</h2>
-          <p>기상청 실시간 관측 및 시간별 예보</p>
-        </div>
-        <div class="home-weather-actions">
-          <button class="home-weather-action" id="homeWeatherLocationToggle" type="button" aria-expanded="false" aria-controls="homeWeatherLocationForm">위치 변경</button>
-          <button class="home-weather-action home-weather-refresh" id="homeWeatherRefresh" type="button" aria-label="날씨 새로고침" title="새로고침">↻</button>
-        </div>
-      </header>
-      <form class="home-weather-location-form" id="homeWeatherLocationForm" role="search" hidden>
-        <input id="homeWeatherLocationInput" type="search" maxlength="120" placeholder="시·군·구 또는 주소 검색" aria-label="날씨 위치 검색" required>
-        <button class="home-weather-action" id="homeWeatherLocationSearch" type="submit">검색</button>
-        <button class="home-weather-action" id="homeWeatherLocationReset" type="button">지산CC</button>
-      </form>
-      <ul class="home-weather-location-results" id="homeWeatherLocationResults" aria-label="날씨 위치 검색 결과"></ul>
-      <p class="home-weather-error home-weather-location-message" id="homeWeatherLocationMessage" role="status"></p>
-      <p class="home-weather-location-attribution">장소 검색: 카카오맵</p>
-      <div class="home-weather-current" id="homeWeatherCurrent" aria-live="polite">
-        <span class="home-weather-icon" aria-hidden="true">⛅</span>
-        <div><div class="home-weather-temperature">--°</div><div class="home-weather-condition">날씨를 불러오는 중입니다.</div></div>
-        <div class="home-weather-updated" id="homeWeatherUpdated"></div>
-      </div>
-      <div class="home-weather-details" id="homeWeatherDetails">
-        <div class="home-weather-detail"><span>습도</span><strong>--</strong></div>
-        <div class="home-weather-detail"><span>바람</span><strong>--</strong></div>
-        <div class="home-weather-detail"><span>현재 강수량</span><strong>--</strong></div>
-        <div class="home-weather-detail"><span>강수확률</span><strong>--</strong></div>
-      </div>
-      <div class="home-weather-forecast-heading">
-        <strong>시간별 날씨</strong>
-        <div class="home-weather-forecast-meta">
-          <span class="home-weather-forecast-date" id="homeWeatherForecastDate" aria-live="polite">시간별 예보</span>
-          <div class="home-weather-forecast-controls" role="group" aria-label="시간별 예보 이동">
-            <button id="homeWeatherForecastPrevious" type="button" aria-label="이전 예보">‹</button>
-            <button id="homeWeatherForecastNext" type="button" aria-label="다음 예보">›</button>
-          </div>
-        </div>
-      </div>
-      <div class="home-weather-forecast" id="homeWeatherForecast" aria-label="시간별 날씨 예보"></div>
-      <p class="home-weather-error" id="homeWeatherError" role="alert"></p>
-      <p class="home-weather-source" id="homeWeatherSource">기상청 동네예보 · 자료 제공 지연이 있을 수 있습니다.</p>
-    </section>
-
     <section class="personal-panel" aria-labelledby="personalTitle">
       <div class="personal-heading">
         <div>
@@ -930,6 +890,56 @@
           <div id="teamAllowanceContent" aria-live="polite"><div class="personal-empty">이번 달 수당 통계를 불러오는 중입니다.</div></div>
         </section>
       </section>
+    </section>
+
+    <section class="home-weather" id="homeWeather" aria-labelledby="homeWeatherTitle" aria-busy="false">
+      <header class="home-weather-header">
+        <button class="home-weather-toggle" id="homeWeatherToggle" type="button" aria-expanded="false" aria-controls="homeWeatherContent">
+          <span class="home-weather-title">
+            <span class="home-weather-title-heading" id="homeWeatherTitle">지산 리조트 날씨</span>
+            <span class="home-weather-title-description">날씨 정보를 보려면 눌러서 펼치세요</span>
+          </span>
+          <span class="home-weather-toggle-icon" aria-hidden="true">⌄</span>
+        </button>
+      </header>
+      <div id="homeWeatherContent" hidden>
+        <div class="home-weather-actions">
+          <button class="home-weather-action" id="homeWeatherLocationToggle" type="button" aria-expanded="false" aria-controls="homeWeatherLocationForm">위치 변경</button>
+          <button class="home-weather-action home-weather-refresh" id="homeWeatherRefresh" type="button" aria-label="날씨 새로고침" title="새로고침">↻</button>
+        </div>
+        <form class="home-weather-location-form" id="homeWeatherLocationForm" role="search" hidden>
+          <input id="homeWeatherLocationInput" type="search" maxlength="120" placeholder="시·군·구 또는 주소 검색" aria-label="날씨 위치 검색" required>
+          <button class="home-weather-action" id="homeWeatherLocationSearch" type="submit">검색</button>
+          <button class="home-weather-action" id="homeWeatherLocationReset" type="button">지산CC</button>
+        </form>
+        <ul class="home-weather-location-results" id="homeWeatherLocationResults" aria-label="날씨 위치 검색 결과"></ul>
+        <p class="home-weather-error home-weather-location-message" id="homeWeatherLocationMessage" role="status"></p>
+        <p class="home-weather-location-attribution">장소 검색: 카카오맵</p>
+        <div class="home-weather-current" id="homeWeatherCurrent" aria-live="polite">
+          <span class="home-weather-icon" aria-hidden="true">⛅</span>
+          <div><div class="home-weather-temperature">--°</div><div class="home-weather-condition">펼치면 날씨 정보를 불러옵니다.</div></div>
+          <div class="home-weather-updated" id="homeWeatherUpdated"></div>
+        </div>
+        <div class="home-weather-details" id="homeWeatherDetails">
+          <div class="home-weather-detail"><span>습도</span><strong>--</strong></div>
+          <div class="home-weather-detail"><span>바람</span><strong>--</strong></div>
+          <div class="home-weather-detail"><span>현재 강수량</span><strong>--</strong></div>
+          <div class="home-weather-detail"><span>강수확률</span><strong>--</strong></div>
+        </div>
+        <div class="home-weather-forecast-heading">
+          <strong>시간별 날씨</strong>
+          <div class="home-weather-forecast-meta">
+            <span class="home-weather-forecast-date" id="homeWeatherForecastDate" aria-live="polite">시간별 예보</span>
+            <div class="home-weather-forecast-controls" role="group" aria-label="시간별 예보 이동">
+              <button id="homeWeatherForecastPrevious" type="button" aria-label="이전 예보">‹</button>
+              <button id="homeWeatherForecastNext" type="button" aria-label="다음 예보">›</button>
+            </div>
+          </div>
+        </div>
+        <div class="home-weather-forecast" id="homeWeatherForecast" aria-label="시간별 날씨 예보"></div>
+        <p class="home-weather-error" id="homeWeatherError" role="alert"></p>
+        <p class="home-weather-source" id="homeWeatherSource">기상청 동네예보 · 자료 제공 지연이 있을 수 있습니다.</p>
+      </div>
     </section>
 
     <section class="home-favorites" id="homeFavoritesSection" aria-labelledby="homeFavoritesTitle" hidden>

@@ -1,6 +1,9 @@
 document.addEventListener('DOMContentLoaded', async () => {
   const API_URL = 'https://jsec-serverless.adobephotoshop.workers.dev/api/weather';
   const widget = document.getElementById('homeWeather');
+  const weatherToggle = document.getElementById('homeWeatherToggle');
+  const weatherContent = document.getElementById('homeWeatherContent');
+  const titleDescription = weatherToggle.querySelector('.home-weather-title-description');
   const refreshButton = document.getElementById('homeWeatherRefresh');
   const current = document.getElementById('homeWeatherCurrent');
   const details = document.getElementById('homeWeatherDetails');
@@ -21,6 +24,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   const locationStorageKey = 'jsec-weather-location';
   const defaultLocation = { name: '지산컨트리클럽', latitude: 37.2137, longitude: 127.34099 };
   let selectedLocation = defaultLocation;
+  let weatherExpanded = false;
+  let lastLoadedAt = 0;
+  let refreshIntervalId = null;
+  let activeRequestId = 0;
+  let activeAbortController = null;
 
   try {
     const savedLocation = JSON.parse(localStorage.getItem(locationStorageKey) || 'null');
@@ -134,6 +142,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   async function loadWeather() {
+    if (!weatherExpanded) return;
+    const requestId = ++activeRequestId;
+    activeAbortController?.abort();
+    const controller = new AbortController();
+    activeAbortController = controller;
     refreshButton.disabled = true;
     widget.setAttribute('aria-busy', 'true');
     errorMessage.textContent = '';
@@ -150,21 +163,51 @@ document.addEventListener('DOMContentLoaded', async () => {
       });
       const response = await fetcher(url, {
         headers: { Authorization: `Bearer ${data.session.access_token}` },
-        cache: 'no-store'
+        cache: 'no-store',
+        signal: controller.signal
       });
       const weather = await response.json().catch(() => ({}));
+      if (requestId !== activeRequestId || !weatherExpanded) return;
       if (response.status === 404) {
         throw new Error('날씨 API 경로가 Worker에 배포되지 않았습니다. Worker를 최신 버전으로 다시 배포해 주세요.');
       }
       if (!response.ok) throw new Error(weather.error || `날씨 조회에 실패했습니다. (HTTP ${response.status})`);
       renderWeather(weather);
+      lastLoadedAt = Date.now();
     } catch (error) {
+      if (error.name === 'AbortError' || requestId !== activeRequestId || !weatherExpanded) return;
       console.error('메인 날씨 조회 오류:', error);
       errorMessage.textContent = `날씨 정보를 불러오지 못했습니다: ${error.message}`;
     } finally {
-      refreshButton.disabled = false;
-      widget.setAttribute('aria-busy', 'false');
+      if (requestId === activeRequestId) {
+        activeAbortController = null;
+        refreshButton.disabled = false;
+        widget.setAttribute('aria-busy', 'false');
+      }
     }
+  }
+
+  function setWeatherExpanded(expanded) {
+    weatherExpanded = expanded;
+    weatherContent.hidden = !expanded;
+    weatherToggle.setAttribute('aria-expanded', String(expanded));
+    titleDescription.textContent = expanded
+      ? '기상청 실시간 관측 및 시간별 예보'
+      : '날씨 정보를 보려면 눌러서 펼치세요';
+    if (expanded) {
+      if (!lastLoadedAt || Date.now() - lastLoadedAt >= 10 * 60 * 1000) loadWeather();
+      if (!refreshIntervalId) refreshIntervalId = window.setInterval(loadWeather, 10 * 60 * 1000);
+      return;
+    }
+    if (refreshIntervalId) {
+      window.clearInterval(refreshIntervalId);
+      refreshIntervalId = null;
+    }
+    activeRequestId += 1;
+    activeAbortController?.abort();
+    activeAbortController = null;
+    refreshButton.disabled = false;
+    widget.setAttribute('aria-busy', 'false');
   }
 
   function slideForecast(direction) {
@@ -236,6 +279,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     loadWeather();
   }
 
+  weatherToggle.addEventListener('click', () => setWeatherExpanded(!weatherExpanded));
   refreshButton.addEventListener('click', loadWeather);
   forecastPrevious.addEventListener('click', () => slideForecast(-1));
   forecastNext.addEventListener('click', () => slideForecast(1));
@@ -259,6 +303,4 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   });
   locationReset.addEventListener('click', () => applySelectedLocation(defaultLocation));
-  await loadWeather();
-  window.setInterval(loadWeather, 10 * 60 * 1000);
 });
