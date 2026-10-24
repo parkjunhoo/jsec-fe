@@ -9,7 +9,6 @@
   const MUTATION_TOOL_NAMES = new Set([
     'create_my_days_off',
     'update_my_day_off',
-    'delete_my_day_off',
     'delete_my_days_off',
     'create_employee_days_off',
     'update_employee_day_off',
@@ -394,7 +393,7 @@
       '요청을 해석하고 사용할 API 도구를 직접 선택한다. 도구가 필요한 요청은 반드시 도구를 호출하며, 프론트엔드의 단어 추측에 의존하지 않는다. 날씨·차량·연락망·식단 이미지 등 요청에 맞는 도구를 사용하고 도구 오류는 숨기지 않는다.',
       '휴무 날짜는 자연어를 해석한다. 월이 없으면 아래 오늘 기준 가장 가까운 미래 날짜를 사용하고, 불명확한 경우에만 한 번 묻는다.',
       '조건에 맞는 무작위 휴무 추천 및 등록 요청은 suggest_my_days_off로 근무자와 기존 일정을 확인한 뒤, 사용자가 등록을 요청했으면 반환 날짜로 create_my_days_off를 호출한다.',
-      '등록·수정·삭제는 도구를 호출해 화면의 확인 버튼으로 한 번 승인받는다. 여러 일정 삭제는 기간 삭제 도구를 사용한다. 채팅으로 추가 확인을 요구하지 않는다.',
+      '등록·수정·삭제는 도구를 호출해 화면의 확인 버튼으로 한 번 승인받는다. 휴무 삭제는 항상 delete_my_days_off 도구를 사용한다. 단일 날짜 삭제는 start=end로, 월 전체 삭제는 그 달의 첫날과 마지막 날을 start/end로 지정한다. 휴무 ID나 단건 삭제 도구를 사용하지 않는다. 채팅으로 추가 확인을 요구하지 않는다.',
       '식단 이미지는 이미지에서 확인되는 메뉴만 답한다.',
       `오늘(대한민국 서울 기준)은 ${getTodayKst()}이다.`
     ].join('\n');
@@ -688,7 +687,6 @@
     const labels = {
       create_my_days_off: '휴무 등록',
       update_my_day_off: '휴무 수정',
-      delete_my_day_off: '휴무 삭제',
       delete_my_days_off: '기간 내 휴무 일괄 삭제',
       create_employee_days_off: '직원 휴무 등록',
       update_employee_day_off: '직원 휴무 수정',
