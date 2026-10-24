@@ -322,6 +322,7 @@
     panel.hidden = !isOpen;
     toggle.setAttribute('aria-expanded', String(isOpen));
     toggle.setAttribute('aria-label', isOpen ? 'AI 챗봇 닫기' : 'AI 챗봇 열기');
+    window.AndroidAiChat?.setOpen(isOpen);
     if (isOpen) positionPanel();
     if (isOpen && apiKey) input.focus();
   }

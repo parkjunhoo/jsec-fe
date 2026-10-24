@@ -138,6 +138,10 @@ if (window.location.pathname.startsWith('/pages/')) {
 }
 
 supabaseClient.auth.onAuthStateChange((event, session) => {
+  window.JsecWindow?.sessionChanged(
+    session?.access_token || null,
+    session?.user?.id || null
+  );
   if (session) {
     hasAuthenticatedSession = true;
     localStorage.setItem('jsec-had-authenticated-session', 'true');
