@@ -391,8 +391,9 @@
       '지산리조트 보안팀 챗봇. 한국어로 간결하게 답한다. 인사·일상 대화·일반 지식도 답하고, 서비스 내부 정보는 도구 결과 없이 추측하지 않는다.',
       '일반 사용자는 본인 정보와 팀 휴무자(이름·날짜·종류)만 조회한다. 다른 직원의 연락처·근태·연차 및 직원 휴무 관리는 관리자 도구가 제공될 때만 가능하다. GPS·기기 정보·비밀 정보는 노출하지 않는다.',
       '관리자 도구에 list_employees가 있으면 "회사원 목록", "직원 명단" 요청에 반드시 해당 도구를 사용한다. search_employees는 이름으로 일부 직원 검색할 때만 사용한다.',
-      '날씨·차량·연락망·식단 이미지 등 요청에 맞는 도구를 사용한다. 도구 오류는 숨기지 말고 간단히 알린다.',
+      '요청을 해석하고 사용할 API 도구를 직접 선택한다. 도구가 필요한 요청은 반드시 도구를 호출하며, 프론트엔드의 단어 추측에 의존하지 않는다. 날씨·차량·연락망·식단 이미지 등 요청에 맞는 도구를 사용하고 도구 오류는 숨기지 않는다.',
       '휴무 날짜는 자연어를 해석한다. 월이 없으면 아래 오늘 기준 가장 가까운 미래 날짜를 사용하고, 불명확한 경우에만 한 번 묻는다.',
+      '조건에 맞는 무작위 휴무 추천 및 등록 요청은 suggest_my_days_off로 근무자와 기존 일정을 확인한 뒤, 사용자가 등록을 요청했으면 반환 날짜로 create_my_days_off를 호출한다.',
       '등록·수정·삭제는 도구를 호출해 화면의 확인 버튼으로 한 번 승인받는다. 여러 일정 삭제는 기간 삭제 도구를 사용한다. 채팅으로 추가 확인을 요구하지 않는다.',
       '식단 이미지는 이미지에서 확인되는 메뉴만 답한다.',
       `오늘(대한민국 서울 기준)은 ${getTodayKst()}이다.`
@@ -410,51 +411,6 @@
     return history.slice(userTurnStarts[userTurnStarts.length - maxUserTurns]);
   }
 
-  function getGroqToolsForRequest(text) {
-    const query = text.toLowerCase();
-    const names = new Set();
-    const add = (...toolNames) => toolNames.forEach(name => names.add(name));
-    const isAdminRequest = /(직원|사원|회사원|다른\s*사람|다른\s*직원|(?:씨|님)\b)/.test(query);
-    const isDelete = /(삭제|취소|지워)/.test(query);
-    const isBulkDelete = isDelete && /(다\s*삭제|전부|전체|모두|한꺼번에|한\s*달|한달)/.test(query);
-    const isUpdate = /(수정|변경)/.test(query);
-    const isMutation = /(등록|추가|신청|잡아|넣어|수정|변경|삭제|취소|지워)/.test(query);
-
-    if (/(날씨|기온|강수|비\s*(?:와|오|오나)|눈\s*(?:와|오|오나))/.test(query)) {
-      add('get_resort_weather');
-    }
-    if (/(차량|자동차|차량번호|차번호|번호판)/.test(query)) add('search_vehicles');
-    if (/(연락처|전화번호|연락망|전화|내선번호)/.test(query)) add('search_phonebook');
-    if (/(식단표|식단|메뉴표|점심\s*메뉴|저녁\s*메뉴)/.test(query)) add('get_weekly_meal_plan');
-    if (/(근태|출근|퇴근|출퇴근)/.test(query)) {
-      add(isAdminRequest ? 'get_employee_attendance' : 'get_my_attendance');
-    }
-    if (/(연차|잔여\s*일수|남은\s*휴가)/.test(query)) add('get_my_annual_leave_balance');
-    if (/(휴무|휴가|쉬는\s*날)/.test(query)) {
-      if (isAdminRequest) {
-        if (isDelete) add('delete_employee_day_off');
-        else if (isUpdate) add('update_employee_day_off');
-        else if (isMutation) add('create_employee_days_off');
-        else add('list_employee_days_off');
-      } else if (isBulkDelete) {
-        add('delete_my_days_off');
-      } else if (isDelete) {
-        add('delete_my_day_off');
-      } else if (isUpdate) {
-        add('update_my_day_off');
-      } else if (isMutation) {
-        add('create_my_days_off');
-      } else {
-        add('list_my_days_off', 'list_team_days_off');
-      }
-    }
-    if (/(직원|사원|회사원|직원들|회사\s*사람)/.test(query)) {
-      if (/(목록|명단|리스트|전체|모두)/.test(query)) add('list_employees');
-      else add('search_employees');
-    }
-    return tools.filter(tool => names.has(tool.name));
-  }
-
   function compactGroqSchema(schema) {
     if (!schema || typeof schema !== 'object' || Array.isArray(schema)) return schema;
     return Object.fromEntries(Object.entries(schema)
@@ -468,7 +424,7 @@
   function toGroqMessages(history) {
     const messages = [{
       role: 'system',
-      content: `지산리조트 보안팀 챗봇. 한국어로 짧게 답한다. 일반 질문에도 답한다. 내부 정보는 도구 결과만 사용한다. 관리자 전용 도구가 없으면 다른 직원 개인정보·업무를 조회하지 않는다. 변경은 확인 버튼으로 승인한다. 오늘 서울 날짜: ${getTodayKst()}.`
+      content: getSystemPrompt()
     }];
     const pendingToolIds = new Map();
     let generatedToolId = 0;
@@ -535,10 +491,6 @@
   async function callGroq() {
     statusText.textContent = 'Groq에서 답변을 생성하고 있습니다.';
     const requestHistory = getRecentConversation(conversation, 1);
-    const latestUserText = [...requestHistory].reverse()
-      .find(item => item.role === 'user' && item.parts?.some(part => typeof part.text === 'string'))
-      ?.parts.filter(part => typeof part.text === 'string').map(part => part.text).join('\n') || '';
-    const relevantTools = getGroqToolsForRequest(latestUserText);
     const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -549,15 +501,15 @@
       body: JSON.stringify({
         model: GROQ_MODEL,
         messages: toGroqMessages(requestHistory),
-        ...(relevantTools.length ? { tools: relevantTools.map(tool => ({
+        ...(tools.length ? { tools: tools.map(tool => ({
           type: 'function',
           function: {
             name: tool.name,
-            description: tool.title || tool.name,
+            description: tool.description || tool.title || tool.name,
             parameters: compactGroqSchema(tool.inputSchema)
           }
         })) } : {}),
-        ...(relevantTools.length ? { tool_choice: 'auto' } : {}),
+        ...(tools.length ? { tool_choice: 'auto' } : {}),
         temperature: 0.2,
         max_completion_tokens: 1000
       })
@@ -1360,58 +1312,6 @@
     const quickReply = getQuickReply(text);
     if (quickReply) {
       appendMessage(quickReply);
-      return;
-    }
-
-    const randomLeaveRequest = parseRandomLeaveRequest(text);
-    if (randomLeaveRequest?.error) {
-      appendMessage(randomLeaveRequest.error, 'assistant', true);
-      return;
-    }
-    if (randomLeaveRequest) {
-      await runRandomLeaveSuggestion(randomLeaveRequest);
-      return;
-    }
-
-    const directRequest = parseDirectLeaveRequest(text);
-    if (directRequest?.error) {
-      appendMessage(directRequest.error, 'assistant', true);
-      return;
-    }
-    if (directRequest?.dates) {
-      showConfirmation([{
-        name: 'create_my_days_off',
-        args: { dates: directRequest.dates },
-        id: `direct-${Date.now()}`
-      }], true);
-      return;
-    }
-
-    if (isEmployeeListQuery(text)) {
-      await runEmployeeListShortcut();
-      return;
-    }
-
-    if (isMealPlanQuery(text)) {
-      try {
-        await runMealPlanShortcut(getMealPlanArguments(text));
-      } catch (error) {
-        appendMessage(error.message || '식단표 조회 날짜를 해석하지 못했습니다.', 'assistant', true);
-      }
-      return;
-    }
-
-    if (isTeamLeaveQuery(text)) {
-      try {
-        await runTeamDaysOffShortcut(getTeamLeaveQueryRange(text));
-      } catch (error) {
-        appendMessage(error.message || '조회 날짜를 해석하지 못했습니다.', 'assistant', true);
-      }
-      return;
-    }
-
-    if (isWeatherRequest(text)) {
-      await runWeatherShortcut();
       return;
     }
 
