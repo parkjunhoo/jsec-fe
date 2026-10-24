@@ -218,11 +218,13 @@
     .attendance-admin-subpanel[hidden] { display: none; }
     body.attendance-admin-view .attendance-profile { display: none; }
     body.attendance-admin-view .attendance-heading { padding-bottom: 8px; }
-    .attendance-history-nav:not(.attendance-admin-toolbar) { grid-template-columns: 44px minmax(0, 1fr) 44px 44px; align-items: center; gap: 10px; padding: 14px; }
-    .attendance-history-nav:not(.attendance-admin-toolbar) .attendance-button { width: 44px; height: 44px; padding: 0; border: 0; border-radius: 50%; background: #eef1f5; color: #59616d; font-size: 23px; }
+    .attendance-history-nav:not(.attendance-admin-toolbar) { grid-template-columns: 36px minmax(0, 1fr) 36px; align-items: center; gap: 6px; padding: 8px; }
+    .attendance-history-nav:not(.attendance-admin-toolbar) .attendance-button { width: 36px; height: 36px; padding: 0; border: 0; border-radius: 50%; background: #eef1f5; color: #59616d; font-size: 20px; }
     .attendance-history-nav:not(.attendance-admin-toolbar) .attendance-field { display: grid; place-items: center; }
     .attendance-history-nav:not(.attendance-admin-toolbar) .attendance-month-field { position: relative; min-width: 0; }
-    .attendance-history-nav:not(.attendance-admin-toolbar) .attendance-month-field > span { display: block; max-width: 100%; overflow: hidden; color: #17191d; font-size: 22px; font-weight: 850; letter-spacing: -.05em; text-overflow: ellipsis; white-space: nowrap; }
+    .attendance-history-nav:not(.attendance-admin-toolbar) .attendance-month-field > .attendance-month-caption { display: none; }
+    .attendance-history-nav:not(.attendance-admin-toolbar) .attendance-refresh { display: none; }
+    .attendance-history-nav:not(.attendance-admin-toolbar) .attendance-month-field > span { display: block; max-width: 100%; overflow: hidden; color: #17191d; font-size: clamp(15px, 4.6vw, 17px); font-weight: 850; letter-spacing: -.04em; white-space: nowrap; }
     .attendance-history-nav:not(.attendance-admin-toolbar) input[type="month"] { position: absolute; inset: 0; width: 100%; height: 100%; min-width: 0; padding: 0; border: 0; opacity: 0; cursor: pointer; }
     .attendance-history-nav:not(.attendance-admin-toolbar) .attendance-refresh { background: #fff0eb; color: #f05a3d; font-size: 20px; }
     .attendance-history-nav:not(.attendance-admin-toolbar) .attendance-button:hover { background: #dfe5ec; }
@@ -302,7 +304,8 @@
       <p class="attendance-description">본인의 기록을 확인할 수 있습니다. 관리자는 직원별 기록을 추가·수정·삭제할 수 있으며, 처리 내역은 감사 기록에 보관됩니다.</p>
       <div class="attendance-history-nav">
         <button class="attendance-button" id="attendancePrevMonth" type="button" aria-label="이전 달">‹</button>
-        <label class="attendance-field attendance-month-field" for="attendanceMonth">조회 월
+        <label class="attendance-field attendance-month-field" for="attendanceMonth" aria-label="조회 월">
+          <span class="attendance-month-caption" aria-hidden="true">조회 월</span>
           <span id="attendanceMonthDisplay">2026년 10월</span>
           <input id="attendanceMonth" type="month" aria-label="조회 월">
         </label>
